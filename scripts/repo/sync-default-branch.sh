@@ -102,6 +102,19 @@ repo_slug() {
   repo_display_name "$repo_path"
 }
 
+api_progress_tick() {
+  owner="$1"
+  case "${api_progress_mode:-render}" in
+    pv)
+      printf '1\n' >&4
+      ;;
+    *)
+      api_progress_done=$((api_progress_done + 1))
+      render_progress "$api_progress_done" "$api_progress_total" "graphql ${owner}"
+      ;;
+  esac
+}
+
 fetch_owner_default_branch_heads() {
   owner="$1"
   output_file="$2"
@@ -151,8 +164,7 @@ query($owner: String!, $cursor: String) {
       return 1
     fi
 
-    api_progress_done=$((api_progress_done + 1))
-    render_progress "$api_progress_done" "$api_progress_total" "graphql ${owner}"
+    api_progress_tick "$owner"
 
     printf '%s\n' "$response" | jq -r --arg owner "$owner" '
       .data.repositoryOwner.repositories.nodes[]
@@ -164,7 +176,9 @@ query($owner: String!, $cursor: String) {
     if [ "$has_next" != "true" ]; then
       break
     fi
-    api_progress_total=$((api_progress_total + 1))
+    if [ "${api_progress_mode:-render}" = "render" ]; then
+      api_progress_total=$((api_progress_total + 1))
+    fi
     cursor=$(printf '%s\n' "$response" | jq -r '.data.repositoryOwner.repositories.pageInfo.endCursor // ""')
     if [ -z "$cursor" ]; then
       break
@@ -200,10 +214,22 @@ build_sync_target_paths() {
   done <"$input_paths_file" | sort -u >"$owners_file"
 
   owners_total=$(wc -l <"$owners_file" | tr -d ' ')
+  api_progress_mode="render"
   api_progress_done=0
   api_progress_total="$owners_total"
   if [ "$api_progress_total" -lt 1 ]; then
     api_progress_total=1
+  fi
+  api_progress_fifo=""
+  api_progress_pv_pid=""
+  if command -v pv >/dev/null 2>&1; then
+    api_progress_mode="pv"
+    api_progress_fifo=$(mktemp -u)
+    mkfifo "$api_progress_fifo"
+    pv -f -l -N graphql <"$api_progress_fifo" >/dev/null &
+    api_progress_pv_pid=$!
+    # Keep one writer FD open so pv does not see EOF between requests.
+    exec 4>"$api_progress_fifo"
   fi
 
   prefilter_failed=0
@@ -214,7 +240,12 @@ build_sync_target_paths() {
       break
     fi
   done <"$owners_file"
-  if [ "$api_progress_done" -gt 0 ]; then
+  if [ "$api_progress_mode" = "pv" ]; then
+    exec 4>&-
+    wait "$api_progress_pv_pid" || true
+    rm -f "$api_progress_fifo"
+    printf '\n' >&2
+  elif [ "$api_progress_done" -gt 0 ]; then
     render_progress "$api_progress_done" "$api_progress_total" "graphql done"
     printf '\n' >&2
   fi
