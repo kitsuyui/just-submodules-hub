@@ -37,6 +37,8 @@ query($owner: String!, $cursor: String) {
 }
 """
 
+TQDM_BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+
 
 @dataclass
 class SyncResult:
@@ -146,10 +148,6 @@ def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> Tupl
     owners = sorted({repo_display_name(p).split("/", 1)[0] for p in path_list})
     heads: Dict[str, Tuple[str, str]] = {}
 
-    if bar.total is None:
-        bar.total = 0
-    bar.total += len(owners)
-    bar.refresh()
     for owner in owners:
         heads.update(fetch_owner_default_heads(owner, bar))
 
@@ -239,11 +237,6 @@ def sync_all(paths: List[str], jobs: int, verbose: bool, bar: tqdm) -> Tuple[int
     failures: List[Tuple[str, str]] = []
     results: List[SyncResult] = []
 
-    if bar.total is None:
-        bar.total = 0
-    bar.total += len(paths)
-    bar.refresh()
-
     with ThreadPoolExecutor(max_workers=jobs) as pool:
         future_map = {pool.submit(sync_one, p): p for p in paths}
         for fut in as_completed(future_map):
@@ -296,8 +289,15 @@ def main() -> int:
             if not paths:
                 print("No submodule paths found in .gitmodules")
                 return 0
-
-            with tqdm(total=0, unit="step", leave=False, dynamic_ncols=True) as bar:
+            owner_count = len({repo_display_name(p).split("/", 1)[0] for p in paths}) if prefilter else 0
+            with tqdm(
+                total=len(paths) + owner_count,
+                desc="sync-all",
+                unit="task",
+                leave=False,
+                dynamic_ncols=True,
+                bar_format=TQDM_BAR_FORMAT,
+            ) as bar:
                 targets, skipped = build_sync_targets(paths, prefilter, bar)
                 if not targets:
                     print("All submodules are up to date.")
