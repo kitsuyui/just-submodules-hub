@@ -7,6 +7,8 @@ if [ -z "$action" ]; then
   exit 2
 fi
 shift
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+sync_script="$script_dir/sync-default-branch.sh"
 
 repo_input_to_path() {
   input="$1"
@@ -24,33 +26,6 @@ repo_input_to_path() {
 
   repo_path=$(echo "$input" | sed -E 's#^(git@github.com:|https://github.com/)##; s#\.git$##')
   printf 'repo/github.com/%s\n' "$repo_path"
-}
-
-sync_repo_path_to_default_branch() {
-  repo_path="$1"
-  # Submodules have a ".git" file, while regular repos have a ".git" directory.
-  if [ ! -e "$repo_path/.git" ]; then
-    echo "Repository path not found: $repo_path" >&2
-    exit 2
-  fi
-
-  (
-    cd "$repo_path"
-    git fetch origin --prune
-
-    default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)
-    if [ -z "$default_branch" ]; then
-      default_branch=$(git remote show origin | sed -n 's#.*HEAD branch: ##p' | head -n1)
-    fi
-
-    if [ -z "$default_branch" ]; then
-      echo "Could not resolve default branch for $repo_path" >&2
-      exit 2
-    fi
-
-    git switch "$default_branch"
-    git pull --ff-only origin "$default_branch"
-  )
 }
 
 case "$action" in
@@ -111,15 +86,11 @@ case "$action" in
   sync-repo-default-branch)
     repo_input="${1:-}"
     repo_path=$(repo_input_to_path "$repo_input")
-    sync_repo_path_to_default_branch "$repo_path"
+    "$sync_script" one "$repo_path"
     ;;
 
   sync-all-repo-default-branch)
-    git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | while IFS= read -r repo_path; do
-      [ -n "$repo_path" ] || continue
-      echo "Syncing $repo_path"
-      sync_repo_path_to_default_branch "$repo_path"
-    done
+    "$sync_script" all
     git submodule update --remote --rebase --recursive --progress
     ;;
 
