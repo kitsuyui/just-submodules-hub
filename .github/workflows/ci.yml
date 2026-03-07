@@ -1,0 +1,26 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  validate-just-module:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: taiki-e/install-action@just
+
+      - name: Validate just module syntax
+        run: |
+          just --summary
+
+      - name: Smoke test (dry-run)
+        run: |
+          just --dry-run add-repo kitsuyui/example
+
+      - name: Lint shell scripts
+        run: shellcheck scripts/repo/*.sh
