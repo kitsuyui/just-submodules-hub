@@ -23,4 +23,4 @@ jobs:
           just --dry-run add-repo kitsuyui/example
 
       - name: Lint shell scripts
-        run: shellcheck scripts/repo/*.sh
+        run: shellcheck scripts/repo/*.sh scripts/submodules/*.sh scripts/github/*.sh
