@@ -46,6 +46,8 @@ class SyncResult:
     default_branch: str
     switched: bool
     updated: bool
+    skipped: bool = False
+    skip_reason: str = ""
 
 
 def as_bool(raw: str, default: bool) -> bool:
@@ -199,6 +201,17 @@ def sync_one(repo_path: str) -> SyncResult:
     except Exception:
         pass
 
+    status_porcelain = run(["git", "status", "--porcelain"], cwd=cwd)
+    if status_porcelain:
+        return SyncResult(
+            repo_path=repo_path,
+            default_branch=current_branch,
+            switched=False,
+            updated=False,
+            skipped=True,
+            skip_reason="dirty working tree",
+        )
+
     run(["git", "fetch", "origin", "--prune"], cwd=cwd)
     default_branch = resolve_default_branch(repo_path)
 
@@ -219,6 +232,10 @@ def sync_one(repo_path: str) -> SyncResult:
 
 def print_result(result: SyncResult, verbose: bool) -> bool:
     name = repo_display_name(result.repo_path)
+    if result.skipped:
+        print(f"{name}: skipped ({result.skip_reason})")
+        return False
+
     if not result.switched and not result.updated:
         if verbose:
             print(f"{name}: up-to-date")
