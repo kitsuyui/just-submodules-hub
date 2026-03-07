@@ -74,6 +74,19 @@ def gh_graphql(owner: str, cursor: str | None) -> dict:
     return json.loads(out)
 
 
+def extract_default_head(node: dict, owner: str) -> tuple[str, tuple[str, str]] | None:
+    default_ref = node.get("defaultBranchRef")
+    if not default_ref:
+        return None
+    target = default_ref.get("target") or {}
+    oid = target.get("oid")
+    name = default_ref.get("name")
+    repo_name = node.get("name")
+    if not oid or not name or not repo_name:
+        return None
+    return f"{owner}/{repo_name}", (name, oid)
+
+
 def fetch_owner_default_heads(owner: str, bar: tqdm) -> Dict[str, Tuple[str, str]]:
     cursor: str | None = None
     found: Dict[str, Tuple[str, str]] = {}
@@ -88,16 +101,11 @@ def fetch_owner_default_heads(owner: str, bar: tqdm) -> Dict[str, Tuple[str, str
 
         repos = repo_owner_payload["repositories"]
         for node in repos.get("nodes", []):
-            default_ref = node.get("defaultBranchRef")
-            if not default_ref:
+            extracted = extract_default_head(node, owner)
+            if extracted is None:
                 continue
-            target = default_ref.get("target") or {}
-            oid = target.get("oid")
-            name = default_ref.get("name")
-            repo_name = node.get("name")
-            if not oid or not name or not repo_name:
-                continue
-            found[f"{owner}/{repo_name}"] = (name, oid)
+            slug, head = extracted
+            found[slug] = head
 
         page_info = repos.get("pageInfo", {})
         if not page_info.get("hasNextPage"):
@@ -112,6 +120,12 @@ def fetch_owner_default_heads(owner: str, bar: tqdm) -> Dict[str, Tuple[str, str
     return found
 
 
+def owner_prefilter_total(paths: Iterable[str], prefilter: bool) -> int:
+    if not prefilter:
+        return 0
+    return len({repo_owner(path) for path in paths})
+
+
 def local_head(repo_path: str) -> Tuple[str, str]:
     cwd = Path(repo_path)
     branch = "DETACHED"
@@ -121,6 +135,17 @@ def local_head(repo_path: str) -> Tuple[str, str]:
         pass
     oid = run(["git", "rev-parse", "HEAD"], cwd=cwd)
     return branch, oid
+
+
+def should_sync_target(
+    remote_head: tuple[str, str] | None,
+    local_branch: str,
+    local_oid: str,
+) -> bool:
+    if remote_head is None:
+        return True
+    remote_branch, remote_oid = remote_head
+    return not (local_branch == remote_branch and local_oid == remote_oid)
 
 
 def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> List[str]:
@@ -139,12 +164,8 @@ def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> List
     for repo_path in path_list:
         slug = repo_display_name(repo_path)
         remote = heads.get(slug)
-        if not remote:
-            targets.append(repo_path)
-            continue
-        remote_branch, remote_oid = remote
         local_branch, local_oid = local_head(repo_path)
-        if local_branch == remote_branch and local_oid == remote_oid:
+        if not should_sync_target(remote, local_branch, local_oid):
             bar.update(1)
             continue
         targets.append(repo_path)
@@ -164,10 +185,17 @@ def resolve_default_branch(repo_path: str) -> str:
         pass
 
     show = run(["git", "remote", "show", "origin"], cwd=cwd)
-    for line in show.splitlines():
+    parsed = parse_head_branch_line(show)
+    if parsed is not None:
+        return parsed
+    raise RuntimeError(f"Could not resolve default branch for {repo_path}")
+
+
+def parse_head_branch_line(remote_show_output: str) -> str | None:
+    for line in remote_show_output.splitlines():
         if "HEAD branch:" in line:
             return line.split("HEAD branch:", 1)[1].strip()
-    raise RuntimeError(f"Could not resolve default branch for {repo_path}")
+    return None
 
 
 def sync_one(repo_path: str) -> SyncResult:
@@ -212,22 +240,28 @@ def sync_one(repo_path: str) -> SyncResult:
 
 def print_result(result: SyncResult, verbose: bool) -> bool:
     name = repo_display_name(result.repo_path)
-    if result.skipped:
-        print(f"{name}: skipped ({result.skip_reason})")
+    rendered = render_sync_result(name, result, verbose)
+    if rendered is None:
         return False
+    print(rendered)
+    return not result.skipped
+
+
+def render_sync_result(name: str, result: SyncResult, verbose: bool) -> str | None:
+    if result.skipped:
+        return f"{name}: skipped ({result.skip_reason})"
 
     if not result.switched and not result.updated:
         if verbose:
-            print(f"{name}: up-to-date")
-        return False
+            return f"{name}: up-to-date"
+        return None
 
     parts: List[str] = []
     if result.switched:
         parts.append(f"switched-to:{result.default_branch}")
     if result.updated:
         parts.append("updated-to:latest")
-    print(f"{name}: {' '.join(parts)}")
-    return True
+    return f"{name}: {' '.join(parts)}"
 
 
 def sync_all(paths: List[str], jobs: int, verbose: bool, bar: tqdm) -> Tuple[int, int]:
@@ -251,11 +285,15 @@ def sync_all(paths: List[str], jobs: int, verbose: bool, bar: tqdm) -> Tuple[int
             changed_count += 1
 
     if failures:
-        for repo_path, msg in failures:
-            print(f"{repo_display_name(repo_path)}: {msg}", file=sys.stderr)
+        print_failures(failures)
         print("One or more repositories failed to sync", file=sys.stderr)
         return 1, changed_count
     return 0, changed_count
+
+
+def print_failures(failures: list[tuple[str, str]]) -> None:
+    for repo_path, msg in failures:
+        print(f"{repo_display_name(repo_path)}: {msg}", file=sys.stderr)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -285,6 +323,37 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def handle_one_action(args: argparse.Namespace) -> int:
+    result = sync_one(args.repo_path)
+    print_result(result, args.verbose)
+    return 0
+
+
+def handle_all_action(args: argparse.Namespace) -> int:
+    paths = parse_repo_paths()
+    if not paths:
+        print("No submodule paths found in .gitmodules")
+        return 0
+
+    with tqdm(
+        total=len(paths) + owner_prefilter_total(paths, args.prefilter),
+        desc="sync-all",
+        unit="task",
+        leave=False,
+        dynamic_ncols=True,
+        bar_format=TQDM_BAR_FORMAT,
+    ) as bar:
+        targets = build_sync_targets(paths, args.prefilter, bar)
+        if not targets:
+            print("All submodules are up to date.")
+            return 0
+        code, changed_count = sync_all(targets, args.jobs, args.verbose, bar)
+
+    if code == 0 and changed_count == 0 and not args.verbose:
+        print("All submodules are up to date.")
+    return code
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -292,33 +361,10 @@ def main() -> int:
 
     try:
         if action == "one":
-            result = sync_one(args.repo_path)
-            print_result(result, args.verbose)
-            return 0
+            return handle_one_action(args)
 
         if action == "all":
-            paths = parse_repo_paths()
-            if not paths:
-                print("No submodule paths found in .gitmodules")
-                return 0
-            owner_count = len({repo_owner(path) for path in paths}) if args.prefilter else 0
-            with tqdm(
-                total=len(paths) + owner_count,
-                desc="sync-all",
-                unit="task",
-                leave=False,
-                dynamic_ncols=True,
-                bar_format=TQDM_BAR_FORMAT,
-            ) as bar:
-                targets = build_sync_targets(paths, args.prefilter, bar)
-                if not targets:
-                    print("All submodules are up to date.")
-                    return 0
-                code, changed_count = sync_all(targets, args.jobs, args.verbose, bar)
-
-            if code == 0 and changed_count == 0 and not args.verbose:
-                print("All submodules are up to date.")
-            return code
+            return handle_all_action(args)
 
         print(f"Unknown sync action: {action}", file=sys.stderr)
         return 2
