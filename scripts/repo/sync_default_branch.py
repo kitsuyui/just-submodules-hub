@@ -316,6 +316,8 @@ def main() -> int:
                 bar_format=TQDM_BAR_FORMAT,
             ) as bar:
                 targets, skipped = build_sync_targets(paths, prefilter, bar)
+                if skipped:
+                    bar.update(skipped)
                 if not targets:
                     print("All submodules are up to date.")
                     return 0
