@@ -6,9 +6,9 @@ add-repo REPO_URL:
   "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" add-repo "{{REPO_URL}}"
 
 # Remove a submodule
-remove-repo REPO_PATH:
+remove-repo REPO:
   #!/bin/sh
-  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" remove-repo "{{REPO_PATH}}"
+  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" remove-repo "{{REPO}}"
 
 # Create a new public GitHub repository and add it as a submodule (REPO format: owner/name)
 create-public-repo REPO:
@@ -20,15 +20,20 @@ create-private-repo REPO:
   #!/bin/sh
   "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" create-private-repo "{{REPO}}"
 
-# Update a submodule
-update-repo REPO_PATH:
+# Sync one repository to its default branch
+sync-repo-default-branch REPO:
   #!/bin/sh
-  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" update-repo "{{REPO_PATH}}"
+  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" sync-repo-default-branch "{{REPO}}"
 
-# Update all submodules
-update-all-repo:
+# Sync all repositories to their default branches
+sync-all-repo-default-branch:
   #!/bin/sh
-  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" update-all-repo
+  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" sync-all-repo-default-branch
+
+# Commit only submodule pointer changes in the parent repository
+commit-submodule-pointers MESSAGE="Update submodule pointers":
+  #!/bin/sh
+  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" commit-submodule-pointers "{{MESSAGE}}"
 
 # Run a command for each submodule
 every-repo COMMAND:

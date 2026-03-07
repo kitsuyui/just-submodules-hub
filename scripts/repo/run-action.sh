@@ -8,6 +8,50 @@ if [ -z "$action" ]; then
 fi
 shift
 
+repo_input_to_path() {
+  input="$1"
+  if [ -z "$input" ]; then
+    echo "REPO is required" >&2
+    exit 2
+  fi
+
+  case "$input" in
+    repo/github.com/*)
+      printf '%s\n' "$input"
+      return 0
+      ;;
+  esac
+
+  repo_path=$(echo "$input" | sed -E 's#^(git@github.com:|https://github.com/)##; s#\.git$##')
+  printf 'repo/github.com/%s\n' "$repo_path"
+}
+
+sync_repo_path_to_default_branch() {
+  repo_path="$1"
+  if [ ! -d "$repo_path/.git" ]; then
+    echo "Repository path not found: $repo_path" >&2
+    exit 2
+  fi
+
+  (
+    cd "$repo_path"
+    git fetch origin --prune
+
+    default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)
+    if [ -z "$default_branch" ]; then
+      default_branch=$(git remote show origin | sed -n 's#.*HEAD branch: ##p' | head -n1)
+    fi
+
+    if [ -z "$default_branch" ]; then
+      echo "Could not resolve default branch for $repo_path" >&2
+      exit 2
+    fi
+
+    git switch "$default_branch"
+    git pull --ff-only origin "$default_branch"
+  )
+}
+
 case "$action" in
   add-repo)
     repo_url_input="${1:-}"
@@ -26,11 +70,8 @@ case "$action" in
     ;;
 
   remove-repo)
-    repo_path="${1:-}"
-    if [ -z "$repo_path" ]; then
-      echo "REPO_PATH is required" >&2
-      exit 2
-    fi
+    repo_input="${1:-}"
+    repo_path=$(repo_input_to_path "$repo_input")
     git submodule deinit -f -- "$repo_path"
     rm -rf ".git/modules/$repo_path"
     git rm -f "$repo_path"
@@ -66,25 +107,45 @@ case "$action" in
     just add-repo "https://github.com/$repo"
     ;;
 
-  update-repo)
-    repo_path="${1:-}"
-    if [ -z "$repo_path" ]; then
-      echo "REPO_PATH is required" >&2
-      exit 2
-    fi
-    # Update the main branch
-    cd "$repo_path"
-    git switch main
-    git pull origin main
+  sync-repo-default-branch)
+    repo_input="${1:-}"
+    repo_path=$(repo_input_to_path "$repo_input")
+    sync_repo_path_to_default_branch "$repo_path"
     ;;
 
-  update-all-repo)
-    # Updating submodules can take time; enable debug env vars if needed.
-    # export GIT_TRACE=1
-    # export GIT_CURL_VERBOSE=1
-    # shellcheck disable=SC2016
-    git submodule foreach --recursive 'echo "Updating $path"; git switch main && git pull origin main'
+  sync-all-repo-default-branch)
+    git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | while IFS= read -r repo_path; do
+      [ -n "$repo_path" ] || continue
+      echo "Syncing $repo_path"
+      sync_repo_path_to_default_branch "$repo_path"
+    done
     git submodule update --remote --rebase --recursive --progress
+    ;;
+
+  commit-submodule-pointers)
+    message="${1:-Update submodule pointers}"
+    changed=""
+    while IFS= read -r repo_path; do
+      [ -n "$repo_path" ] || continue
+      if ! git diff --quiet -- "$repo_path"; then
+        changed="$changed $repo_path"
+      fi
+    done <<EOF_PATHS
+$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}')
+EOF_PATHS
+
+    if [ -z "$changed" ]; then
+      echo "No submodule pointer changes to commit"
+      exit 0
+    fi
+
+    # shellcheck disable=SC2086
+    git add -- $changed
+    if git diff --cached --quiet; then
+      echo "No staged changes after selecting submodule pointers"
+      exit 0
+    fi
+    git commit -m "$message"
     ;;
 
   every-repo)

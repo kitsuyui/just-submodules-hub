@@ -18,6 +18,16 @@ This repository should contain shared, reusable logic:
 - helper scripts for those modules
 - shared behavior that should be consistent across hubs
 
+## Core Commands
+
+Typical commands provided by `just/repo.just` include:
+
+- `just add-repo <owner>/<repo>`
+- `just remove-repo <owner>/<repo>`
+- `just sync-repo-default-branch <owner>/<repo>`
+- `just sync-all-repo-default-branch`
+- `just commit-submodule-pointers`
+
 ## License Scope
 
 This repository is dedicated to the public domain under CC0-1.0.
