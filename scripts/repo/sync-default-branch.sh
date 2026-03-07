@@ -59,7 +59,7 @@ format_sync_result() {
 print_sync_result() {
   result_line="$1"
 
-  IFS="$(printf '\t')" read -r status repo_path default_branch state switched_field updated_field <<EOF_RESULT
+  IFS="$(printf '\t')" read -r _ repo_path default_branch state switched_field updated_field <<EOF_RESULT
 $result_line
 EOF_RESULT
 
@@ -175,7 +175,7 @@ sync_all() {
     done <"$paths_file"
     printf '\n' >&2
   else
-    xargs -P "$sync_jobs" -I{} sh -c '"$1" one-machine "$2"' _ "$script_path" "{}" <"$paths_file" >>"$results_file" &
+    xargs -P "$sync_jobs" -I{} "$script_path" one-machine "{}" <"$paths_file" >>"$results_file" &
     xargs_pid=$!
     completed=0
     last_repo=""
