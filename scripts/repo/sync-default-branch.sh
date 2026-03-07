@@ -151,6 +151,9 @@ query($owner: String!, $cursor: String) {
       return 1
     fi
 
+    api_progress_done=$((api_progress_done + 1))
+    render_progress "$api_progress_done" "$api_progress_total" "graphql ${owner}"
+
     printf '%s\n' "$response" | jq -r --arg owner "$owner" '
       .data.repositoryOwner.repositories.nodes[]
       | select(.defaultBranchRef != null and .defaultBranchRef.target != null and .defaultBranchRef.target.oid != null)
@@ -161,6 +164,7 @@ query($owner: String!, $cursor: String) {
     if [ "$has_next" != "true" ]; then
       break
     fi
+    api_progress_total=$((api_progress_total + 1))
     cursor=$(printf '%s\n' "$response" | jq -r '.data.repositoryOwner.repositories.pageInfo.endCursor // ""')
     if [ -z "$cursor" ]; then
       break
@@ -195,6 +199,13 @@ build_sync_target_paths() {
     repo_owner "$repo_path"
   done <"$input_paths_file" | sort -u >"$owners_file"
 
+  owners_total=$(wc -l <"$owners_file" | tr -d ' ')
+  api_progress_done=0
+  api_progress_total="$owners_total"
+  if [ "$api_progress_total" -lt 1 ]; then
+    api_progress_total=1
+  fi
+
   prefilter_failed=0
   while IFS= read -r owner; do
     [ -n "$owner" ] || continue
@@ -203,6 +214,10 @@ build_sync_target_paths() {
       break
     fi
   done <"$owners_file"
+  if [ "$api_progress_done" -gt 0 ]; then
+    render_progress "$api_progress_done" "$api_progress_total" "graphql done"
+    printf '\n' >&2
+  fi
 
   if [ "$prefilter_failed" -ne 0 ] || [ ! -s "$remote_heads_file" ]; then
     cp "$input_paths_file" "$output_paths_file"
