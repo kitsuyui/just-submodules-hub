@@ -13,6 +13,7 @@ from typing import Dict, Iterable, List, Tuple
 from tqdm import tqdm
 
 
+REPO_PREFIX = "repo/github.com/"
 GRAPHQL_QUERY = """
 query($owner: String!, $cursor: String) {
   repositoryOwner(login: $owner) {
@@ -69,10 +70,13 @@ def run(cmd: List[str], cwd: Path | None = None) -> str:
 
 
 def repo_display_name(repo_path: str) -> str:
-    prefix = "repo/github.com/"
-    if repo_path.startswith(prefix):
-        return repo_path[len(prefix) :]
+    if repo_path.startswith(REPO_PREFIX):
+        return repo_path[len(REPO_PREFIX) :]
     return repo_path
+
+
+def repo_owner(repo_path: str) -> str:
+    return repo_display_name(repo_path).split("/", 1)[0]
 
 
 def parse_repo_paths() -> List[str]:
@@ -142,19 +146,18 @@ def local_head(repo_path: str) -> Tuple[str, str]:
     return branch, oid
 
 
-def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> Tuple[List[str], int]:
+def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> List[str]:
     path_list = list(paths)
     if not prefilter:
-        return path_list, 0
+        return path_list
 
-    owners = sorted({repo_display_name(p).split("/", 1)[0] for p in path_list})
+    owners = sorted({repo_owner(path) for path in path_list})
     heads: Dict[str, Tuple[str, str]] = {}
 
     for owner in owners:
         heads.update(fetch_owner_default_heads(owner, bar))
 
     targets: List[str] = []
-    skipped = 0
 
     for repo_path in path_list:
         slug = repo_display_name(repo_path)
@@ -165,12 +168,11 @@ def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> Tupl
         remote_branch, remote_oid = remote
         local_branch, local_oid = local_head(repo_path)
         if local_branch == remote_branch and local_oid == remote_oid:
-            skipped += 1
             bar.update(1)
             continue
         targets.append(repo_path)
 
-    return targets, skipped
+    return targets
 
 
 def resolve_default_branch(repo_path: str) -> str:
@@ -279,6 +281,13 @@ def sync_all(paths: List[str], jobs: int, verbose: bool, bar: tqdm) -> Tuple[int
     return 0, changed_count
 
 
+def parse_sync_jobs(raw: str) -> int:
+    value = raw.strip()
+    if value.isdigit() and int(value) > 0:
+        return int(value)
+    return 4
+
+
 def main() -> int:
     if len(sys.argv) < 2:
         print("action is required", file=sys.stderr)
@@ -287,11 +296,7 @@ def main() -> int:
     action = sys.argv[1]
     verbose = as_bool(os.getenv("SYNC_VERBOSE", "0"), False)
     prefilter = as_bool(os.getenv("SYNC_PREFILTER_REMOTE_HEADS", "1"), True)
-
-    jobs_raw = os.getenv("SYNC_JOBS", "4").strip()
-    jobs = 4
-    if jobs_raw.isdigit() and int(jobs_raw) > 0:
-        jobs = int(jobs_raw)
+    jobs = parse_sync_jobs(os.getenv("SYNC_JOBS", "4"))
 
     try:
         if action == "one":
@@ -307,7 +312,7 @@ def main() -> int:
             if not paths:
                 print("No submodule paths found in .gitmodules")
                 return 0
-            owner_count = len({repo_display_name(p).split("/", 1)[0] for p in paths}) if prefilter else 0
+            owner_count = len({repo_owner(path) for path in paths}) if prefilter else 0
             with tqdm(
                 total=len(paths) + owner_count,
                 desc="sync-all",
@@ -316,7 +321,7 @@ def main() -> int:
                 dynamic_ncols=True,
                 bar_format=TQDM_BAR_FORMAT,
             ) as bar:
-                targets, skipped = build_sync_targets(paths, prefilter, bar)
+                targets = build_sync_targets(paths, prefilter, bar)
                 if not targets:
                     print("All submodules are up to date.")
                     return 0
