@@ -32,8 +32,9 @@ Typical commands provided by `just/repo.just` include:
 
 - `SYNC_VERBOSE=1`: show `up-to-date` lines for unchanged repositories
 - `SYNC_JOBS=<n>`: set parallel workers for `sync-all-repo-default-branch` (default: `4`)
+- `SYNC_PREFILTER_REMOTE_HEADS=0`: disable GitHub GraphQL prefilter (enabled by default)
 - `SYNC_FINAL_SUBMODULE_UPDATE=1`: run extra `git submodule update --remote --rebase --recursive` after sync-all (disabled by default)
-- `sync-all-repo-default-branch` shows a progress bar (`done/total` and latest repository) on stderr
+- `sync-all-repo-default-branch` uses Python + `tqdm` progress bars for GraphQL prefilter and sync phases
 
 ## License Scope
 
