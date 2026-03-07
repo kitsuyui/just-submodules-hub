@@ -148,6 +148,19 @@ render_progress() {
   printf '\r[%s%s] %s/%s %s' "$bar_filled" "$bar_empty" "$completed" "$total" "$current" >&2
 }
 
+is_active_non_zombie() {
+  pid="$1"
+  state=$(ps -o stat= -p "$pid" 2>/dev/null | awk '{print $1}' || true)
+  if [ -z "$state" ]; then
+    return 1
+  fi
+
+  case "$state" in
+    Z*|*Z*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 sync_all() {
   script_path="$1"
   paths_file=$(mktemp)
@@ -180,7 +193,7 @@ sync_all() {
     completed=0
     last_repo=""
 
-    while kill -0 "$xargs_pid" 2>/dev/null; do
+    while is_active_non_zombie "$xargs_pid"; do
       new_completed=$(wc -l <"$results_file" | tr -d ' ')
       if [ "$new_completed" -ne "$completed" ]; then
         completed="$new_completed"
