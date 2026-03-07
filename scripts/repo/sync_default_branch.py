@@ -166,6 +166,7 @@ def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> Tupl
         local_branch, local_oid = local_head(repo_path)
         if local_branch == remote_branch and local_oid == remote_oid:
             skipped += 1
+            bar.update(1)
             continue
         targets.append(repo_path)
 
@@ -316,8 +317,6 @@ def main() -> int:
                 bar_format=TQDM_BAR_FORMAT,
             ) as bar:
                 targets, skipped = build_sync_targets(paths, prefilter, bar)
-                if skipped:
-                    bar.update(skipped)
                 if not targets:
                     print("All submodules are up to date.")
                     return 0
