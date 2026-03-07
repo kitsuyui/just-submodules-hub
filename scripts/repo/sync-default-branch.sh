@@ -188,43 +188,58 @@ sync_all() {
     done <"$paths_file"
     printf '\n' >&2
   else
-    xargs -P "$sync_jobs" -I{} "$script_path" one-machine "{}" <"$paths_file" >>"$results_file" &
-    xargs_pid=$!
-    completed=0
-    last_repo=""
+    if command -v pv >/dev/null 2>&1; then
+      progress_fifo=$(mktemp -u)
+      mkfifo "$progress_fifo"
+      pv -f -l -s "$total" <"$progress_fifo" >/dev/null &
+      pv_pid=$!
 
-    while is_active_non_zombie "$xargs_pid"; do
-      new_completed=$(wc -l <"$results_file" | tr -d ' ')
-      if [ "$new_completed" -ne "$completed" ]; then
-        completed="$new_completed"
-        last_line=$(tail -n 1 "$results_file" || true)
-        if [ -n "$last_line" ]; then
-          IFS="$(printf '\t')" read -r _ repo_path _ _ _ _ <<EOF_LAST
+      if ! xargs -P "$sync_jobs" -I{} "$script_path" one-machine-with-progress "{}" "$results_file" "$progress_fifo" <"$paths_file"; then
+        sync_failed=1
+      fi
+
+      wait "$pv_pid" || true
+      rm -f "$progress_fifo"
+      printf '\n' >&2
+    else
+      xargs -P "$sync_jobs" -I{} "$script_path" one-machine "{}" <"$paths_file" >>"$results_file" &
+      xargs_pid=$!
+      completed=0
+      last_repo=""
+
+      while is_active_non_zombie "$xargs_pid"; do
+        new_completed=$(wc -l <"$results_file" | tr -d ' ')
+        if [ "$new_completed" -ne "$completed" ]; then
+          completed="$new_completed"
+          last_line=$(tail -n 1 "$results_file" || true)
+          if [ -n "$last_line" ]; then
+            IFS="$(printf '\t')" read -r _ repo_path _ _ _ _ <<EOF_LAST
 $last_line
 EOF_LAST
-          last_repo=$(repo_display_name "$repo_path")
+            last_repo=$(repo_display_name "$repo_path")
+          fi
+          render_progress "$completed" "$total" "$last_repo"
         fi
-        render_progress "$completed" "$total" "$last_repo"
+        sleep 1
+      done
+
+      if ! wait "$xargs_pid"; then
+        sync_failed=1
       fi
-      sleep 1
-    done
 
-    if ! wait "$xargs_pid"; then
-      sync_failed=1
-    fi
-
-    completed=$(wc -l <"$results_file" | tr -d ' ')
-    if [ "$completed" -gt 0 ]; then
-      last_line=$(tail -n 1 "$results_file" || true)
-      if [ -n "$last_line" ]; then
-        IFS="$(printf '\t')" read -r _ repo_path _ _ _ _ <<EOF_LAST_FINAL
+      completed=$(wc -l <"$results_file" | tr -d ' ')
+      if [ "$completed" -gt 0 ]; then
+        last_line=$(tail -n 1 "$results_file" || true)
+        if [ -n "$last_line" ]; then
+          IFS="$(printf '\t')" read -r _ repo_path _ _ _ _ <<EOF_LAST_FINAL
 $last_line
 EOF_LAST_FINAL
-        last_repo=$(repo_display_name "$repo_path")
+          last_repo=$(repo_display_name "$repo_path")
+        fi
       fi
+      render_progress "$completed" "$total" "$last_repo"
+      printf '\n' >&2
     fi
-    render_progress "$completed" "$total" "$last_repo"
-    printf '\n' >&2
   fi
 
   while IFS= read -r result_line; do
@@ -255,6 +270,21 @@ case "$action" in
       exit 2
     fi
     sync_repo_path_to_default_branch "$repo_path"
+    ;;
+  one-machine-with-progress)
+    repo_path="${1:-}"
+    result_file="${2:-}"
+    progress_fifo="${3:-}"
+    if [ -z "$repo_path" ] || [ -z "$result_file" ] || [ -z "$progress_fifo" ]; then
+      echo "repo path, result file and progress fifo are required" >&2
+      exit 2
+    fi
+    job_status=0
+    if ! sync_repo_path_to_default_branch "$repo_path" >>"$result_file"; then
+      job_status=$?
+    fi
+    printf '1\n' >"$progress_fifo"
+    exit "$job_status"
     ;;
   all)
     sync_all "$0"
