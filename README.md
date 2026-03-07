@@ -18,6 +18,8 @@ This repository should contain shared, reusable logic:
 - helper scripts for those modules
 - shared behavior that should be consistent across hubs
 
+Consumers should normally import `just/index.just`, which aggregates the shared modules.
+
 ## Core Commands
 
 Typical commands provided by `just/repo.just` include:
@@ -27,6 +29,17 @@ Typical commands provided by `just/repo.just` include:
 - `just sync-repo-default-branch <owner>/<repo>`
 - `just sync-all-repo-default-branch`
 - `just commit-submodule-pointers`
+
+Additional shared modules include:
+
+- `just/inventory.just` for submodule inventory and cross-repository diagnostics
+- `just/github.just` for GitHub pull request queries scoped to managed repositories
+
+The recommended entrypoint is:
+
+```just
+import? "repo/github.com/kitsuyui/just-submodules-hub/just/index.just"
+```
 
 ### Sync Options
 
