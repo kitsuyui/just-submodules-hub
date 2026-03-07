@@ -277,7 +277,11 @@ build_sync_target_paths() {
     fi
 
     local_branch=$(cd "$repo_path" && git symbolic-ref --quiet --short HEAD 2>/dev/null || echo "DETACHED")
-    local_oid=$(cd "$repo_path" && git rev-parse HEAD 2>/dev/null || true)
+    if local_oid=$(cd "$repo_path" && git rev-parse HEAD 2>/dev/null); then
+      :
+    else
+      local_oid=""
+    fi
 
     if [ "$local_branch" = "$remote_default_branch" ] && [ -n "$local_oid" ] && [ "$local_oid" = "$remote_oid" ]; then
       skipped_count=$((skipped_count + 1))
