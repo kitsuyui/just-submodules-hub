@@ -28,7 +28,8 @@ repo_input_to_path() {
 
 sync_repo_path_to_default_branch() {
   repo_path="$1"
-  if [ ! -d "$repo_path/.git" ]; then
+  # Submodules have a ".git" file, while regular repos have a ".git" directory.
+  if [ ! -e "$repo_path/.git" ]; then
     echo "Repository path not found: $repo_path" >&2
     exit 2
   fi
