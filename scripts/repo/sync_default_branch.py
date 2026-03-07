@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import json
-import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -51,10 +51,14 @@ class SyncResult:
     skip_reason: str = ""
 
 
-def as_bool(raw: str, default: bool) -> bool:
-    if raw == "":
-        return default
-    return raw.strip().lower() not in {"0", "false", "no", "off"}
+def positive_int(raw: str) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be an integer") from exc
+    if value < 1:
+        raise argparse.ArgumentTypeError("must be >= 1")
+    return value
 
 
 def run(cmd: List[str], cwd: Path | None = None) -> str:
@@ -281,30 +285,42 @@ def sync_all(paths: List[str], jobs: int, verbose: bool, bar: tqdm) -> Tuple[int
     return 0, changed_count
 
 
-def parse_sync_jobs(raw: str) -> int:
-    value = raw.strip()
-    if value.isdigit() and int(value) > 0:
-        return int(value)
-    return 4
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Sync submodules to default branches")
+    subparsers = parser.add_subparsers(dest="action", required=True)
+
+    one = subparsers.add_parser("one", help="sync one repository")
+    one.add_argument("repo_path", help="repository path (e.g. repo/github.com/owner/repo)")
+    one.add_argument("--verbose", action="store_true", help="show up-to-date repositories")
+
+    all_cmd = subparsers.add_parser("all", help="sync all repositories from .gitmodules")
+    all_cmd.add_argument("--jobs", type=positive_int, default=4, help="parallel workers (default: 4)")
+    all_cmd.add_argument("--verbose", action="store_true", help="show up-to-date repositories")
+    all_cmd.add_argument(
+        "--prefilter",
+        dest="prefilter",
+        action="store_true",
+        default=True,
+        help="enable GraphQL prefilter (default)",
+    )
+    all_cmd.add_argument(
+        "--no-prefilter",
+        dest="prefilter",
+        action="store_false",
+        help="disable GraphQL prefilter",
+    )
+    return parser
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
-        print("action is required", file=sys.stderr)
-        return 2
-
-    action = sys.argv[1]
-    verbose = as_bool(os.getenv("SYNC_VERBOSE", "0"), False)
-    prefilter = as_bool(os.getenv("SYNC_PREFILTER_REMOTE_HEADS", "1"), True)
-    jobs = parse_sync_jobs(os.getenv("SYNC_JOBS", "4"))
+    parser = build_parser()
+    args = parser.parse_args()
+    action = args.action
 
     try:
         if action == "one":
-            if len(sys.argv) < 3:
-                print("repo path is required", file=sys.stderr)
-                return 2
-            result = sync_one(sys.argv[2])
-            print_result(result, verbose)
+            result = sync_one(args.repo_path)
+            print_result(result, args.verbose)
             return 0
 
         if action == "all":
@@ -312,7 +328,7 @@ def main() -> int:
             if not paths:
                 print("No submodule paths found in .gitmodules")
                 return 0
-            owner_count = len({repo_owner(path) for path in paths}) if prefilter else 0
+            owner_count = len({repo_owner(path) for path in paths}) if args.prefilter else 0
             with tqdm(
                 total=len(paths) + owner_count,
                 desc="sync-all",
@@ -321,13 +337,13 @@ def main() -> int:
                 dynamic_ncols=True,
                 bar_format=TQDM_BAR_FORMAT,
             ) as bar:
-                targets = build_sync_targets(paths, prefilter, bar)
+                targets = build_sync_targets(paths, args.prefilter, bar)
                 if not targets:
                     print("All submodules are up to date.")
                     return 0
-                code, changed_count = sync_all(targets, jobs, verbose, bar)
+                code, changed_count = sync_all(targets, args.jobs, args.verbose, bar)
 
-            if code == 0 and changed_count == 0 and not verbose:
+            if code == 0 and changed_count == 0 and not args.verbose:
                 print("All submodules are up to date.")
             return code
 

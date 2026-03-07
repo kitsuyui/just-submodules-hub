@@ -9,12 +9,6 @@ fi
 shift
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 sync_script="$script_dir/sync-default-branch.sh"
-sync_final_update_raw="${SYNC_FINAL_SUBMODULE_UPDATE:-0}"
-
-case "$sync_final_update_raw" in
-  1|true|TRUE|yes|YES|on|ON) sync_final_update=1 ;;
-  *) sync_final_update=0 ;;
-esac
 
 repo_input_to_path() {
   input="$1"
@@ -92,12 +86,19 @@ case "$action" in
   sync-repo-default-branch)
     repo_input="${1:-}"
     repo_path=$(repo_input_to_path "$repo_input")
-    "$sync_script" one "$repo_path"
+    shift
+    "$sync_script" one "$repo_path" "$@"
     ;;
 
   sync-all-repo-default-branch)
-    "$sync_script" all
-    if [ "$sync_final_update" -eq 1 ]; then
+    final_submodule_update=0
+    if [ "${1:-}" = "--final-submodule-update" ]; then
+      final_submodule_update=1
+      shift
+    fi
+
+    "$sync_script" all "$@"
+    if [ "$final_submodule_update" -eq 1 ]; then
       echo "Running final submodule update (--remote --rebase --recursive)..."
       git submodule update --remote --rebase --recursive --progress
     fi
