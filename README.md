@@ -20,6 +20,28 @@ This repository should contain shared, reusable logic:
 
 Consumers should normally import `just/index.just`, which aggregates the shared modules.
 
+## Requirements
+
+This repository assumes the following tools are available:
+
+- [`just`](https://github.com/casey/just) to run the shared recipes
+- [`git`](https://git-scm.com/) to manage submodules
+- [`uv`](https://github.com/astral-sh/uv) to run the bundled Python utilities
+
+On macOS, install them with Homebrew:
+
+```sh
+brew install just git uv
+```
+
+If you use GitHub-related commands such as `create-public-repo`, `create-private-repo`, `list-github-repos`, or `list-managed-prs`, install the GitHub CLI as well:
+
+```sh
+brew install gh
+```
+
+Make sure `gh auth login` has been completed before using those commands.
+
 ## Core Commands
 
 Typical commands provided by `just/repo.just` include:
