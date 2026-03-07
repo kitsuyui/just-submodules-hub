@@ -98,7 +98,7 @@ sync_repo_path_to_default_branch() {
     switched=0
     updated=0
 
-    run_quiet_stdout git fetch origin --prune
+    run_quiet_stdout git fetch origin --prune || return $?
 
     default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)
     if [ -z "$default_branch" ]; then
@@ -114,9 +114,9 @@ sync_repo_path_to_default_branch() {
       switched=1
     fi
 
-    run_quiet_stdout git switch "$default_branch"
+    run_quiet_stdout git switch "$default_branch" || return $?
     before_pull=$(git rev-parse HEAD)
-    run_quiet_stdout git pull --ff-only origin "$default_branch"
+    run_quiet_stdout git pull --ff-only origin "$default_branch" || return $?
     after_pull=$(git rev-parse HEAD)
 
     if [ "$before_pull" != "$after_pull" ]; then
@@ -193,11 +193,14 @@ sync_all() {
       mkfifo "$progress_fifo"
       pv -f -l -s "$total" <"$progress_fifo" >/dev/null &
       pv_pid=$!
+      # Keep one writer FD open so pv does not see EOF between worker writes.
+      exec 3>"$progress_fifo"
 
       if ! xargs -P "$sync_jobs" -I{} "$script_path" one-machine-with-progress "{}" "$results_file" "$progress_fifo" <"$paths_file"; then
         sync_failed=1
       fi
 
+      exec 3>&-
       wait "$pv_pid" || true
       rm -f "$progress_fifo"
       printf '\n' >&2
@@ -279,8 +282,9 @@ case "$action" in
       echo "repo path, result file and progress fifo are required" >&2
       exit 2
     fi
-    job_status=0
-    if ! sync_repo_path_to_default_branch "$repo_path" >>"$result_file"; then
+    if sync_repo_path_to_default_branch "$repo_path" >>"$result_file"; then
+      job_status=0
+    else
       job_status=$?
     fi
     printf '1\n' >"$progress_fifo"
