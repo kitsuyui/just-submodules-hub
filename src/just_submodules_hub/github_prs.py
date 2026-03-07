@@ -48,12 +48,19 @@ def parse_pull_request_payload(payload: str) -> list[PullRequestRecord]:
     data = json.loads(payload)
     records: list[PullRequestRecord] = []
     for item in data:
-        repo = (item.get("repository") or {}).get("nameWithOwner")
-        author = (item.get("author") or {}).get("login")
-        url = item.get("url")
-        if repo and author and url:
-            records.append(PullRequestRecord(repo=repo, author=author, url=url))
+        record = build_pull_request_record(item)
+        if record is not None:
+            records.append(record)
     return records
+
+
+def build_pull_request_record(item: dict) -> PullRequestRecord | None:
+    repo = (item.get("repository") or {}).get("nameWithOwner")
+    author = (item.get("author") or {}).get("login")
+    url = item.get("url")
+    if not (repo and author and url):
+        return None
+    return PullRequestRecord(repo=repo, author=author, url=url)
 
 
 def filter_managed_pull_requests(records: list[PullRequestRecord], managed_paths: list[str]) -> list[PullRequestRecord]:

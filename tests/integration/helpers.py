@@ -74,3 +74,9 @@ def advance_remote(remote: Path, relative_path: str, content: str, message: str,
 
 def git_head(repo: Path) -> str:
     return run(["git", "rev-parse", "HEAD"], cwd=repo)
+
+
+def write_executable(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    path.chmod(0o755)

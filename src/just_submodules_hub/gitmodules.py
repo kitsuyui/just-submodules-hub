@@ -7,6 +7,8 @@ from .repo_paths import repo_display_name, repo_owner
 
 
 def parse_gitmodules_paths(text: str) -> list[str]:
+    if not text.strip():
+        return []
     parser = ConfigParser(interpolation=None)
     parser.read_string(text)
 

@@ -43,3 +43,7 @@ def test_find_submodules_with_marker(tmp_path: Path) -> None:
     assert find_submodules_with_marker("pyproject.toml", repo_root=tmp_path) == [
         "repo/github.com/acme/one"
     ]
+
+
+def test_parse_gitmodules_paths_returns_empty_for_blank_text() -> None:
+    assert parse_gitmodules_paths("") == []
