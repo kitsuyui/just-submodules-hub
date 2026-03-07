@@ -11,6 +11,7 @@ if [ "$#" -ne 0 ]; then
   exit 2
 fi
 
+# shellcheck disable=SC2016
 git submodule foreach --recursive --quiet '
   git ls-files | sed "s#^#$sm_path/#"
 ' \
