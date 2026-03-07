@@ -50,3 +50,6 @@ jobs:
 
       - name: Run tests
         run: just test
+
+      - name: Record coverage
+        run: just coverage-xml

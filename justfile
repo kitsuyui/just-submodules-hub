@@ -6,6 +6,9 @@ import "just/index.just"
 test:
   uv run pytest tests/unit tests/integration
 
+coverage-xml:
+  uv run pytest --cov=just_submodules_hub --cov-report=xml tests/unit tests/integration
+
 test-unit:
   uv run pytest tests/unit
 
