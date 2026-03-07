@@ -138,7 +138,7 @@ def local_head(repo_path: str) -> Tuple[str, str]:
     return branch, oid
 
 
-def build_sync_targets(paths: Iterable[str], prefilter: bool) -> Tuple[List[str], int]:
+def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> Tuple[List[str], int]:
     path_list = list(paths)
     if not prefilter:
         return path_list, 0
@@ -146,9 +146,12 @@ def build_sync_targets(paths: Iterable[str], prefilter: bool) -> Tuple[List[str]
     owners = sorted({repo_display_name(p).split("/", 1)[0] for p in path_list})
     heads: Dict[str, Tuple[str, str]] = {}
 
-    with tqdm(total=max(1, len(owners)), desc="graphql", unit="req") as bar:
-        for owner in owners:
-            heads.update(fetch_owner_default_heads(owner, bar))
+    if bar.total is None:
+        bar.total = 0
+    bar.total += len(owners)
+    bar.refresh()
+    for owner in owners:
+        heads.update(fetch_owner_default_heads(owner, bar))
 
     targets: List[str] = []
     skipped = 0
@@ -216,12 +219,12 @@ def sync_one(repo_path: str) -> SyncResult:
     )
 
 
-def print_result(result: SyncResult, verbose: bool) -> None:
+def print_result(result: SyncResult, verbose: bool) -> bool:
     name = repo_display_name(result.repo_path)
     if not result.switched and not result.updated:
         if verbose:
             print(f"{name}: up-to-date")
-        return
+        return False
 
     parts: List[str] = []
     if result.switched:
@@ -229,33 +232,40 @@ def print_result(result: SyncResult, verbose: bool) -> None:
     if result.updated:
         parts.append("updated-to:latest")
     print(f"{name}: {' '.join(parts)}")
+    return True
 
 
-def sync_all(paths: List[str], jobs: int, verbose: bool) -> int:
+def sync_all(paths: List[str], jobs: int, verbose: bool, bar: tqdm) -> Tuple[int, int]:
     failures: List[Tuple[str, str]] = []
     results: List[SyncResult] = []
 
+    if bar.total is None:
+        bar.total = 0
+    bar.total += len(paths)
+    bar.refresh()
+
     with ThreadPoolExecutor(max_workers=jobs) as pool:
         future_map = {pool.submit(sync_one, p): p for p in paths}
-        with tqdm(total=len(paths), desc="sync", unit="repo") as bar:
-            for fut in as_completed(future_map):
-                repo_path = future_map[fut]
-                try:
-                    results.append(fut.result())
-                except Exception as exc:
-                    failures.append((repo_path, str(exc)))
-                finally:
-                    bar.update(1)
+        for fut in as_completed(future_map):
+            repo_path = future_map[fut]
+            try:
+                results.append(fut.result())
+            except Exception as exc:
+                failures.append((repo_path, str(exc)))
+            finally:
+                bar.update(1)
 
+    changed_count = 0
     for result in sorted(results, key=lambda r: r.repo_path):
-        print_result(result, verbose)
+        if print_result(result, verbose):
+            changed_count += 1
 
     if failures:
         for repo_path, msg in failures:
             print(f"{repo_display_name(repo_path)}: {msg}", file=sys.stderr)
         print("One or more repositories failed to sync", file=sys.stderr)
-        return 1
-    return 0
+        return 1, changed_count
+    return 0, changed_count
 
 
 def main() -> int:
@@ -287,15 +297,16 @@ def main() -> int:
                 print("No submodule paths found in .gitmodules")
                 return 0
 
-            targets, skipped = build_sync_targets(paths, prefilter)
-            if skipped > 0:
-                print(
-                    f"Prefilter: skip {skipped}/{len(paths)} repositories already at default-branch HEAD"
-                )
-            if not targets:
-                print("No repositories require sync")
-                return 0
-            return sync_all(targets, jobs, verbose)
+            with tqdm(total=0, unit="step", leave=False, dynamic_ncols=True) as bar:
+                targets, skipped = build_sync_targets(paths, prefilter, bar)
+                if not targets:
+                    print("All submodules are up to date.")
+                    return 0
+                code, changed_count = sync_all(targets, jobs, verbose, bar)
+
+            if code == 0 and changed_count == 0 and not verbose:
+                print("All submodules are up to date.")
+            return code
 
         print(f"Unknown sync action: {action}", file=sys.stderr)
         return 2
