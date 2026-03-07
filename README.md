@@ -28,6 +28,12 @@ Typical commands provided by `just/repo.just` include:
 - `just sync-all-repo-default-branch`
 - `just commit-submodule-pointers`
 
+### Sync Options
+
+- `SYNC_VERBOSE=1`: show `up-to-date` lines for unchanged repositories
+- `SYNC_JOBS=<n>`: set parallel workers for `sync-all-repo-default-branch` (default: `4`)
+- `sync-all-repo-default-branch` shows a progress bar (`done/total` and latest repository) on stderr
+
 ## License Scope
 
 This repository is dedicated to the public domain under CC0-1.0.
