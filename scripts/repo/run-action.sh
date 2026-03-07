@@ -82,6 +82,7 @@ case "$action" in
     # Updating submodules can take time; enable debug env vars if needed.
     # export GIT_TRACE=1
     # export GIT_CURL_VERBOSE=1
+    # shellcheck disable=SC2016
     git submodule foreach --recursive 'echo "Updating $path"; git switch main && git pull origin main'
     git submodule update --remote --rebase --recursive --progress
     ;;

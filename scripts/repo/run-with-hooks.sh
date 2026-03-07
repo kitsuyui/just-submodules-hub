@@ -20,7 +20,7 @@ if has_recipe "$before_hook"; then
   just "$before_hook" "$@"
 fi
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 "$script_dir/run-action.sh" "$action" "$@"
 if has_recipe "$after_hook"; then
   just "$after_hook" "$@"
