@@ -75,7 +75,7 @@ case "$action" in
     else
       gh repo create "$repo" --public --add-readme
     fi
-    just add-repo "https://github.com/$repo"
+    just repo submodule add "https://github.com/$repo"
     ;;
 
   create-private-repo)
@@ -90,7 +90,7 @@ case "$action" in
     else
       gh repo create "$repo" --private --add-readme
     fi
-    just add-repo "https://github.com/$repo"
+    just repo submodule add "https://github.com/$repo"
     ;;
 
   sync-repo-default-branch)
@@ -223,7 +223,7 @@ EOF_PATHS
     command -v gh >/dev/null 2>&1 || { echo "gh command not found" >&2; exit 1; }
     for owner in $(printf '%s\n' "$owners" | tr ',' ' '); do
       [ -n "$owner" ] || continue
-      just list-github-repos-owner "$owner" "$visibility"
+      just github repos list-owner "$owner" "$visibility"
     done | awk -F'\t' '!seen[$1]++'
     ;;
 
@@ -241,8 +241,8 @@ EOF_PATHS
     public_file=$(mktemp)
     managed_file=$(mktemp)
     trap 'rm -f "$public_file" "$managed_file"' EXIT
-    just list-github-repos "$owners" "$visibility" | cut -f1 | sort > "$public_file"
-    just list-managed-repos | sort > "$managed_file"
+    just github repos list "$owners" "$visibility" | cut -f1 | sort > "$public_file"
+    just repo submodule list-managed | sort > "$managed_file"
     comm -23 "$public_file" "$managed_file"
     ;;
 

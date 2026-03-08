@@ -1,3 +1,2 @@
-import "repo.just"
-import "inventory.just"
-import "github.just"
+mod repo "repo/index.just"
+mod github "github/index.just"
