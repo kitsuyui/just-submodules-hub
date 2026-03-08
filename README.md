@@ -58,7 +58,7 @@ Typical commands provided by `just/repo.just` include:
 Additional shared modules include:
 
 - `just/inventory.just` for submodule inventory and cross-repository diagnostics
-- `just/github.just` for GitHub pull request queries scoped to managed repositories
+- `just/github.just` for GitHub pull request queries and default-branch ruleset primitives
 - `just/openers.just` for opening managed repositories in local tools
 
 The recommended entrypoint is:
@@ -84,6 +84,57 @@ just submodule-ignore-dirty-off
 ```
 
 These commands only update the parent repository's local `.git/config`.
+
+For one repository at a time, you can inspect or upsert the shared baseline ruleset on the default branch:
+
+```sh
+just default-branch-ruleset-status kitsuyui/just-submodules-hub
+just default-branch-ruleset-apply kitsuyui/just-submodules-hub
+just default-branch-ruleset-legacy-status kitsuyui/just-submodules-hub
+just default-branch-classic-protection-status kitsuyui/just-submodules-hub
+```
+
+The managed baseline currently enforces:
+
+- `pull_request`
+- `non_fast_forward`
+- `deletion`
+
+`default-branch-ruleset-status` prints JSON so you can inspect missing rule types and `pull_request` parameter drift before applying changes.
+
+If older rulesets such as `protect-main` remain, inspect them first:
+
+```sh
+just default-branch-ruleset-legacy-status kitsuyui/just-submodules-hub
+```
+
+This command reports which legacy rulesets are deletable. A legacy ruleset is only deletable when its rules are already covered by the remaining active rulesets. If it still carries uncovered rules such as `required_linear_history`, keep it and review it manually.
+
+To delete a redundant legacy ruleset by id or name:
+
+```sh
+just default-branch-ruleset-delete-if-redundant kitsuyui/just-submodules-hub protect-main
+```
+
+Classic branch protection can also be inspected and deleted conservatively:
+
+```sh
+just default-branch-classic-protection-status kitsuyui/just-submodules-hub
+just default-branch-classic-protection-delete-if-redundant kitsuyui/just-submodules-hub
+```
+
+The classic delete command only proceeds when the classic protection contains no extra settings outside the managed baseline. If classic protection still carries settings such as `required_status_checks`, it is reported for manual review and is not deleted automatically.
+
+For managed repositories in bulk, the shared workflow is split into four explicit phases:
+
+```sh
+just default-branch-baseline-status-all
+just default-branch-baseline-apply-all
+just default-branch-baseline-cleanup-rulesets-all
+just default-branch-baseline-cleanup-classic-all
+```
+
+These commands default to `public` repositories. Pass `private` or `all` explicitly when needed.
 
 ### Sync Options
 
