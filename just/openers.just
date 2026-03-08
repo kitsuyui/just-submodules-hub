@@ -1,9 +1,9 @@
-repo_hub_root := "repo/github.com/kitsuyui/just-submodules-hub"
+openers_repo_hub_root := "repo/github.com/kitsuyui/just-submodules-hub"
 
 # Open a managed repository in the selected tool.
 open-repo TOOL REPO:
   #!/bin/sh
-  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" open-repo "{{TOOL}}" "{{REPO}}"
+  "{{openers_repo_hub_root}}/scripts/repo/run-with-hooks.sh" open-repo "{{TOOL}}" "{{REPO}}"
 
 # Open a managed repository in Codex.
 open-repo-in-codex REPO:
