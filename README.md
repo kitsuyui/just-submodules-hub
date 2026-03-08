@@ -34,7 +34,7 @@ On macOS, install them with Homebrew:
 brew install just git uv
 ```
 
-If you use GitHub-related commands such as `create-public-repo`, `create-private-repo`, `list-github-repos`, or `list-managed-prs`, install the GitHub CLI as well:
+If you use GitHub-related commands such as `just github repos create-public`, `just github repos create-private`, `just github repos list`, or `just github prs list`, install the GitHub CLI as well:
 
 ```sh
 brew install gh
@@ -44,22 +44,42 @@ Make sure `gh auth login` has been completed before using those commands.
 
 ## Core Commands
 
-Typical commands provided by `just/repo.just` include:
+Typical commands provided by the `repo` namespace include:
 
-- `just add-repo <owner>/<repo>`
-- `just remove-repo <owner>/<repo>`
-- `just sync-repo-default-branch <owner>/<repo>`
-- `just sync-all-repo-default-branch`
-- `just commit-submodule-pointers`
-- `just submodule-ignore-dirty-on`
-- `just submodule-ignore-dirty-off`
-- `just submodule-ignore-dirty-status`
+- `just repo submodule add <owner>/<repo>`
+- `just repo submodule remove <owner>/<repo>`
+- `just repo submodule sync-default-branch <owner>/<repo>`
+- `just repo submodule sync-all-default-branch`
+- `just repo submodule commit-pointers`
+- `just repo submodule ignore-dirty-on`
+- `just repo submodule ignore-dirty-off`
+- `just repo submodule ignore-dirty-status`
+- `just repo catalog python`
+- `just repo catalog duplicate-filenames`
+- `just repo open codex <owner>/<repo>`
 
 Additional shared modules include:
 
-- `just/inventory.just` for submodule inventory and cross-repository diagnostics
-- `just/github.just` for GitHub pull request queries and default-branch ruleset primitives
-- `just/openers.just` for opening managed repositories in local tools
+- `just/repo/catalog.just` for submodule cataloging and cross-repository diagnostics
+- `just/repo/open.just` for opening managed repositories in local tools
+- `just/github/index.just` for GitHub repository, pull request, and branch-protection primitives
+
+GitHub-related recipes are exposed through the `github` module namespace:
+
+```sh
+just github repos list
+just github prs list
+just github branch-protection status-all
+```
+
+Repository-management recipes are exposed through the `repo` namespace:
+
+```sh
+just repo submodule list-managed
+just repo submodule sync-all-default-branch
+just repo catalog python
+just repo open codex kitsuyui/just-submodules-hub
+```
 
 The recommended entrypoint is:
 
@@ -67,31 +87,30 @@ The recommended entrypoint is:
 import? "repo/github.com/kitsuyui/just-submodules-hub/just/index.just"
 ```
 
-If you want local opener commands, import the optional module explicitly:
-
-```just
-import? "repo/github.com/kitsuyui/just-submodules-hub/just/openers.just"
-```
-
-This keeps app-specific launchers opt-in while still sharing a common `open-repo <tool> <owner>/<repo>` primitive.
-
 For local-only submodule worktree noise control, you can toggle `ignore=dirty` for every managed submodule without editing `.gitmodules`:
 
 ```sh
-just submodule-ignore-dirty-on
-just submodule-ignore-dirty-status
-just submodule-ignore-dirty-off
+just repo submodule ignore-dirty-on
+just repo submodule ignore-dirty-status
+just repo submodule ignore-dirty-off
 ```
 
 These commands only update the parent repository's local `.git/config`.
 
-For one repository at a time, you can inspect or upsert the shared baseline ruleset on the default branch:
+For GitHub repository creation and listing:
 
 ```sh
-just default-branch-ruleset-status kitsuyui/just-submodules-hub
-just default-branch-ruleset-apply kitsuyui/just-submodules-hub
-just default-branch-ruleset-legacy-status kitsuyui/just-submodules-hub
-just default-branch-classic-protection-status kitsuyui/just-submodules-hub
+just github repos create-public kitsuyui/new-repo
+just github repos list
+```
+
+For one repository at a time, you can inspect or upsert the shared baseline branch protection on the default branch:
+
+```sh
+just github branch-protection status kitsuyui/just-submodules-hub
+just github branch-protection apply kitsuyui/just-submodules-hub
+just github branch-protection legacy-status kitsuyui/just-submodules-hub
+just github branch-protection classic-status kitsuyui/just-submodules-hub
 ```
 
 The managed baseline currently enforces:
@@ -100,12 +119,12 @@ The managed baseline currently enforces:
 - `non_fast_forward`
 - `deletion`
 
-`default-branch-ruleset-status` prints JSON so you can inspect missing rule types and `pull_request` parameter drift before applying changes.
+`just github branch-protection status` prints JSON so you can inspect missing rule types and `pull_request` parameter drift before applying changes.
 
 If older rulesets such as `protect-main` remain, inspect them first:
 
 ```sh
-just default-branch-ruleset-legacy-status kitsuyui/just-submodules-hub
+just github branch-protection legacy-status kitsuyui/just-submodules-hub
 ```
 
 This command reports which legacy rulesets are deletable. A legacy ruleset is only deletable when its rules are already covered by the remaining active rulesets. If it still carries uncovered rules such as `required_linear_history`, keep it and review it manually.
@@ -113,14 +132,14 @@ This command reports which legacy rulesets are deletable. A legacy ruleset is on
 To delete a redundant legacy ruleset by id or name:
 
 ```sh
-just default-branch-ruleset-delete-if-redundant kitsuyui/just-submodules-hub protect-main
+just github branch-protection cleanup-ruleset kitsuyui/just-submodules-hub protect-main
 ```
 
 Classic branch protection can also be inspected and deleted conservatively:
 
 ```sh
-just default-branch-classic-protection-status kitsuyui/just-submodules-hub
-just default-branch-classic-protection-delete-if-redundant kitsuyui/just-submodules-hub
+just github branch-protection classic-status kitsuyui/just-submodules-hub
+just github branch-protection cleanup-classic kitsuyui/just-submodules-hub
 ```
 
 The classic delete command only proceeds when the classic protection contains no extra settings outside the managed baseline. If classic protection still carries settings such as `required_status_checks`, it is reported for manual review and is not deleted automatically.
@@ -128,10 +147,10 @@ The classic delete command only proceeds when the classic protection contains no
 For managed repositories in bulk, the shared workflow is split into four explicit phases:
 
 ```sh
-just default-branch-baseline-status-all
-just default-branch-baseline-apply-all
-just default-branch-baseline-cleanup-rulesets-all
-just default-branch-baseline-cleanup-classic-all
+just github branch-protection status-all
+just github branch-protection apply-all
+just github branch-protection cleanup-rulesets-all
+just github branch-protection cleanup-classic-all
 ```
 
 These commands default to `public` repositories. Pass `private` or `all` explicitly when needed.
@@ -141,7 +160,7 @@ These commands default to `public` repositories. Pass `private` or `all` explici
 - `scripts/repo/run-action.sh sync-repo-default-branch <owner>/<repo> --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --jobs 8 --no-prefilter --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --final-submodule-update`
-- `sync-all-repo-default-branch` uses Python + `tqdm` with one transient progress bar
+- `repo submodule sync-all-default-branch` uses Python + `tqdm` with one transient progress bar
 
 ## License Scope
 

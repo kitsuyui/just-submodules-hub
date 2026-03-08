@@ -20,7 +20,7 @@ jobs:
 
       - name: Smoke test (dry-run)
         run: |
-          just --dry-run add-repo kitsuyui/example
+          just --dry-run repo submodule add kitsuyui/example
 
       - name: Lint shell scripts
         run: shellcheck scripts/repo/*.sh scripts/submodules/*.sh scripts/github/*.sh
