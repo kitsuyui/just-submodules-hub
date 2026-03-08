@@ -56,12 +56,21 @@ Additional shared modules include:
 
 - `just/inventory.just` for submodule inventory and cross-repository diagnostics
 - `just/github.just` for GitHub pull request queries scoped to managed repositories
+- `just/openers.just` for opening managed repositories in local tools
 
 The recommended entrypoint is:
 
 ```just
 import? "repo/github.com/kitsuyui/just-submodules-hub/just/index.just"
 ```
+
+If you want local opener commands, import the optional module explicitly:
+
+```just
+import? "repo/github.com/kitsuyui/just-submodules-hub/just/openers.just"
+```
+
+This keeps app-specific launchers opt-in while still sharing a common `open-repo <tool> <owner>/<repo>` primitive.
 
 ### Sync Options
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 
 REPO_PREFIX = "repo/github.com/"
 
@@ -30,3 +32,10 @@ def repo_display_name(repo_path: str) -> str:
 
 def repo_owner(repo_path: str) -> str:
     return repo_display_name(repo_path).split("/", 1)[0]
+
+
+def repo_abspath(value: str, hub_root: Path) -> Path:
+    repo_path = hub_root / normalize_repo_input(value)
+    if not repo_path.exists():
+        raise FileNotFoundError(f"repository path not found: {repo_path}")
+    return repo_path.resolve()
