@@ -9,6 +9,7 @@ fi
 shift
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 sync_script="$script_dir/sync-default-branch.sh"
+open_repo_script="$script_dir/open-repo.sh"
 
 repo_input_to_path() {
   input="$1"
@@ -128,6 +129,16 @@ EOF_PATHS
       exit 0
     fi
     git commit -m "$message"
+    ;;
+
+  open-repo)
+    tool="${1:-}"
+    repo_input="${2:-}"
+    if [ -z "$tool" ] || [ -z "$repo_input" ]; then
+      echo "TOOL and REPO are required" >&2
+      exit 2
+    fi
+    exec "$open_repo_script" "$tool" "$repo_input"
     ;;
 
   every-repo)
