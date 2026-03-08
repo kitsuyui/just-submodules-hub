@@ -54,7 +54,7 @@ def test_build_sync_targets_skips_up_to_date_repositories(monkeypatch) -> None:
 
 
 def test_extract_default_head_ignores_incomplete_nodes() -> None:
-    assert sync.extract_default_head({"name": "demo"}, "kitsuyui") is None
+    assert sync.extract_default_head({"name": "sample-repo"}, "kitsuyui") is None
 
 
 def test_should_sync_target_handles_missing_remote_head() -> None:
@@ -69,40 +69,40 @@ def test_parse_head_branch_line_returns_none_when_missing() -> None:
 
 def test_render_sync_result_variants() -> None:
     changed = sync.SyncResult(
-        repo_path="repo/github.com/kitsuyui/demo",
+        repo_path="repo/github.com/kitsuyui/sample-repo",
         default_branch="main",
         switched=True,
         updated=True,
     )
-    assert sync.render_sync_result("kitsuyui/demo", changed, verbose=False) == (
-        "kitsuyui/demo: switched-to:main updated-to:latest"
+    assert sync.render_sync_result("kitsuyui/sample-repo", changed, verbose=False) == (
+        "kitsuyui/sample-repo: switched-to:main updated-to:latest"
     )
 
     skipped = sync.SyncResult(
-        repo_path="repo/github.com/kitsuyui/demo",
+        repo_path="repo/github.com/kitsuyui/sample-repo",
         default_branch="DETACHED",
         switched=False,
         updated=False,
         skipped=True,
         skip_reason="dirty working tree",
     )
-    assert sync.render_sync_result("kitsuyui/demo", skipped, verbose=False) == (
-        "kitsuyui/demo: skipped (dirty working tree)"
+    assert sync.render_sync_result("kitsuyui/sample-repo", skipped, verbose=False) == (
+        "kitsuyui/sample-repo: skipped (dirty working tree)"
     )
 
     unchanged = sync.SyncResult(
-        repo_path="repo/github.com/kitsuyui/demo",
+        repo_path="repo/github.com/kitsuyui/sample-repo",
         default_branch="main",
         switched=False,
         updated=False,
     )
-    assert sync.render_sync_result("kitsuyui/demo", unchanged, verbose=False) is None
-    assert sync.render_sync_result("kitsuyui/demo", unchanged, verbose=True) == "kitsuyui/demo: up-to-date"
+    assert sync.render_sync_result("kitsuyui/sample-repo", unchanged, verbose=False) is None
+    assert sync.render_sync_result("kitsuyui/sample-repo", unchanged, verbose=True) == "kitsuyui/sample-repo: up-to-date"
 
 
 def test_owner_prefilter_total() -> None:
     paths = [
-        "repo/github.com/kitsuyui/demo",
+        "repo/github.com/kitsuyui/sample-repo",
         "repo/github.com/kitsuyui/other",
         "repo/github.com/gitignore-in/site",
     ]
@@ -124,12 +124,12 @@ def test_positive_int_rejects_invalid_values() -> None:
 def test_parse_repo_paths_reads_gitmodules(tmp_path) -> None:
     (tmp_path / ".gitmodules").write_text(
         """
-[submodule "repo/github.com/kitsuyui/demo"]
-    path = repo/github.com/kitsuyui/demo
+[submodule "repo/github.com/kitsuyui/sample-repo"]
+    path = repo/github.com/kitsuyui/sample-repo
 """.strip(),
         encoding="utf-8",
     )
-    assert sync.parse_repo_paths(tmp_path) == ["repo/github.com/kitsuyui/demo"]
+    assert sync.parse_repo_paths(tmp_path) == ["repo/github.com/kitsuyui/sample-repo"]
 
 
 def test_resolve_default_branch_prefers_symbolic_ref(monkeypatch) -> None:
@@ -139,7 +139,7 @@ def test_resolve_default_branch_prefers_symbolic_ref(monkeypatch) -> None:
         raise AssertionError(f"unexpected command: {cmd}")
 
     monkeypatch.setattr(sync, "run", fake_run)
-    assert sync.resolve_default_branch("repo/github.com/kitsuyui/demo") == "main"
+    assert sync.resolve_default_branch("repo/github.com/kitsuyui/sample-repo") == "main"
 
 
 def test_resolve_default_branch_falls_back_to_remote_show(monkeypatch) -> None:
@@ -154,7 +154,7 @@ def test_resolve_default_branch_falls_back_to_remote_show(monkeypatch) -> None:
         raise AssertionError(f"unexpected command: {cmd}")
 
     monkeypatch.setattr(sync, "run", fake_run)
-    assert sync.resolve_default_branch("repo/github.com/kitsuyui/demo") == "trunk"
+    assert sync.resolve_default_branch("repo/github.com/kitsuyui/sample-repo") == "trunk"
 
 
 def test_main_reports_when_no_submodules(monkeypatch, capsys) -> None:
@@ -172,7 +172,7 @@ def test_fetch_owner_default_heads_handles_pagination(monkeypatch) -> None:
                 "data": {
                     "repositoryOwner": {
                         "repositories": {
-                            "nodes": [{"name": "demo", "defaultBranchRef": {"name": "main", "target": {"oid": "aaa"}}}],
+                            "nodes": [{"name": "sample-repo", "defaultBranchRef": {"name": "main", "target": {"oid": "aaa"}}}],
                             "pageInfo": {"hasNextPage": True, "endCursor": "cursor-1"},
                         }
                     }
@@ -182,7 +182,7 @@ def test_fetch_owner_default_heads_handles_pagination(monkeypatch) -> None:
                 "data": {
                     "repositoryOwner": {
                         "repositories": {
-                            "nodes": [{"name": "demo2", "defaultBranchRef": {"name": "trunk", "target": {"oid": "bbb"}}}],
+                            "nodes": [{"name": "sample-repo-2", "defaultBranchRef": {"name": "trunk", "target": {"oid": "bbb"}}}],
                             "pageInfo": {"hasNextPage": False, "endCursor": None},
                         }
                     }
@@ -192,7 +192,7 @@ def test_fetch_owner_default_heads_handles_pagination(monkeypatch) -> None:
     )
     monkeypatch.setattr(sync, "gh_graphql", lambda owner, cursor: next(responses))
     heads = sync.fetch_owner_default_heads("kitsuyui", bar)
-    assert heads == {"kitsuyui/demo": ("main", "aaa"), "kitsuyui/demo2": ("trunk", "bbb")}
+    assert heads == {"kitsuyui/sample-repo": ("main", "aaa"), "kitsuyui/sample-repo-2": ("trunk", "bbb")}
     assert bar.updated == 2
 
 
@@ -240,7 +240,7 @@ def test_local_head_returns_detached_when_symbolic_ref_fails(monkeypatch) -> Non
         raise AssertionError(f"unexpected command: {cmd}")
 
     monkeypatch.setattr(sync, "run", fake_run)
-    assert sync.local_head("repo/github.com/kitsuyui/demo") == ("DETACHED", "abc123")
+    assert sync.local_head("repo/github.com/kitsuyui/sample-repo") == ("DETACHED", "abc123")
 
 
 def test_sync_one_rejects_missing_repository(tmp_path) -> None:
@@ -310,13 +310,13 @@ def test_handle_one_action(monkeypatch) -> None:
         lambda repo_path: sync.SyncResult(repo_path=repo_path, default_branch="main", switched=False, updated=False),
     )
     monkeypatch.setattr(sync, "print_result", lambda result, verbose: calls.append((result.repo_path, verbose)) or False)
-    args = type("Args", (), {"repo_path": "repo/github.com/kitsuyui/demo", "verbose": True})()
+    args = type("Args", (), {"repo_path": "repo/github.com/kitsuyui/sample-repo", "verbose": True})()
     assert sync.handle_one_action(args) == 0
-    assert calls == [("repo/github.com/kitsuyui/demo", True)]
+    assert calls == [("repo/github.com/kitsuyui/sample-repo", True)]
 
 
 def test_handle_all_action_reports_all_up_to_date(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/demo"])
+    monkeypatch.setattr(sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"])
     monkeypatch.setattr(sync, "build_sync_targets", lambda paths, prefilter, bar: [])
     monkeypatch.setattr(sync, "tqdm", lambda **kwargs: DummyBar())
     args = type("Args", (), {"prefilter": True, "jobs": 1, "verbose": False})()
@@ -325,7 +325,7 @@ def test_handle_all_action_reports_all_up_to_date(monkeypatch, capsys) -> None:
 
 
 def test_handle_all_action_runs_sync_all(monkeypatch) -> None:
-    monkeypatch.setattr(sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/demo"])
+    monkeypatch.setattr(sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"])
     monkeypatch.setattr(sync, "build_sync_targets", lambda paths, prefilter, bar: list(paths))
     monkeypatch.setattr(sync, "sync_all", lambda paths, jobs, verbose, bar: (0, 1))
     monkeypatch.setattr(sync, "tqdm", lambda **kwargs: DummyBar())
@@ -334,7 +334,7 @@ def test_handle_all_action_runs_sync_all(monkeypatch) -> None:
 
 
 def test_handle_all_action_prints_when_sync_all_reports_no_changes(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/demo"])
+    monkeypatch.setattr(sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"])
     monkeypatch.setattr(sync, "build_sync_targets", lambda paths, prefilter, bar: list(paths))
     monkeypatch.setattr(sync, "sync_all", lambda paths, jobs, verbose, bar: (0, 0))
     monkeypatch.setattr(sync, "tqdm", lambda **kwargs: DummyBar())
@@ -344,7 +344,7 @@ def test_handle_all_action_prints_when_sync_all_reports_no_changes(monkeypatch, 
 
 
 def test_main_handles_runtime_error(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(sync.argparse.ArgumentParser, "parse_args", lambda self: type("Args", (), {"action": "one", "repo_path": "repo/github.com/kitsuyui/demo", "verbose": False})())
+    monkeypatch.setattr(sync.argparse.ArgumentParser, "parse_args", lambda self: type("Args", (), {"action": "one", "repo_path": "repo/github.com/kitsuyui/sample-repo", "verbose": False})())
     monkeypatch.setattr(sync, "handle_one_action", lambda args: (_ for _ in ()).throw(RuntimeError("boom")))
     assert sync.main() == 1
     assert "boom" in capsys.readouterr().err

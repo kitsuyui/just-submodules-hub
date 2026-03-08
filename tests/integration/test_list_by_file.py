@@ -13,18 +13,18 @@ SCRIPT = PROJECT_ROOT / "scripts/submodules/list-by-file.sh"
 def test_list_by_file_script_lists_matching_submodules(tmp_path: Path, hub_repo: Path) -> None:
     python_remote = create_remote(
         tmp_path,
-        "acme",
+        "example-owner",
         "python-lib",
         {"pyproject.toml": "[project]\nname='python-lib'\n"},
     )
     js_remote = create_remote(
         tmp_path,
-        "acme",
+        "example-owner",
         "js-lib",
         {"package.json": '{"name":"js-lib"}\n'},
     )
-    add_submodule(hub_repo, python_remote, "repo/github.com/acme/python-lib")
-    add_submodule(hub_repo, js_remote, "repo/github.com/acme/js-lib")
+    add_submodule(hub_repo, python_remote, "repo/github.com/example-owner/python-lib")
+    add_submodule(hub_repo, js_remote, "repo/github.com/example-owner/js-lib")
 
     proc = subprocess.run(
         [str(SCRIPT), "pyproject.toml"],
@@ -35,4 +35,4 @@ def test_list_by_file_script_lists_matching_submodules(tmp_path: Path, hub_repo:
     )
 
     assert proc.returncode == 0, proc.stderr
-    assert proc.stdout.splitlines() == ["repo/github.com/acme/python-lib"]
+    assert proc.stdout.splitlines() == ["repo/github.com/example-owner/python-lib"]

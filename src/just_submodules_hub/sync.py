@@ -11,7 +11,7 @@ from typing import Dict, Iterable, List, Tuple
 from tqdm import tqdm
 
 from .gitmodules import read_gitmodules_paths
-from .repo_paths import repo_display_name, repo_owner
+from .repo_paths import repo_display_name, repo_owner, resolve_repo_input
 from .shell import run
 
 
@@ -301,7 +301,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="action", required=True)
 
     one = subparsers.add_parser("one", help="sync one repository")
-    one.add_argument("repo_path", help="repository path (e.g. repo/github.com/owner/repo)")
+    one.add_argument("repo_path", help="repository name or path (e.g. example, owner/repo, or repo/github.com/owner/repo)")
     one.add_argument("--verbose", action="store_true", help="show up-to-date repositories")
 
     all_cmd = subparsers.add_parser("all", help="sync all repositories from .gitmodules")
@@ -324,7 +324,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def handle_one_action(args: argparse.Namespace) -> int:
-    result = sync_one(args.repo_path)
+    result = sync_one(resolve_repo_input(args.repo_path, Path.cwd()))
     print_result(result, args.verbose)
     return 0
 

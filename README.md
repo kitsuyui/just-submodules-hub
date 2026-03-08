@@ -54,7 +54,7 @@ Examples:
 ```sh
 just repo submodule sync-all-default-branch
 just repo catalog python
-just repo open codex kitsuyui/just-submodules-hub
+just repo open codex just-submodules-hub
 just github repos list
 just github prs summary
 just github branch-protection status-all
@@ -75,7 +75,7 @@ The namespace guides in [`docs/`](docs/README.md) are the canonical reference. K
 
 ### Sync Options
 
-- `scripts/repo/run-action.sh sync-repo-default-branch <owner>/<repo> --verbose`
+- `scripts/repo/run-action.sh sync-repo-default-branch <repo|owner/repo|repo/github.com/owner/repo> --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --jobs 8 --no-prefilter --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --final-submodule-update`
 - `repo submodule sync-all-default-branch` uses Python + `tqdm` with one transient progress bar
