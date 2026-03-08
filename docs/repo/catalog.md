@@ -2,7 +2,11 @@
 
 Use `repo catalog` to classify or inspect the managed repositories that already exist in the hub.
 
-## Commands
+## Intent
+
+Use these commands when you want a quick local catalog of managed repositories by language marker or filename pattern.
+
+## Examples
 
 ```sh
 just repo catalog python

@@ -2,7 +2,11 @@
 
 Use `repo open` to resolve a managed repository path and open it in a local tool.
 
-## Commands
+## Intent
+
+Use these commands when you want to jump from an `owner/repo` slug to the local checkout in your preferred tool.
+
+## Examples
 
 ```sh
 just repo open tool codex <owner>/<repo>

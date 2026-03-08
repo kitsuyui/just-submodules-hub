@@ -2,7 +2,13 @@
 
 Use `github branch-protection` to inspect or apply the shared default-branch protection baseline.
 
-## Single Repository
+## Intent
+
+Use these commands when you want to inspect, apply, or clean up the shared default-branch protection policy on GitHub.
+
+## Examples
+
+### Single Repository
 
 ```sh
 just github branch-protection status kitsuyui/just-submodules-hub
@@ -13,7 +19,7 @@ just github branch-protection classic-status kitsuyui/just-submodules-hub
 just github branch-protection cleanup-classic kitsuyui/just-submodules-hub
 ```
 
-## Bulk Operations
+### Bulk Operations
 
 ```sh
 just github branch-protection status-all

@@ -2,7 +2,11 @@
 
 GitHub repository creation and listing belong under `github repos`.
 
-## Commands
+## Intent
+
+Use these commands when you want to list repositories on GitHub or create a new repository before adding it to the hub.
+
+## Examples
 
 ```sh
 just github repos list

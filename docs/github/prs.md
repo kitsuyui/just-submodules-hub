@@ -2,7 +2,11 @@
 
 Use `github prs` to inspect pull requests across managed repositories.
 
-## Commands
+## Intent
+
+Use these commands when you want a quick view of pull request activity across the repositories managed by the hub.
+
+## Examples
 
 ```sh
 just github prs list

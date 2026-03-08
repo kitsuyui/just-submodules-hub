@@ -2,7 +2,11 @@
 
 Local submodule operations belong under the `repo submodule` namespace.
 
-## Typical Commands
+## Intent
+
+Use these commands when you want to add, remove, sync, or inspect managed submodules from the parent hub repository.
+
+## Examples
 
 ```sh
 just repo submodule add <owner>/<repo>
