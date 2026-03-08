@@ -20,8 +20,8 @@ def test_imported_repo_submodule_list_managed_uses_consumer_invocation_directory
     init_hub(hub_repo)
     write_consumer_justfile(hub_repo)
 
-    remote = create_remote(tmp_path, "acme", "managed", {"README.md": "hello\n"})
-    add_submodule(hub_repo, remote, "repo/github.com/acme/managed")
+    remote = create_remote(tmp_path, "example-owner", "managed", {"README.md": "hello\n"})
+    add_submodule(hub_repo, remote, "repo/github.com/example-owner/managed")
 
     proc = subprocess.run(
         ["just", "repo", "submodule", "list-managed"],
@@ -32,7 +32,7 @@ def test_imported_repo_submodule_list_managed_uses_consumer_invocation_directory
     )
 
     assert proc.returncode == 0, proc.stderr
-    assert proc.stdout.splitlines() == ["acme/managed"]
+    assert proc.stdout.splitlines() == ["example-owner/managed"]
 
 
 def test_imported_repo_submodule_commit_pointers_uses_consumer_invocation_directory(tmp_path: Path) -> None:
@@ -40,12 +40,12 @@ def test_imported_repo_submodule_commit_pointers_uses_consumer_invocation_direct
     init_hub(hub_repo)
     write_consumer_justfile(hub_repo)
 
-    remote = create_remote(tmp_path, "acme", "pointers", {"README.md": "before\n"})
-    add_submodule(hub_repo, remote, "repo/github.com/acme/pointers")
+    remote = create_remote(tmp_path, "example-owner", "pointers", {"README.md": "before\n"})
+    add_submodule(hub_repo, remote, "repo/github.com/example-owner/pointers")
     advance_remote(remote, "README.md", "after\n", "Update remote")
 
     sync_proc = subprocess.run(
-        [str(SYNC_SCRIPT), "one", "repo/github.com/acme/pointers"],
+        [str(SYNC_SCRIPT), "one", "repo/github.com/example-owner/pointers"],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,

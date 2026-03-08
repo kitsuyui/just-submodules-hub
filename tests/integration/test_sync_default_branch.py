@@ -13,15 +13,15 @@ SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
 def test_sync_default_branch_updates_submodule_to_latest(tmp_path: Path, hub_repo: Path) -> None:
     remote = create_remote(
         tmp_path,
-        "acme",
+        "example-owner",
         "sync-me",
         {"README.md": "hello\n"},
     )
-    add_submodule(hub_repo, remote, "repo/github.com/acme/sync-me")
+    add_submodule(hub_repo, remote, "repo/github.com/example-owner/sync-me")
     latest_head = advance_remote(remote, "README.md", "hello again\n", "Update README")
 
     proc = subprocess.run(
-        [str(SCRIPT), "one", "repo/github.com/acme/sync-me"],
+        [str(SCRIPT), "one", "repo/github.com/example-owner/sync-me"],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
@@ -29,17 +29,17 @@ def test_sync_default_branch_updates_submodule_to_latest(tmp_path: Path, hub_rep
     )
 
     assert proc.returncode == 0, proc.stderr
-    assert git_head(hub_repo / "repo/github.com/acme/sync-me") == latest_head
+    assert git_head(hub_repo / "repo/github.com/example-owner/sync-me") == latest_head
 
 
 def test_sync_default_branch_resolves_unique_short_name(tmp_path: Path, hub_repo: Path) -> None:
     remote = create_remote(
         tmp_path,
-        "acme",
+        "example-owner",
         "sync-me",
         {"README.md": "hello\n"},
     )
-    add_submodule(hub_repo, remote, "repo/github.com/acme/sync-me")
+    add_submodule(hub_repo, remote, "repo/github.com/example-owner/sync-me")
     latest_head = advance_remote(remote, "README.md", "hello again\n", "Update README")
 
     proc = subprocess.run(
@@ -51,4 +51,4 @@ def test_sync_default_branch_resolves_unique_short_name(tmp_path: Path, hub_repo
     )
 
     assert proc.returncode == 0, proc.stderr
-    assert git_head(hub_repo / "repo/github.com/acme/sync-me") == latest_head
+    assert git_head(hub_repo / "repo/github.com/example-owner/sync-me") == latest_head

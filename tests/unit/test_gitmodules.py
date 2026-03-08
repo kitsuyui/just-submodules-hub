@@ -29,19 +29,19 @@ def test_parse_gitmodules_paths() -> None:
 def test_find_submodules_with_marker(tmp_path: Path) -> None:
     (tmp_path / ".gitmodules").write_text(
         """
-[submodule "repo/github.com/acme/one"]
-    path = repo/github.com/acme/one
-[submodule "repo/github.com/acme/two"]
-    path = repo/github.com/acme/two
+[submodule "repo/github.com/example-owner/one"]
+    path = repo/github.com/example-owner/one
+[submodule "repo/github.com/example-owner/two"]
+    path = repo/github.com/example-owner/two
 """.strip(),
         encoding="utf-8",
     )
-    (tmp_path / "repo/github.com/acme/one").mkdir(parents=True)
-    (tmp_path / "repo/github.com/acme/two").mkdir(parents=True)
-    (tmp_path / "repo/github.com/acme/one/pyproject.toml").write_text("[project]\nname='one'\n", encoding="utf-8")
+    (tmp_path / "repo/github.com/example-owner/one").mkdir(parents=True)
+    (tmp_path / "repo/github.com/example-owner/two").mkdir(parents=True)
+    (tmp_path / "repo/github.com/example-owner/one/pyproject.toml").write_text("[project]\nname='one'\n", encoding="utf-8")
 
     assert find_submodules_with_marker("pyproject.toml", repo_root=tmp_path) == [
-        "repo/github.com/acme/one"
+        "repo/github.com/example-owner/one"
     ]
 
 

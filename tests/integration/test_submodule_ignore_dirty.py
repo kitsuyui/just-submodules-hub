@@ -13,12 +13,12 @@ ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 def test_submodule_ignore_dirty_toggle_updates_local_config(tmp_path: Path, hub_repo: Path) -> None:
     remote = create_remote(
         tmp_path,
-        "acme",
+        "example-owner",
         "ignore-me",
         {"README.md": "hello\n"},
     )
-    submodule_path = "repo/github.com/acme/ignore-me"
-    section = "submodule.repo/github.com/acme/ignore-me"
+    submodule_path = "repo/github.com/example-owner/ignore-me"
+    section = "submodule.repo/github.com/example-owner/ignore-me"
     add_submodule(hub_repo, remote, submodule_path)
 
     on_proc = subprocess.run(

@@ -12,7 +12,7 @@ ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
 def test_open_repo_dispatches_to_code_for_vscode(tmp_path: Path, hub_repo: Path) -> None:
-    target_repo = hub_repo / "repo/github.com/acme/example"
+    target_repo = hub_repo / "repo/github.com/example-owner/example"
     target_repo.mkdir(parents=True)
     bin_dir = tmp_path / "bin"
     log_file = tmp_path / "open.log"
@@ -22,7 +22,7 @@ def test_open_repo_dispatches_to_code_for_vscode(tmp_path: Path, hub_repo: Path)
     )
 
     proc = subprocess.run(
-        [str(ACTION_SCRIPT), "open-repo", "vscode", "acme/example"],
+        [str(ACTION_SCRIPT), "open-repo", "vscode", "example-owner/example"],
         cwd=str(hub_repo),
         env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "OPEN_LOG": str(log_file)},
         text=True,
@@ -35,7 +35,7 @@ def test_open_repo_dispatches_to_code_for_vscode(tmp_path: Path, hub_repo: Path)
 
 
 def test_open_repo_resolves_unique_short_name(tmp_path: Path, hub_repo: Path) -> None:
-    target_repo = hub_repo / "repo/github.com/acme/example"
+    target_repo = hub_repo / "repo/github.com/example-owner/example"
     target_repo.mkdir(parents=True)
     bin_dir = tmp_path / "bin"
     log_file = tmp_path / "open.log"
@@ -58,7 +58,7 @@ def test_open_repo_resolves_unique_short_name(tmp_path: Path, hub_repo: Path) ->
 
 
 def test_open_repo_dispatches_to_open_for_codex(tmp_path: Path, hub_repo: Path) -> None:
-    target_repo = hub_repo / "repo/github.com/acme/example"
+    target_repo = hub_repo / "repo/github.com/example-owner/example"
     target_repo.mkdir(parents=True)
     bin_dir = tmp_path / "bin"
     log_file = tmp_path / "open.log"
@@ -68,7 +68,7 @@ def test_open_repo_dispatches_to_open_for_codex(tmp_path: Path, hub_repo: Path) 
     )
 
     proc = subprocess.run(
-        [str(ACTION_SCRIPT), "open-repo", "codex", "repo/github.com/acme/example"],
+        [str(ACTION_SCRIPT), "open-repo", "codex", "repo/github.com/example-owner/example"],
         cwd=str(hub_repo),
         env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "OPEN_LOG": str(log_file)},
         text=True,

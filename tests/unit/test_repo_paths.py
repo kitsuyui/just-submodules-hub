@@ -49,15 +49,15 @@ def test_managed_repo_paths_reads_gitmodules(tmp_path: Path) -> None:
         """
 [submodule "repo/github.com/kitsuyui/example"]
     path = repo/github.com/kitsuyui/example
-[submodule "repo/github.com/acme/demo"]
-    path = repo/github.com/acme/demo
+[submodule "repo/github.com/example-owner/sample-repo"]
+    path = repo/github.com/example-owner/sample-repo
 """.strip()
         + "\n",
         encoding="utf-8",
     )
 
     assert managed_repo_paths(tmp_path) == [
-        "repo/github.com/acme/demo",
+        "repo/github.com/example-owner/sample-repo",
         "repo/github.com/kitsuyui/example",
     ]
 
@@ -71,7 +71,7 @@ def test_resolve_repo_input_accepts_short_name_when_unique(tmp_path: Path) -> No
 
 def test_resolve_repo_input_rejects_ambiguous_short_name(tmp_path: Path) -> None:
     (tmp_path / "repo/github.com/kitsuyui/example").mkdir(parents=True)
-    (tmp_path / "repo/github.com/acme/example").mkdir(parents=True)
+    (tmp_path / "repo/github.com/example-owner/example").mkdir(parents=True)
 
     with pytest.raises(ValueError, match="ambiguous"):
         resolve_repo_input("example", tmp_path)
