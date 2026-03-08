@@ -35,6 +35,21 @@ commit-submodule-pointers MESSAGE="Update submodule pointers":
   #!/bin/sh
   "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" commit-submodule-pointers "{{MESSAGE}}"
 
+# Enable local ignore=dirty for all managed submodules.
+submodule-ignore-dirty-on:
+  #!/bin/sh
+  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-on
+
+# Disable local ignore=dirty for all managed submodules.
+submodule-ignore-dirty-off:
+  #!/bin/sh
+  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-off
+
+# Show local ignore=dirty status for all managed submodules.
+submodule-ignore-dirty-status:
+  #!/bin/sh
+  "{{repo_hub_root}}/scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-status
+
 # Run a command for each submodule
 every-repo COMMAND:
   #!/bin/sh

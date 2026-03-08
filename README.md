@@ -51,6 +51,9 @@ Typical commands provided by `just/repo.just` include:
 - `just sync-repo-default-branch <owner>/<repo>`
 - `just sync-all-repo-default-branch`
 - `just commit-submodule-pointers`
+- `just submodule-ignore-dirty-on`
+- `just submodule-ignore-dirty-off`
+- `just submodule-ignore-dirty-status`
 
 Additional shared modules include:
 
@@ -71,6 +74,16 @@ import? "repo/github.com/kitsuyui/just-submodules-hub/just/openers.just"
 ```
 
 This keeps app-specific launchers opt-in while still sharing a common `open-repo <tool> <owner>/<repo>` primitive.
+
+For local-only submodule worktree noise control, you can toggle `ignore=dirty` for every managed submodule without editing `.gitmodules`:
+
+```sh
+just submodule-ignore-dirty-on
+just submodule-ignore-dirty-status
+just submodule-ignore-dirty-off
+```
+
+These commands only update the parent repository's local `.git/config`.
 
 ### Sync Options
 

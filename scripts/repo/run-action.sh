@@ -29,6 +29,15 @@ repo_input_to_path() {
   printf 'repo/github.com/%s\n' "$repo_path"
 }
 
+submodule_section_names() {
+  git config -f .gitmodules --name-only --get-regexp '^submodule\..*\.path$' 2>/dev/null | sed 's/\.path$//'
+}
+
+submodule_path_from_section() {
+  section="$1"
+  git config -f .gitmodules --get "${section}.path"
+}
+
 case "$action" in
   add-repo)
     repo_url_input="${1:-}"
@@ -129,6 +138,33 @@ EOF_PATHS
       exit 0
     fi
     git commit -m "$message"
+    ;;
+
+  submodule-ignore-dirty-on)
+    submodule_section_names | while IFS= read -r section; do
+      [ -n "$section" ] || continue
+      git config --local "${section}.ignore" dirty
+    done
+    ;;
+
+  submodule-ignore-dirty-off)
+    submodule_section_names | while IFS= read -r section; do
+      [ -n "$section" ] || continue
+      git config --local --unset-all "${section}.ignore" 2>/dev/null || true
+    done
+    ;;
+
+  submodule-ignore-dirty-status)
+    submodule_section_names | while IFS= read -r section; do
+      [ -n "$section" ] || continue
+      repo_path=$(submodule_path_from_section "$section")
+      ignore_value=$(git config --local --get "${section}.ignore" 2>/dev/null || true)
+      if [ -n "$ignore_value" ]; then
+        printf '%s\t%s\n' "$repo_path" "$ignore_value"
+      else
+        printf '%s\toff\n' "$repo_path"
+      fi
+    done
     ;;
 
   open-repo)
