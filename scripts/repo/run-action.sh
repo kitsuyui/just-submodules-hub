@@ -8,8 +8,10 @@ if [ -z "$action" ]; then
 fi
 shift
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+project_root=$(CDPATH='' cd -- "$script_dir/../.." && pwd)
 sync_script="$script_dir/sync-default-branch.sh"
 open_repo_script="$script_dir/open-repo.sh"
+resolve_repo_script="$script_dir/resolve_repo.py"
 
 repo_input_to_path() {
   input="$1"
@@ -17,16 +19,7 @@ repo_input_to_path() {
     echo "REPO is required" >&2
     exit 2
   fi
-
-  case "$input" in
-    repo/github.com/*)
-      printf '%s\n' "$input"
-      return 0
-      ;;
-  esac
-
-  repo_path=$(echo "$input" | sed -E 's#^(git@github.com:|https://github.com/)##; s#\.git$##')
-  printf 'repo/github.com/%s\n' "$repo_path"
+  uv run --project "$project_root" python "$resolve_repo_script" "$input"
 }
 
 submodule_section_names() {
@@ -95,9 +88,8 @@ case "$action" in
 
   sync-repo-default-branch)
     repo_input="${1:-}"
-    repo_path=$(repo_input_to_path "$repo_input")
     shift
-    "$sync_script" one "$repo_path" "$@"
+    "$sync_script" one "$repo_input" "$@"
     ;;
 
   sync-all-repo-default-branch)
