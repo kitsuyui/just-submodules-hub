@@ -7,6 +7,12 @@ import pytest
 from just_submodules_hub.openers import opener_command
 
 
+def test_opener_command_for_claude_code_aliases() -> None:
+    repo = Path("/tmp/example")
+    assert opener_command("claude", repo) == ["claude", str(repo)]
+    assert opener_command("claude-code", repo) == ["claude", str(repo)]
+
+
 def test_opener_command_for_codex() -> None:
     repo = Path("/tmp/example")
     assert opener_command("codex", repo) == ["open", "-a", "Codex", str(repo)]

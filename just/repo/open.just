@@ -5,6 +5,11 @@ tool TOOL REPO:
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_open_source_dir}}/../../scripts/repo/run-with-hooks.sh" open-repo "{{TOOL}}" "{{REPO}}"
 
+# Open a managed repository in Claude Code.
+claude REPO:
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && just repo open tool claude "{{REPO}}"
+
 # Open a managed repository in Codex.
 codex REPO:
   #!/bin/sh
