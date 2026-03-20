@@ -12,6 +12,8 @@ def opener_command(tool: str, repo_path: Path) -> list[str]:
 
     if normalized_tool == "codex":
         return ["open", "-a", "Codex", repo]
+    if normalized_tool in {"claude", "claude-code"}:
+        return ["claude", repo]
     if normalized_tool in {"code", "vscode", "vs-code"}:
         return ["code", repo]
     if normalized_tool in {"iterm", "iterm2"}:
