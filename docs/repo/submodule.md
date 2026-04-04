@@ -1,6 +1,6 @@
-# `repo submodule`
+# `repo::submodule`
 
-Local submodule operations belong under the `repo submodule` namespace.
+Local submodule operations belong under the `repo::submodule` namespace.
 
 ## Intent
 
@@ -9,17 +9,17 @@ Use these commands when you want to add, remove, sync, or inspect managed submod
 ## Examples
 
 ```sh
-just repo submodule add <owner>/<repo>
-just repo submodule remove <repo|owner/repo|repo/github.com/owner/repo>
-just repo submodule sync-default-branch <repo|owner/repo|repo/github.com/owner/repo>
-just repo submodule sync-all-default-branch
-just repo submodule commit-pointers
-just repo submodule ignore-dirty-on
-just repo submodule ignore-dirty-off
-just repo submodule ignore-dirty-status
-just repo submodule list-managed
-just repo submodule list-unmanaged
-just repo submodule every '<command>'
+just repo::submodule::add <owner>/<repo>
+just repo::submodule::remove <repo|owner/repo|repo/github.com/owner/repo>
+just repo::submodule::sync-default-branch <repo|owner/repo|repo/github.com/owner/repo>
+just repo::submodule::sync-all-default-branch
+just repo::submodule::commit-pointers
+just repo::submodule::ignore-dirty-on
+just repo::submodule::ignore-dirty-off
+just repo::submodule::ignore-dirty-status
+just repo::submodule::list-managed
+just repo::submodule::list-unmanaged
+just repo::submodule::every '<command>'
 ```
 
 ## Notes

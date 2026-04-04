@@ -1,6 +1,6 @@
-# `github branch-protection`
+# `github::branch-protection`
 
-Use `github branch-protection` to inspect or apply the shared default-branch protection baseline.
+Use `github::branch-protection` to inspect or apply the shared default-branch protection baseline.
 
 ## Intent
 
@@ -11,21 +11,21 @@ Use these commands when you want to inspect, apply, or clean up the shared defau
 ### Single Repository
 
 ```sh
-just github branch-protection status kitsuyui/just-submodules-hub
-just github branch-protection apply kitsuyui/just-submodules-hub
-just github branch-protection legacy-status kitsuyui/just-submodules-hub
-just github branch-protection cleanup-ruleset kitsuyui/just-submodules-hub protect-main
-just github branch-protection classic-status kitsuyui/just-submodules-hub
-just github branch-protection cleanup-classic kitsuyui/just-submodules-hub
+just github::branch-protection::status kitsuyui/just-submodules-hub
+just github::branch-protection::apply kitsuyui/just-submodules-hub
+just github::branch-protection::legacy-status kitsuyui/just-submodules-hub
+just github::branch-protection::cleanup-ruleset kitsuyui/just-submodules-hub protect-main
+just github::branch-protection::classic-status kitsuyui/just-submodules-hub
+just github::branch-protection::cleanup-classic kitsuyui/just-submodules-hub
 ```
 
 ### Bulk Operations
 
 ```sh
-just github branch-protection status-all
-just github branch-protection apply-all
-just github branch-protection cleanup-rulesets-all
-just github branch-protection cleanup-classic-all
+just github::branch-protection::status-all
+just github::branch-protection::apply-all
+just github::branch-protection::cleanup-rulesets-all
+just github::branch-protection::cleanup-classic-all
 ```
 
 ## Managed Baseline

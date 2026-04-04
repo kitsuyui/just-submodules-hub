@@ -1,6 +1,6 @@
-# `github prs`
+# `github::prs`
 
-Use `github prs` to inspect pull requests across managed repositories.
+Use `github::prs` to inspect pull requests across managed repositories.
 
 ## Intent
 
@@ -9,10 +9,10 @@ Use these commands when you want a quick view of pull request activity across th
 ## Examples
 
 ```sh
-just github prs list
-just github prs list open
-just github prs summary
-just github prs summary merged
+just github::prs::list
+just github::prs::list open
+just github::prs::summary
+just github::prs::summary merged
 ```
 
 ## States
