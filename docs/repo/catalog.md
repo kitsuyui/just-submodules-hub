@@ -1,6 +1,6 @@
-# `repo catalog`
+# `repo::catalog`
 
-Use `repo catalog` to classify or inspect the managed repositories that already exist in the hub.
+Use `repo::catalog` to classify or inspect the managed repositories that already exist in the hub.
 
 ## Intent
 
@@ -9,11 +9,11 @@ Use these commands when you want a quick local catalog of managed repositories b
 ## Examples
 
 ```sh
-just repo catalog python
-just repo catalog js
-just repo catalog go
-just repo catalog rust
-just repo catalog duplicate-filenames
+just repo::catalog::python
+just repo::catalog::js
+just repo::catalog::go
+just repo::catalog::rust
+just repo::catalog::duplicate-filenames
 ```
 
 ## Purpose

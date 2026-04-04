@@ -34,7 +34,7 @@ On macOS, install them with Homebrew:
 brew install just git uv
 ```
 
-If you use GitHub-related commands such as `just github repos create-public`, `just github repos create-private`, `just github repos list`, or `just github prs list`, install the GitHub CLI as well:
+If you use GitHub-related commands such as `just github::repos::create-public`, `just github::repos::create-private`, `just github::repos::list`, or `just github::prs::list`, install the GitHub CLI as well:
 
 ```sh
 brew install gh
@@ -52,12 +52,12 @@ Shared commands are grouped into two top-level namespaces:
 Examples:
 
 ```sh
-just repo submodule sync-all-default-branch
-just repo catalog python
-just repo open codex just-submodules-hub
-just github repos list
-just github prs summary
-just github branch-protection status-all
+just repo::submodule::sync-all-default-branch
+just repo::catalog::python
+just repo::open::codex just-submodules-hub
+just github::repos::list
+just github::prs::summary
+just github::branch-protection::status-all
 ```
 
 Detailed command guides live under [`docs/`](docs/README.md):
@@ -78,7 +78,7 @@ The namespace guides in [`docs/`](docs/README.md) are the canonical reference. K
 - `scripts/repo/run-action.sh sync-repo-default-branch <repo|owner/repo|repo/github.com/owner/repo> --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --jobs 8 --no-prefilter --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --final-submodule-update`
-- `repo submodule sync-all-default-branch` uses Python + `tqdm` with one transient progress bar
+- `repo::submodule::sync-all-default-branch` uses Python + `tqdm` with one transient progress bar
 
 ## License Scope
 
