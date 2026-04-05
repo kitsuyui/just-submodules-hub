@@ -86,6 +86,74 @@ exit 1
     assert payload["repos"][0]["ruleset_status"]["baseline_compliant"] is True
 
 
+def test_default_branch_baseline_status_all_skips_wiki_submodules(tmp_path: Path) -> None:
+    hub_repo = tmp_path / "hub"
+    init_hub(hub_repo)
+
+    public_remote = create_remote(tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"})
+    wiki_remote = create_remote(tmp_path, "kitsuyui", "public-repo.wiki", {"Home.md": "ok\n"})
+    add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
+    add_submodule(hub_repo, wiki_remote, "repo/github.com/kitsuyui/public-repo.wiki")
+
+    fake_bin = tmp_path / "fake-bin"
+    write_executable(
+        fake_bin / "gh",
+        """#!/bin/sh
+set -eu
+if [ "$1" = "auth" ] && [ "$2" = "status" ]; then
+  exit 0
+fi
+if [ "$1" = "repo" ] && [ "$2" = "view" ] && [ "$3" = "kitsuyui/public-repo" ]; then
+  cat <<'EOF'
+{"nameWithOwner":"kitsuyui/public-repo","visibility":"PUBLIC","defaultBranchRef":{"name":"main"}}
+EOF
+  exit 0
+fi
+if [ "$1" = "repo" ] && [ "$2" = "view" ] && [ "$3" = "kitsuyui/public-repo.wiki" ]; then
+  echo "wiki repo should have been skipped" >&2
+  exit 1
+fi
+if [ "$1" = "api" ] && [ "$2" = "repos/kitsuyui/public-repo/rules/branches/main" ]; then
+  cat <<'EOF'
+[{"type":"pull_request","parameters":{"required_approving_review_count":0,"dismiss_stale_reviews_on_push":false,"require_code_owner_review":false,"require_last_push_approval":false,"required_review_thread_resolution":false}},{"type":"non_fast_forward"},{"type":"deletion"}]
+EOF
+  exit 0
+fi
+if [ "$1" = "api" ] && [ "$2" = "repos/kitsuyui/public-repo/rulesets" ]; then
+  cat <<'EOF'
+[{"id":42,"name":"default-branch-baseline"}]
+EOF
+  exit 0
+fi
+if [ "$1" = "api" ] && [ "$2" = "repos/kitsuyui/public-repo/rulesets/42" ]; then
+  cat <<'EOF'
+{"id":42,"name":"default-branch-baseline","target":"branch","enforcement":"active","conditions":{"ref_name":{"include":["refs/heads/main"],"exclude":[]}},"rules":[{"type":"pull_request","parameters":{"required_approving_review_count":0,"dismiss_stale_reviews_on_push":false,"require_code_owner_review":false,"require_last_push_approval":false,"required_review_thread_resolution":false}},{"type":"non_fast_forward"},{"type":"deletion"}]}
+EOF
+  exit 0
+fi
+if [ "$1" = "api" ] && [ "$2" = "repos/kitsuyui/public-repo/branches/main/protection" ]; then
+  echo '{"message":"Branch not protected","status":"404"}' >&2
+  exit 1
+fi
+echo "unexpected gh invocation: $*" >&2
+exit 1
+""",
+    )
+
+    proc = subprocess.run(
+        [str(SCRIPT), "status-all", "public"],
+        cwd=str(hub_repo),
+        env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    assert [item["repo"] for item in payload["repos"]] == ["kitsuyui/public-repo"]
+
+
 def test_default_branch_baseline_cleanup_classic_all_skips_manual_review_cases(tmp_path: Path) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)

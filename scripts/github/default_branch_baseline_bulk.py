@@ -103,10 +103,16 @@ def write_json(data: dict) -> None:
     sys.stdout.write("\n")
 
 
+def supports_branch_protection(repo: str) -> bool:
+    return not repo.endswith(".wiki")
+
+
 def managed_repositories(visibility: str) -> list[tuple[str, dict]]:
     repos = managed_repo_slugs(read_gitmodules_paths("."))
     selected: list[tuple[str, dict]] = []
     for repo in repos:
+        if not supports_branch_protection(repo):
+            continue
         metadata = load_repo_metadata(repo)
         parsed = parse_repo_metadata(json.dumps(metadata))
         if visibility != "all" and parsed.visibility != visibility:
