@@ -28,20 +28,20 @@ commit-pointers MESSAGE="Update submodule pointers":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" commit-submodule-pointers "{{MESSAGE}}"
 
-# Enable local ignore=dirty for all managed submodules.
-ignore-dirty-on:
+# Enable local ignore=dirty for all managed submodules or one selected submodule.
+ignore-dirty-on REPO="":
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-on
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-on "{{REPO}}"
 
-# Disable local ignore=dirty for all managed submodules.
-ignore-dirty-off:
+# Disable local ignore=dirty for all managed submodules or one selected submodule.
+ignore-dirty-off REPO="":
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-off
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-off "{{REPO}}"
 
-# Show local ignore=dirty status for all managed submodules.
-ignore-dirty-status:
+# Show local ignore=dirty status for all managed submodules or one selected submodule.
+ignore-dirty-status REPO="":
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-status
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-status "{{REPO}}"
 
 # Run a command for each submodule.
 every COMMAND:

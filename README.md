@@ -53,6 +53,8 @@ Examples:
 
 ```sh
 just repo::submodule::sync-all-default-branch
+just repo::submodule::ignore-dirty-on
+just repo::submodule::ignore-dirty-on just-submodules-hub
 just repo::catalog::python
 just repo::open::codex just-submodules-hub
 just github::repos::list
@@ -72,6 +74,18 @@ import? "repo/github.com/kitsuyui/just-submodules-hub/just/index.just"
 ```
 
 The namespace guides in [`docs/`](docs/README.md) are the canonical reference. Keep consumer-specific README customization in the consumer repository, not here.
+
+### Submodule Dirty-Status Noise
+
+If a consumer hub frequently keeps local worktrees dirty, you can suppress that noise in the parent repository with:
+
+```sh
+just repo::submodule::ignore-dirty-on
+just repo::submodule::ignore-dirty-on owner/repo
+just repo::submodule::ignore-dirty-status
+```
+
+This uses Git's local `submodule.<name>.ignore=dirty` setting in the consumer repository's `.git/config`.
 
 ### Sync Options
 
