@@ -84,6 +84,7 @@ exit 1
     assert payload["visibility"] == "public"
     assert [item["repo"] for item in payload["repos"]] == ["kitsuyui/public-repo"]
     assert payload["repos"][0]["ruleset_status"]["baseline_compliant"] is True
+    assert "status-all" in proc.stderr
 
 
 def test_default_branch_baseline_status_all_skips_wiki_submodules(tmp_path: Path) -> None:
@@ -152,6 +153,7 @@ exit 1
     assert proc.returncode == 0, proc.stderr
     payload = json.loads(proc.stdout)
     assert [item["repo"] for item in payload["repos"]] == ["kitsuyui/public-repo"]
+    assert "status-all" in proc.stderr
 
 
 def test_default_branch_baseline_cleanup_classic_all_skips_manual_review_cases(tmp_path: Path) -> None:

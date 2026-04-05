@@ -39,4 +39,5 @@ The current shared baseline enforces:
 ## Notes
 
 - Bulk commands default to `public`. Pass `private` or `all` explicitly when needed.
+- Bulk commands show a transient progress bar on stderr while keeping JSON results on stdout.
 - Legacy or classic protection is only removed when the remaining active rules fully cover it.

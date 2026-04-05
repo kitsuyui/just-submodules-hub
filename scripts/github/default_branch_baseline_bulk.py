@@ -5,6 +5,8 @@ import json
 import subprocess
 import sys
 
+from tqdm import tqdm
+
 from just_submodules_hub.gitmodules import managed_repo_slugs, read_gitmodules_paths
 from just_submodules_hub.github_rulesets import (
     BASELINE_RULESET_NAME,
@@ -18,6 +20,8 @@ from just_submodules_hub.github_rulesets import (
     summarize_legacy_rulesets,
     summarize_ruleset_status,
 )
+
+TQDM_BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
 
 
 def parse_args() -> argparse.Namespace:
@@ -107,13 +111,19 @@ def supports_branch_protection(repo: str) -> bool:
     return not repo.endswith(".wiki")
 
 
-def managed_repositories(visibility: str) -> list[tuple[str, dict]]:
+def candidate_repositories() -> list[str]:
+    return [repo for repo in managed_repo_slugs(read_gitmodules_paths(".")) if supports_branch_protection(repo)]
+
+
+def managed_repositories(visibility: str, bar: tqdm | None = None) -> list[tuple[str, dict]]:
     repos = managed_repo_slugs(read_gitmodules_paths("."))
     selected: list[tuple[str, dict]] = []
     for repo in repos:
         if not supports_branch_protection(repo):
             continue
         metadata = load_repo_metadata(repo)
+        if bar is not None:
+            bar.update(1)
         parsed = parse_repo_metadata(json.dumps(metadata))
         if visibility != "all" and parsed.visibility != visibility:
             continue
@@ -121,22 +131,40 @@ def managed_repositories(visibility: str) -> list[tuple[str, dict]]:
     return selected
 
 
+def build_progress_bar(action: str, total: int) -> tqdm:
+    return tqdm(
+        total=total,
+        desc=action,
+        unit="repo",
+        leave=False,
+        dynamic_ncols=True,
+        bar_format=TQDM_BAR_FORMAT,
+        file=sys.stderr,
+    )
+
+
 def status_all(visibility: str) -> int:
     entries = []
-    for repo, raw_metadata in managed_repositories(visibility):
-        metadata = parse_repo_metadata(json.dumps(raw_metadata))
-        effective_rules = load_effective_rules(repo, metadata.default_branch)
-        rulesets = load_rulesets(repo)
-        classic = load_classic_branch_protection(repo, metadata.default_branch)
-        entries.append(
-            {
-                "repo": repo,
-                "visibility": metadata.visibility,
-                "ruleset_status": summarize_ruleset_status(metadata, effective_rules, rulesets),
-                "legacy_rulesets": summarize_legacy_rulesets(metadata, rulesets)["legacy_rulesets"],
-                "classic_protection": summarize_classic_branch_protection(metadata, classic, effective_rules),
-            }
-        )
+    candidates = candidate_repositories()
+    with build_progress_bar("status-all", len(candidates)) as bar:
+        repos = managed_repositories(visibility, bar)
+        bar.total += len(repos)
+        bar.refresh()
+        for repo, raw_metadata in repos:
+            metadata = parse_repo_metadata(json.dumps(raw_metadata))
+            effective_rules = load_effective_rules(repo, metadata.default_branch)
+            rulesets = load_rulesets(repo)
+            classic = load_classic_branch_protection(repo, metadata.default_branch)
+            entries.append(
+                {
+                    "repo": repo,
+                    "visibility": metadata.visibility,
+                    "ruleset_status": summarize_ruleset_status(metadata, effective_rules, rulesets),
+                    "legacy_rulesets": summarize_legacy_rulesets(metadata, rulesets)["legacy_rulesets"],
+                    "classic_protection": summarize_classic_branch_protection(metadata, classic, effective_rules),
+                }
+            )
+            bar.update(1)
 
     write_json(
         {
@@ -150,24 +178,31 @@ def status_all(visibility: str) -> int:
 
 def apply_all(visibility: str) -> int:
     results = []
-    for repo, raw_metadata in managed_repositories(visibility):
-        metadata = parse_repo_metadata(json.dumps(raw_metadata))
-        rulesets = load_rulesets(repo)
-        managed_ruleset = find_ruleset_by_name(rulesets)
-        payload = desired_ruleset_payload(metadata.default_branch)
-        if managed_ruleset and managed_ruleset.get("id") is not None:
+    candidates = candidate_repositories()
+    with build_progress_bar("apply-all", len(candidates)) as bar:
+        repos = managed_repositories(visibility, bar)
+        bar.total += len(repos)
+        bar.refresh()
+        for repo, raw_metadata in repos:
+            metadata = parse_repo_metadata(json.dumps(raw_metadata))
+            rulesets = load_rulesets(repo)
+            managed_ruleset = find_ruleset_by_name(rulesets)
+            payload = desired_ruleset_payload(metadata.default_branch)
+            if managed_ruleset and managed_ruleset.get("id") is not None:
+                result = run_gh_with_json_input(
+                    ["api", "--method", "PUT", f"repos/{repo}/rulesets/{managed_ruleset['id']}"],
+                    payload,
+                )
+                results.append({"repo": repo, "action": "updated", "ruleset_id": result.get("id", managed_ruleset["id"])})
+                bar.update(1)
+                continue
+
             result = run_gh_with_json_input(
-                ["api", "--method", "PUT", f"repos/{repo}/rulesets/{managed_ruleset['id']}"],
+                ["api", "--method", "POST", f"repos/{repo}/rulesets"],
                 payload,
             )
-            results.append({"repo": repo, "action": "updated", "ruleset_id": result.get("id", managed_ruleset["id"])})
-            continue
-
-        result = run_gh_with_json_input(
-            ["api", "--method", "POST", f"repos/{repo}/rulesets"],
-            payload,
-        )
-        results.append({"repo": repo, "action": "created", "ruleset_id": result.get("id")})
+            results.append({"repo": repo, "action": "created", "ruleset_id": result.get("id")})
+            bar.update(1)
 
     write_json({"action": "apply-all", "visibility": visibility, "results": results})
     return 0
@@ -175,27 +210,33 @@ def apply_all(visibility: str) -> int:
 
 def cleanup_rulesets_all(visibility: str) -> int:
     results = []
-    for repo, raw_metadata in managed_repositories(visibility):
-        metadata = parse_repo_metadata(json.dumps(raw_metadata))
-        rulesets = load_rulesets(repo)
-        summary = summarize_legacy_rulesets(metadata, rulesets)
-        for item in summary["legacy_rulesets"]:
-            if item["deletable"]:
-                target = find_ruleset_by_identifier(candidate_legacy_rulesets(metadata, rulesets), str(item["id"]))
-                if not target:
-                    continue
-                run_gh("api", "--method", "DELETE", f"repos/{repo}/rulesets/{target['id']}")
-                results.append({"repo": repo, "action": "deleted", "ruleset_id": target["id"], "name": target["name"]})
-            else:
-                results.append(
-                    {
-                        "repo": repo,
-                        "action": "skipped",
-                        "name": item["name"],
-                        "reason": "manual_action_required",
-                        "uncovered_rule_types": item["uncovered_rule_types"],
-                    }
-                )
+    candidates = candidate_repositories()
+    with build_progress_bar("cleanup-rulesets-all", len(candidates)) as bar:
+        repos = managed_repositories(visibility, bar)
+        bar.total += len(repos)
+        bar.refresh()
+        for repo, raw_metadata in repos:
+            metadata = parse_repo_metadata(json.dumps(raw_metadata))
+            rulesets = load_rulesets(repo)
+            summary = summarize_legacy_rulesets(metadata, rulesets)
+            for item in summary["legacy_rulesets"]:
+                if item["deletable"]:
+                    target = find_ruleset_by_identifier(candidate_legacy_rulesets(metadata, rulesets), str(item["id"]))
+                    if not target:
+                        continue
+                    run_gh("api", "--method", "DELETE", f"repos/{repo}/rulesets/{target['id']}")
+                    results.append({"repo": repo, "action": "deleted", "ruleset_id": target["id"], "name": target["name"]})
+                else:
+                    results.append(
+                        {
+                            "repo": repo,
+                            "action": "skipped",
+                            "name": item["name"],
+                            "reason": "manual_action_required",
+                            "uncovered_rule_types": item["uncovered_rule_types"],
+                        }
+                    )
+            bar.update(1)
 
     write_json({"action": "cleanup-rulesets-all", "visibility": visibility, "results": results})
     return 0
@@ -203,25 +244,32 @@ def cleanup_rulesets_all(visibility: str) -> int:
 
 def cleanup_classic_all(visibility: str) -> int:
     results = []
-    for repo, raw_metadata in managed_repositories(visibility):
-        metadata = parse_repo_metadata(json.dumps(raw_metadata))
-        effective_rules = load_effective_rules(repo, metadata.default_branch)
-        protection = load_classic_branch_protection(repo, metadata.default_branch)
-        summary = summarize_classic_branch_protection(metadata, protection, effective_rules)
-        if not summary["classic_branch_protection_found"]:
-            continue
-        if summary["deletable"]:
-            run_gh("api", "--method", "DELETE", f"repos/{repo}/branches/{metadata.default_branch}/protection")
-            results.append({"repo": repo, "action": "deleted", "deleted": "classic_branch_protection"})
-        else:
-            results.append(
-                {
-                    "repo": repo,
-                    "action": "skipped",
-                    "reason": "manual_action_required",
-                    "uncovered_settings": summary["uncovered_settings"],
-                }
-            )
+    candidates = candidate_repositories()
+    with build_progress_bar("cleanup-classic-all", len(candidates)) as bar:
+        repos = managed_repositories(visibility, bar)
+        bar.total += len(repos)
+        bar.refresh()
+        for repo, raw_metadata in repos:
+            metadata = parse_repo_metadata(json.dumps(raw_metadata))
+            effective_rules = load_effective_rules(repo, metadata.default_branch)
+            protection = load_classic_branch_protection(repo, metadata.default_branch)
+            summary = summarize_classic_branch_protection(metadata, protection, effective_rules)
+            if not summary["classic_branch_protection_found"]:
+                bar.update(1)
+                continue
+            if summary["deletable"]:
+                run_gh("api", "--method", "DELETE", f"repos/{repo}/branches/{metadata.default_branch}/protection")
+                results.append({"repo": repo, "action": "deleted", "deleted": "classic_branch_protection"})
+            else:
+                results.append(
+                    {
+                        "repo": repo,
+                        "action": "skipped",
+                        "reason": "manual_action_required",
+                        "uncovered_settings": summary["uncovered_settings"],
+                    }
+                )
+            bar.update(1)
 
     write_json({"action": "cleanup-classic-all", "visibility": visibility, "results": results})
     return 0
