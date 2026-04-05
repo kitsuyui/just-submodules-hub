@@ -43,6 +43,21 @@ ignore-dirty-status REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-status "{{REPO}}"
 
+# Enable local ignore=all for all managed submodules or one selected submodule.
+ignore-all-on REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-all-on "{{REPO}}"
+
+# Disable local ignore=all for all managed submodules or one selected submodule.
+ignore-all-off REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-all-off "{{REPO}}"
+
+# Show local ignore=all status for all managed submodules or one selected submodule.
+ignore-all-status REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-all-status "{{REPO}}"
+
 # Run a command for each submodule.
 every COMMAND:
   #!/bin/sh

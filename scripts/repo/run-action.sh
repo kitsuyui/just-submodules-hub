@@ -190,6 +190,36 @@ EOF_PATHS
     done
     ;;
 
+  submodule-ignore-all-on)
+    repo_input="${1:-}"
+    target_submodule_sections "$repo_input" | while IFS= read -r section; do
+      [ -n "$section" ] || continue
+      git config --local "${section}.ignore" all
+    done
+    ;;
+
+  submodule-ignore-all-off)
+    repo_input="${1:-}"
+    target_submodule_sections "$repo_input" | while IFS= read -r section; do
+      [ -n "$section" ] || continue
+      git config --local --unset-all "${section}.ignore" 2>/dev/null || true
+    done
+    ;;
+
+  submodule-ignore-all-status)
+    repo_input="${1:-}"
+    target_submodule_sections "$repo_input" | while IFS= read -r section; do
+      [ -n "$section" ] || continue
+      repo_path=$(submodule_path_from_section "$section")
+      ignore_value=$(git config --local --get "${section}.ignore" 2>/dev/null || true)
+      if [ "$ignore_value" = "all" ]; then
+        printf '%s\t%s\n' "$repo_path" "$ignore_value"
+      else
+        printf '%s\toff\n' "$repo_path"
+      fi
+    done
+    ;;
+
   open-repo)
     tool="${1:-}"
     repo_input="${2:-}"

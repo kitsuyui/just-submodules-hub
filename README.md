@@ -83,9 +83,14 @@ If a consumer hub frequently keeps local worktrees dirty, you can suppress that 
 just repo::submodule::ignore-dirty-on
 just repo::submodule::ignore-dirty-on owner/repo
 just repo::submodule::ignore-dirty-status
+just repo::submodule::ignore-all-on
+just repo::submodule::ignore-all-on owner/repo
 ```
 
-This uses Git's local `submodule.<name>.ignore=dirty` setting in the consumer repository's `.git/config`.
+This uses Git's local `submodule.<name>.ignore` setting in the consumer repository's `.git/config`.
+
+- `ignore-dirty-*` suppresses modified and untracked content noise.
+- `ignore-all-*` also suppresses `new commits` noise in the parent repository status.
 
 ### Sync Options
 

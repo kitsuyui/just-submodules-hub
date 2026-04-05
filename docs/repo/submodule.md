@@ -20,6 +20,12 @@ just repo::submodule::ignore-dirty-off
 just repo::submodule::ignore-dirty-off <repo|owner/repo|repo/github.com/owner/repo>
 just repo::submodule::ignore-dirty-status
 just repo::submodule::ignore-dirty-status <repo|owner/repo|repo/github.com/owner/repo>
+just repo::submodule::ignore-all-on
+just repo::submodule::ignore-all-on <repo|owner/repo|repo/github.com/owner/repo>
+just repo::submodule::ignore-all-off
+just repo::submodule::ignore-all-off <repo|owner/repo|repo/github.com/owner/repo>
+just repo::submodule::ignore-all-status
+just repo::submodule::ignore-all-status <repo|owner/repo|repo/github.com/owner/repo>
 just repo::submodule::list-managed
 just repo::submodule::list-unmanaged
 just repo::submodule::every '<command>'
@@ -33,3 +39,5 @@ just repo::submodule::every '<command>'
 - `ignore-dirty-*` changes the consumer repository's local `.git/config`, not `.gitmodules`.
 - `ignore-dirty-*` without arguments updates all managed submodules.
 - `ignore-dirty-* <repo>` targets only the resolved managed submodule.
+- `ignore-dirty-*` hides local worktree dirt, but does not hide `new commits`.
+- `ignore-all-*` hides both local dirt and `new commits` in the parent repository status.
