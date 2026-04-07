@@ -53,8 +53,8 @@ Examples:
 
 ```sh
 just repo::submodule::sync-all-default-branch
-just repo::submodule::ignore-dirty-on
-just repo::submodule::ignore-dirty-on just-submodules-hub
+just repo::submodule::hide-worktree-changes
+just repo::submodule::hide-worktree-changes just-submodules-hub
 just repo::catalog::python
 just repo::open::codex just-submodules-hub
 just github::repos::list
@@ -80,17 +80,20 @@ The namespace guides in [`docs/`](docs/README.md) are the canonical reference. K
 If a consumer hub frequently keeps local worktrees dirty, you can suppress that noise in the parent repository with:
 
 ```sh
-just repo::submodule::ignore-dirty-on
-just repo::submodule::ignore-dirty-on owner/repo
-just repo::submodule::ignore-dirty-status
-just repo::submodule::ignore-all-on
-just repo::submodule::ignore-all-on owner/repo
+just repo::submodule::hide-worktree-changes
+just repo::submodule::hide-worktree-changes owner/repo
+just repo::submodule::worktree-changes-visibility
+just repo::submodule::hide-all-changes
+just repo::submodule::hide-all-changes owner/repo
 ```
 
 This uses Git's local `submodule.<name>.ignore` setting in the consumer repository's `.git/config`.
 
-- `ignore-dirty-*` suppresses modified and untracked content noise.
-- `ignore-all-*` also suppresses `new commits` noise in the parent repository status.
+- `hide-worktree-changes` suppresses modified and untracked content noise.
+- `hide-all-changes` also suppresses `new commits` noise in the parent repository status.
+- `show-worktree-changes` and `show-all-changes` restore visibility.
+- `worktree-changes-visibility` and `all-changes-visibility` report `hidden` or `visible`.
+- Legacy `ignore-dirty-*` and `ignore-all-*` aliases remain available for compatibility.
 
 ### Sync Options
 

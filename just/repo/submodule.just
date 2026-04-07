@@ -28,32 +28,62 @@ commit-pointers MESSAGE="Update submodule pointers":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" commit-submodule-pointers "{{MESSAGE}}"
 
-# Enable local ignore=dirty for all managed submodules or one selected submodule.
+# Hide worktree-only submodule changes from the parent repository status.
+hide-worktree-changes REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-hide-worktree-changes "{{REPO}}"
+
+# Show worktree-only submodule changes in the parent repository status again.
+show-worktree-changes REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-show-worktree-changes "{{REPO}}"
+
+# Show whether worktree-only submodule changes are hidden or visible.
+worktree-changes-visibility REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-worktree-changes-visibility "{{REPO}}"
+
+# Deprecated alias for hide-worktree-changes.
 ignore-dirty-on REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-on "{{REPO}}"
 
-# Disable local ignore=dirty for all managed submodules or one selected submodule.
+# Deprecated alias for show-worktree-changes.
 ignore-dirty-off REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-off "{{REPO}}"
 
-# Show local ignore=dirty status for all managed submodules or one selected submodule.
+# Deprecated alias for worktree-changes-visibility.
 ignore-dirty-status REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-status "{{REPO}}"
 
-# Enable local ignore=all for all managed submodules or one selected submodule.
+# Hide all submodule changes, including new commits, from the parent repository status.
+hide-all-changes REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-hide-all-changes "{{REPO}}"
+
+# Show all submodule changes in the parent repository status again.
+show-all-changes REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-show-all-changes "{{REPO}}"
+
+# Show whether all submodule changes are hidden or visible.
+all-changes-visibility REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-all-changes-visibility "{{REPO}}"
+
+# Deprecated alias for hide-all-changes.
 ignore-all-on REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-all-on "{{REPO}}"
 
-# Disable local ignore=all for all managed submodules or one selected submodule.
+# Deprecated alias for show-all-changes.
 ignore-all-off REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-all-off "{{REPO}}"
 
-# Show local ignore=all status for all managed submodules or one selected submodule.
+# Deprecated alias for all-changes-visibility.
 ignore-all-status REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-all-status "{{REPO}}"

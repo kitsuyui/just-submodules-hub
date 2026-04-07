@@ -138,6 +138,58 @@ def test_submodule_ignore_dirty_toggle_supports_targeted_repo(tmp_path: Path, hu
     assert get_a_proc.returncode != 0
 
 
+def test_submodule_worktree_visibility_commands_use_hidden_visible_labels(
+    tmp_path: Path,
+    hub_repo: Path,
+) -> None:
+    remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "hide-me",
+        {"README.md": "hello\n"},
+    )
+    submodule_path = "repo/github.com/example-owner/hide-me"
+    add_submodule(hub_repo, remote, submodule_path)
+
+    hide_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-hide-worktree-changes"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert hide_proc.returncode == 0, hide_proc.stderr
+
+    status_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-worktree-changes-visibility"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert status_proc.returncode == 0, status_proc.stderr
+    assert status_proc.stdout.splitlines() == [f"{submodule_path}\thidden"]
+
+    show_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-show-worktree-changes"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert show_proc.returncode == 0, show_proc.stderr
+
+    status_after_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-worktree-changes-visibility"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert status_after_proc.returncode == 0, status_after_proc.stderr
+    assert status_after_proc.stdout.splitlines() == [f"{submodule_path}\tvisible"]
+
+
 def test_submodule_ignore_all_toggle_supports_targeted_repo(tmp_path: Path, hub_repo: Path) -> None:
     remote_a = create_remote(
         tmp_path,
@@ -205,3 +257,55 @@ def test_submodule_ignore_all_toggle_supports_targeted_repo(tmp_path: Path, hub_
         check=False,
     )
     assert get_a_proc.returncode != 0
+
+
+def test_submodule_all_visibility_commands_use_hidden_visible_labels(
+    tmp_path: Path,
+    hub_repo: Path,
+) -> None:
+    remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "hide-all-me",
+        {"README.md": "hello\n"},
+    )
+    submodule_path = "repo/github.com/example-owner/hide-all-me"
+    add_submodule(hub_repo, remote, submodule_path)
+
+    hide_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-hide-all-changes"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert hide_proc.returncode == 0, hide_proc.stderr
+
+    status_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-all-changes-visibility"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert status_proc.returncode == 0, status_proc.stderr
+    assert status_proc.stdout.splitlines() == [f"{submodule_path}\thidden"]
+
+    show_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-show-all-changes"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert show_proc.returncode == 0, show_proc.stderr
+
+    status_after_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-all-changes-visibility"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert status_after_proc.returncode == 0, status_after_proc.stderr
+    assert status_after_proc.stdout.splitlines() == [f"{submodule_path}\tvisible"]
