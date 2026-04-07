@@ -59,6 +59,57 @@ target_submodule_sections() {
   printf '%s\n' "$section_name"
 }
 
+set_submodule_ignore_value() {
+  ignore_value="$1"
+  repo_input="${2:-}"
+
+  target_submodule_sections "$repo_input" | while IFS= read -r section; do
+    [ -n "$section" ] || continue
+    git config --local "${section}.ignore" "$ignore_value"
+  done
+}
+
+clear_submodule_ignore_value() {
+  repo_input="${1:-}"
+
+  target_submodule_sections "$repo_input" | while IFS= read -r section; do
+    [ -n "$section" ] || continue
+    git config --local --unset-all "${section}.ignore" 2>/dev/null || true
+  done
+}
+
+print_submodule_ignore_raw_status() {
+  expected_value="$1"
+  repo_input="${2:-}"
+
+  target_submodule_sections "$repo_input" | while IFS= read -r section; do
+    [ -n "$section" ] || continue
+    repo_path=$(submodule_path_from_section "$section")
+    ignore_value=$(git config --local --get "${section}.ignore" 2>/dev/null || true)
+    if [ "$ignore_value" = "$expected_value" ]; then
+      printf '%s\t%s\n' "$repo_path" "$ignore_value"
+    else
+      printf '%s\toff\n' "$repo_path"
+    fi
+  done
+}
+
+print_submodule_visibility_status() {
+  expected_value="$1"
+  repo_input="${2:-}"
+
+  target_submodule_sections "$repo_input" | while IFS= read -r section; do
+    [ -n "$section" ] || continue
+    repo_path=$(submodule_path_from_section "$section")
+    ignore_value=$(git config --local --get "${section}.ignore" 2>/dev/null || true)
+    if [ "$ignore_value" = "$expected_value" ]; then
+      printf '%s\thidden\n' "$repo_path"
+    else
+      printf '%s\tvisible\n' "$repo_path"
+    fi
+  done
+}
+
 case "$action" in
   add-repo)
     repo_url_input="${1:-}"
@@ -160,64 +211,44 @@ EOF_PATHS
     git commit -m "$message"
     ;;
 
-  submodule-ignore-dirty-on)
+  submodule-hide-worktree-changes|submodule-ignore-dirty-on)
     repo_input="${1:-}"
-    target_submodule_sections "$repo_input" | while IFS= read -r section; do
-      [ -n "$section" ] || continue
-      git config --local "${section}.ignore" dirty
-    done
+    set_submodule_ignore_value dirty "$repo_input"
     ;;
 
-  submodule-ignore-dirty-off)
+  submodule-show-worktree-changes|submodule-ignore-dirty-off)
     repo_input="${1:-}"
-    target_submodule_sections "$repo_input" | while IFS= read -r section; do
-      [ -n "$section" ] || continue
-      git config --local --unset-all "${section}.ignore" 2>/dev/null || true
-    done
+    clear_submodule_ignore_value "$repo_input"
+    ;;
+
+  submodule-worktree-changes-visibility)
+    repo_input="${1:-}"
+    print_submodule_visibility_status dirty "$repo_input"
     ;;
 
   submodule-ignore-dirty-status)
     repo_input="${1:-}"
-    target_submodule_sections "$repo_input" | while IFS= read -r section; do
-      [ -n "$section" ] || continue
-      repo_path=$(submodule_path_from_section "$section")
-      ignore_value=$(git config --local --get "${section}.ignore" 2>/dev/null || true)
-      if [ -n "$ignore_value" ]; then
-        printf '%s\t%s\n' "$repo_path" "$ignore_value"
-      else
-        printf '%s\toff\n' "$repo_path"
-      fi
-    done
+    print_submodule_ignore_raw_status dirty "$repo_input"
     ;;
 
-  submodule-ignore-all-on)
+  submodule-hide-all-changes|submodule-ignore-all-on)
     repo_input="${1:-}"
-    target_submodule_sections "$repo_input" | while IFS= read -r section; do
-      [ -n "$section" ] || continue
-      git config --local "${section}.ignore" all
-    done
+    set_submodule_ignore_value all "$repo_input"
     ;;
 
-  submodule-ignore-all-off)
+  submodule-show-all-changes|submodule-ignore-all-off)
     repo_input="${1:-}"
-    target_submodule_sections "$repo_input" | while IFS= read -r section; do
-      [ -n "$section" ] || continue
-      git config --local --unset-all "${section}.ignore" 2>/dev/null || true
-    done
+    clear_submodule_ignore_value "$repo_input"
+    ;;
+
+  submodule-all-changes-visibility)
+    repo_input="${1:-}"
+    print_submodule_visibility_status all "$repo_input"
     ;;
 
   submodule-ignore-all-status)
     repo_input="${1:-}"
-    target_submodule_sections "$repo_input" | while IFS= read -r section; do
-      [ -n "$section" ] || continue
-      repo_path=$(submodule_path_from_section "$section")
-      ignore_value=$(git config --local --get "${section}.ignore" 2>/dev/null || true)
-      if [ "$ignore_value" = "all" ]; then
-        printf '%s\t%s\n' "$repo_path" "$ignore_value"
-      else
-        printf '%s\toff\n' "$repo_path"
-      fi
-    done
+    print_submodule_ignore_raw_status all "$repo_input"
     ;;
 
   open-repo)
