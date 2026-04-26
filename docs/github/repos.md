@@ -23,7 +23,7 @@ just github::repos::private::create kitsuyui/new-private-repo
 
 ## Deprecated aliases
 
-The following aliases remain available for compatibility and emit a warning. Prefer the primary commands above.
+The following aliases remain available for compatibility. Prefer the primary commands above.
 
 | Deprecated alias | Use instead |
 | --- | --- |

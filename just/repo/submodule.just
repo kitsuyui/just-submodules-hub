@@ -24,98 +24,25 @@ init-all JOBS="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" init-all-repos "{{JOBS}}"
 
-# Deprecated alias for default-branch::sync.
-sync-default-branch REPO:
-  #!/bin/sh
-  echo "warning: repo::submodule::sync-default-branch is deprecated; use repo::submodule::default-branch::sync" >&2
-  cd "{{invocation_directory()}}" && just repo submodule default-branch sync "{{REPO}}"
-
-# Deprecated alias for default-branch::sync-all.
-sync-all-default-branch:
-  #!/bin/sh
-  echo "warning: repo::submodule::sync-all-default-branch is deprecated; use repo::submodule::default-branch::sync-all" >&2
-  cd "{{invocation_directory()}}" && just repo submodule default-branch sync-all
-
-# Deprecated alias for pointers::commit.
-commit-pointers MESSAGE="Update submodule pointers":
-  #!/bin/sh
-  echo "warning: repo::submodule::commit-pointers is deprecated; use repo::submodule::pointers::commit" >&2
-  cd "{{invocation_directory()}}" && just repo submodule pointers commit "{{MESSAGE}}"
-
-# Deprecated alias for root-status::hide.
-hide-root-status-changes REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-hide-root-status-changes "{{REPO}}"
-
-# Deprecated alias for root-status::show.
-show-root-status-changes REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-show-root-status-changes "{{REPO}}"
-
-# Deprecated alias for root-status::visibility.
-root-status-changes-visibility REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-root-status-changes-visibility "{{REPO}}"
-
-# Deprecated alias for hide-root-status-changes.
-hide-worktree-changes REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-hide-worktree-changes "{{REPO}}"
-
-# Deprecated alias for show-root-status-changes.
-show-worktree-changes REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-show-worktree-changes "{{REPO}}"
-
-# Deprecated alias for root-status-changes-visibility.
-worktree-changes-visibility REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-worktree-changes-visibility "{{REPO}}"
-
-# Deprecated alias for hide-worktree-changes.
-ignore-dirty-on REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-on "{{REPO}}"
-
-# Deprecated alias for show-worktree-changes.
-ignore-dirty-off REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-off "{{REPO}}"
-
-# Deprecated alias for worktree-changes-visibility.
-ignore-dirty-status REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-status "{{REPO}}"
-
-# Deprecated alias for hide-root-status-changes.
-hide-all-changes REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-hide-all-changes "{{REPO}}"
-
-# Deprecated alias for show-root-status-changes.
-show-all-changes REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-show-all-changes "{{REPO}}"
-
-# Deprecated alias for root-status-changes-visibility.
-all-changes-visibility REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-all-changes-visibility "{{REPO}}"
-
-# Deprecated alias for hide-all-changes.
-ignore-all-on REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-all-on "{{REPO}}"
-
-# Deprecated alias for show-all-changes.
-ignore-all-off REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-all-off "{{REPO}}"
-
-# Deprecated alias for all-changes-visibility.
-ignore-all-status REPO="":
-  #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-all-status "{{REPO}}"
+# Deprecated compatibility aliases. Prefer the canonical namespace/resource/verb commands.
+alias sync-default-branch := default-branch::sync
+alias sync-all-default-branch := default-branch::sync-all
+alias commit-pointers := pointers::commit
+alias hide-root-status-changes := root-status::hide
+alias show-root-status-changes := root-status::show
+alias root-status-changes-visibility := root-status::visibility
+alias hide-worktree-changes := root-status::hide
+alias show-worktree-changes := root-status::show
+alias worktree-changes-visibility := root-status::visibility
+alias ignore-dirty-on := root-status::hide
+alias ignore-dirty-off := root-status::show
+alias ignore-dirty-status := root-status::visibility
+alias hide-all-changes := root-status::hide
+alias show-all-changes := root-status::show
+alias all-changes-visibility := root-status::visibility
+alias ignore-all-on := root-status::hide
+alias ignore-all-off := root-status::show
+alias ignore-all-status := root-status::visibility
 
 # Run a command for each submodule.
 every COMMAND:
@@ -127,14 +54,5 @@ grep +ARGS:
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" grep {{ARGS}}
 
-# Deprecated alias for managed::list.
-list-managed:
-  #!/bin/sh
-  echo "warning: repo::submodule::list-managed is deprecated; use repo::submodule::managed::list" >&2
-  cd "{{invocation_directory()}}" && just repo submodule managed list
-
-# Deprecated alias for unmanaged::list.
-list-unmanaged OWNERS=module_default_owners VISIBILITY=module_default_visibility:
-  #!/bin/sh
-  echo "warning: repo::submodule::list-unmanaged is deprecated; use repo::submodule::unmanaged::list" >&2
-  cd "{{invocation_directory()}}" && just repo submodule unmanaged list "{{OWNERS}}" "{{VISIBILITY}}"
+alias list-managed := managed::list
+alias list-unmanaged := unmanaged::list
