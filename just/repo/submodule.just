@@ -3,6 +3,7 @@ module_default_visibility := "all"
 
 repo_submodule_source_dir := source_directory()
 
+mod branches "submodule/branches.just"
 mod default-branch "submodule/default-branch.just"
 mod managed "submodule/managed.just"
 mod pointers "submodule/pointers.just"
