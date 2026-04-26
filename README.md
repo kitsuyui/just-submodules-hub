@@ -56,10 +56,10 @@ just repo::submodule::default-branch::sync-all
 just repo::submodule::init-all
 just repo::submodule::root-status::hide
 just repo::submodule::root-status::hide just-submodules-hub
-just repo::catalog::python
-just repo::open::codex just-submodules-hub
+just repo::catalog::languages::python::list
+just repo::open::tools::codex::open just-submodules-hub
 just github::repos::list
-just github::prs::summary
+just github::prs::summaries::show
 just github::branch-protection::all::status
 ```
 
