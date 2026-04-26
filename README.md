@@ -53,8 +53,8 @@ Examples:
 
 ```sh
 just repo::submodule::sync-all-default-branch
-just repo::submodule::hide-root-status-changes
-just repo::submodule::hide-root-status-changes just-submodules-hub
+just repo::submodule::root-status::hide
+just repo::submodule::root-status::hide just-submodules-hub
 just repo::catalog::python
 just repo::open::codex just-submodules-hub
 just github::repos::list
@@ -80,18 +80,18 @@ The namespace guides in [`docs/`](docs/README.md) are the canonical reference. K
 If a consumer hub treats each submodule as an independent working repository, you can suppress submodule noise in the parent repository with:
 
 ```sh
-just repo::submodule::hide-root-status-changes
-just repo::submodule::hide-root-status-changes owner/repo
-just repo::submodule::root-status-changes-visibility
+just repo::submodule::root-status::hide
+just repo::submodule::root-status::hide owner/repo
+just repo::submodule::root-status::visibility
 ```
 
 This uses Git's local `submodule.<name>.ignore` setting in the consumer repository's `.git/config`.
 
-- `hide-root-status-changes` sets `ignore=all`, suppressing modified, untracked, and `new commits` noise in the parent repository status.
-- `show-root-status-changes` clears the local ignore setting and restores visibility.
-- `root-status-changes-visibility` reports `hidden` or `visible`.
+- `root-status::hide` sets `ignore=all`, suppressing modified, untracked, and `new commits` noise in the parent repository status.
+- `root-status::show` clears the local ignore setting and restores visibility.
+- `root-status::visibility` reports `hidden` or `visible`.
 - `commit-pointers` still stages and commits intentional gitlink updates by comparing the recorded gitlink with the submodule `HEAD`.
-- Legacy `hide-worktree-changes`, `hide-all-changes`, `ignore-dirty-*`, and `ignore-all-*` aliases remain available for compatibility.
+- Deprecated aliases such as `hide-root-status-changes`, `hide-worktree-changes`, `hide-all-changes`, `ignore-dirty-*`, and `ignore-all-*` remain available for compatibility and emit a warning.
 
 ### Sync Options
 

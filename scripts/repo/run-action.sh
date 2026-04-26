@@ -110,6 +110,12 @@ print_submodule_visibility_status() {
   done
 }
 
+warn_deprecated_submodule_action() {
+  old_name="$1"
+  new_name="$2"
+  printf 'warning: %s is deprecated; use %s instead\n' "$old_name" "$new_name" >&2
+}
+
 submodule_pointer_changed() {
   repo_path="$1"
   index_oid=$(git ls-files -s -- "$repo_path" | awk '{print $2}')
@@ -226,38 +232,60 @@ EOF_PATHS
     git commit -m "$message"
     ;;
 
+  submodule-root-status-hide)
+    repo_input="${1:-}"
+    set_submodule_ignore_value all "$repo_input"
+    ;;
+
+  submodule-root-status-show)
+    repo_input="${1:-}"
+    clear_submodule_ignore_value "$repo_input"
+    ;;
+
+  submodule-root-status-visibility)
+    repo_input="${1:-}"
+    print_submodule_visibility_status all "$repo_input"
+    ;;
+
   submodule-hide-root-status-changes|submodule-hide-worktree-changes|submodule-hide-all-changes|submodule-ignore-all-on)
     repo_input="${1:-}"
+    warn_deprecated_submodule_action "$action" "submodule-root-status-hide"
     set_submodule_ignore_value all "$repo_input"
     ;;
 
   submodule-show-root-status-changes|submodule-show-worktree-changes|submodule-show-all-changes|submodule-ignore-all-off)
     repo_input="${1:-}"
+    warn_deprecated_submodule_action "$action" "submodule-root-status-show"
     clear_submodule_ignore_value "$repo_input"
     ;;
 
   submodule-root-status-changes-visibility|submodule-worktree-changes-visibility|submodule-all-changes-visibility)
     repo_input="${1:-}"
+    warn_deprecated_submodule_action "$action" "submodule-root-status-visibility"
     print_submodule_visibility_status all "$repo_input"
     ;;
 
   submodule-ignore-dirty-status)
     repo_input="${1:-}"
+    warn_deprecated_submodule_action "$action" "submodule-root-status-visibility"
     print_submodule_ignore_raw_status dirty "$repo_input"
     ;;
 
   submodule-ignore-dirty-on)
     repo_input="${1:-}"
+    warn_deprecated_submodule_action "$action" "submodule-root-status-hide"
     set_submodule_ignore_value dirty "$repo_input"
     ;;
 
   submodule-ignore-dirty-off)
     repo_input="${1:-}"
+    warn_deprecated_submodule_action "$action" "submodule-root-status-show"
     clear_submodule_ignore_value "$repo_input"
     ;;
 
   submodule-ignore-all-status)
     repo_input="${1:-}"
+    warn_deprecated_submodule_action "$action" "submodule-root-status-visibility"
     print_submodule_ignore_raw_status all "$repo_input"
     ;;
 
