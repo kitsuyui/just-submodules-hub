@@ -100,6 +100,11 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --final-submodule-update`
 - `repo::submodule::sync-all-default-branch` uses Python + `tqdm` with one transient progress bar
 
+### Shallow Submodule Setup
+
+`repo::submodule::add` records new submodules with `shallow = true` in `.gitmodules`.
+When a hub is cloned later, `git submodule update --recommend-shallow` can use that hint to keep initial setup lighter.
+
 ## License Scope
 
 This repository is dedicated to the public domain under CC0-1.0.

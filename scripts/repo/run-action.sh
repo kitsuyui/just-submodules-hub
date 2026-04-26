@@ -146,6 +146,7 @@ case "$action" in
       rm -rf ".git/modules/${repo_dir}"
     fi
     git submodule add -- "${repo_url}" "${repo_dir}"
+    git config -f .gitmodules "submodule.${repo_dir}.shallow" true
     ;;
 
   remove-repo)
@@ -201,8 +202,8 @@ case "$action" in
 
     "$sync_script" all "$@"
     if [ "$final_submodule_update" -eq 1 ]; then
-      echo "Running final submodule update (--remote --rebase --recursive)..."
-      git submodule update --remote --rebase --recursive --progress
+      echo "Running final submodule update (--remote --rebase --recursive --recommend-shallow)..."
+      git submodule update --remote --rebase --recursive --recommend-shallow --progress
     fi
     ;;
 
