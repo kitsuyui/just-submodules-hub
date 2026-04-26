@@ -63,6 +63,18 @@ just github::prs::summary
 just github::branch-protection::all::status
 ```
 
+For command discovery, use:
+
+```sh
+just --list --list-submodules
+```
+
+To inspect only the canonical command tree without compatibility aliases, use:
+
+```sh
+just --list --list-submodules --no-aliases
+```
+
 Detailed command guides live under [`docs/`](docs/README.md):
 
 - [`docs/repo/`](docs/repo/README.md)
@@ -93,7 +105,7 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 - `root-status::show` clears the local ignore setting and restores visibility.
 - `root-status::visibility` reports `hidden` or `visible`.
 - `pointers::commit` still stages and commits intentional gitlink updates by comparing the recorded gitlink with the submodule `HEAD`.
-- Deprecated aliases such as `hide-root-status-changes`, `hide-worktree-changes`, `hide-all-changes`, `ignore-dirty-*`, and `ignore-all-*` remain available for compatibility and emit a warning.
+- Deprecated aliases such as `hide-root-status-changes`, `hide-worktree-changes`, `hide-all-changes`, `ignore-dirty-*`, and `ignore-all-*` remain available for compatibility.
 
 ### Sync Options
 

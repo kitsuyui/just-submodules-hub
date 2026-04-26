@@ -36,12 +36,24 @@ just github::branch-protection::all::rulesets::cleanup
 When renaming an existing command:
 
 1. Add the new canonical command first.
-2. Keep the old command as a deprecated alias.
-3. Emit a warning from the alias that points to the canonical command.
-4. Update internal calls, tests, and documentation to use the canonical command.
-5. Document the alias in the relevant namespace guide.
+2. Keep the old command as a `just` alias.
+3. Add a code comment near the alias that marks it as deprecated compatibility.
+4. Update internal calls, tests, and documentation examples to use the canonical command.
+5. Document the alias mapping in the relevant namespace guide.
 
-Deprecated aliases are compatibility shims, not examples for new commands.
+Deprecated aliases are compatibility shims, not examples for new commands. `just` aliases do not emit runtime deprecation warnings, so the deprecation note lives in the justfile comments and documentation.
+
+Use this to inspect the full command tree:
+
+```sh
+just --list --list-submodules
+```
+
+Use this when reviewing only canonical commands:
+
+```sh
+just --no-aliases --list --list-submodules
+```
 
 ## Anti-Patterns
 
