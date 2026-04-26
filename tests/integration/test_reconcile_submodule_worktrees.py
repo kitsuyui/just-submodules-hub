@@ -90,7 +90,7 @@ def test_reconcile_submodule_worktrees_aggregates_jsonl(
     add_submodule(hub_repo, remote, submodule_path)
 
     proc = subprocess.run(
-        [str(ACTION_SCRIPT), "reconcile-submodule-worktrees", "--format", "jsonl"],
+        [str(ACTION_SCRIPT), "reconcile-submodule-worktrees", "--format", "jsonl", "--no-prefilter"],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,

@@ -113,3 +113,47 @@ def test_every_repo_reports_failed_commands(
             "stdout": "",
         }
     ]
+
+
+def test_every_repo_can_filter_by_marker_file(
+    tmp_path: Path,
+    hub_repo: Path,
+) -> None:
+    python_remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "python-lib",
+        {"pyproject.toml": "[project]\nname='python-lib'\n"},
+    )
+    js_remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "js-lib",
+        {"package.json": '{"name":"js-lib"}\n'},
+    )
+    python_path = "repo/github.com/example-owner/python-lib"
+    add_submodule(hub_repo, python_remote, python_path)
+    add_submodule(hub_repo, js_remote, "repo/github.com/example-owner/js-lib")
+
+    proc = subprocess.run(
+        [
+            str(ACTION_SCRIPT),
+            "every-repo",
+            "--marker-file",
+            "pyproject.toml",
+            "pwd",
+            "--format",
+            "jsonl",
+            "--jobs",
+            "2",
+        ],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    rows = [json.loads(line) for line in proc.stdout.splitlines()]
+    assert [row["repo"] for row in rows] == [python_path]
+    assert rows[0]["status"] == "ok"

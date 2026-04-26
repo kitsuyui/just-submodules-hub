@@ -11,9 +11,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+from just_submodules_hub.default_heads import matching_default_head, owner_prefilter_total
 from just_submodules_hub.gitmodules import read_gitmodules_paths
 from just_submodules_hub.repo_paths import resolve_repo_input
-from just_submodules_hub.submodule_batch import positive_int, print_records, run_parallel_with_progress
+from just_submodules_hub.submodule_batch import positive_int, print_records, progress_bar, run_parallel, tick
 
 
 FIELDS = ("repo", "status", "action", "branch", "pr", "dirty", "message")
@@ -177,12 +178,69 @@ def reconcile_one(root: Path, repo_path: str) -> Result:
     return Result(repo_path, pulled.status, "pull-topic", branch, pr, dirty, message)
 
 
+def prefiltered_default_result(root: Path, repo_path: str, default: str) -> Result:
+    repo = root / repo_path
+    return Result(
+        repo_path,
+        "noop",
+        "prefilter-default",
+        default,
+        "",
+        dirty_state(repo),
+        "already up to date",
+    )
+
+
+def build_reconcile_targets(
+    root: Path,
+    paths: list[str],
+    *,
+    prefilter: bool,
+    bar,
+) -> tuple[list[str], list[Result]]:
+    if not prefilter:
+        return paths, []
+
+    from just_submodules_hub.default_heads import fetch_default_heads_for_paths
+
+    submodule_paths = [path for path in paths if path != "."]
+    heads = fetch_default_heads_for_paths(submodule_paths, bar)
+    targets: list[str] = []
+    skipped: list[Result] = []
+
+    for repo_path in paths:
+        if repo_path == ".":
+            targets.append(repo_path)
+            continue
+        default = matching_default_head(repo_path, heads)
+        if default is None:
+            targets.append(repo_path)
+            continue
+        skipped.append(prefiltered_default_result(root, repo_path, default.branch))
+        tick(bar)
+
+    return targets, skipped
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Reconcile managed submodule worktrees.")
-    parser.add_argument("mode", choices=("one", "all"))
+    parser.add_argument("mode", choices=("one", "all", "root-and-all"))
     parser.add_argument("repo", nargs="?")
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
     parser.add_argument("--jobs", type=positive_int, default=4, help="parallel workers for all mode (default: 4)")
+    parser.add_argument(
+        "--prefilter",
+        dest="prefilter",
+        action="store_true",
+        default=True,
+        help="skip default-branch submodules that already match the remote default HEAD (default)",
+    )
+    parser.add_argument(
+        "--no-prefilter",
+        dest="prefilter",
+        action="store_false",
+        help="disable GraphQL prefilter",
+    )
     return parser.parse_args()
 
 
@@ -198,21 +256,30 @@ def main() -> int:
         except (ValueError, FileNotFoundError) as exc:
             print(str(exc), file=sys.stderr)
             return 2
-    else:
+    elif args.mode == "all":
         paths = read_gitmodules_paths(root)
+    else:
+        paths = [".", *read_gitmodules_paths(root)]
 
-    if args.mode == "all":
-        results, failures = run_parallel_with_progress(
-            paths,
-            lambda path: reconcile_one(root, path),
-            jobs=args.jobs,
+    if args.mode in ("all", "root-and-all"):
+        prefilter_paths = [path for path in paths if path != "."]
+        with progress_bar(
+            total=len(paths) + owner_prefilter_total(prefilter_paths, args.prefilter),
             desc="reconcile",
             unit="repo",
-        )
-        results.extend(
-            Result(failure.item, "failed", "batch", "", "", "unknown", failure.message)
-            for failure in failures
-        )
+        ) as bar:
+            targets, results = build_reconcile_targets(root, paths, prefilter=args.prefilter, bar=bar)
+            target_results, failures = run_parallel(
+                targets,
+                lambda path: reconcile_one(root, path),
+                jobs=args.jobs,
+                on_done=lambda: tick(bar),
+            )
+            results.extend(target_results)
+            results.extend(
+                Result(failure.item, "failed", "batch", "", "", "unknown", failure.message)
+                for failure in failures
+            )
         results.sort(key=lambda result: result.repo)
     else:
         results = [reconcile_one(root, path) for path in paths]
