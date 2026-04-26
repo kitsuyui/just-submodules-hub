@@ -131,6 +131,46 @@ submodule_pointer_changed() {
   [ "$index_oid" != "$worktree_oid" ]
 }
 
+resolve_submodule_jobs() {
+  requested_jobs="${1:-}"
+  if [ -n "$requested_jobs" ]; then
+    printf '%s\n' "$requested_jobs"
+    return
+  fi
+
+  configured_jobs=$(git config --get submodule.fetchJobs 2>/dev/null || true)
+  if [ -n "$configured_jobs" ]; then
+    printf '%s\n' "$configured_jobs"
+    return
+  fi
+
+  if command -v getconf >/dev/null 2>&1; then
+    cpu_count=$(getconf _NPROCESSORS_ONLN 2>/dev/null || true)
+    if [ -n "$cpu_count" ]; then
+      printf '%s\n' "$cpu_count"
+      return
+    fi
+  fi
+
+  if command -v sysctl >/dev/null 2>&1; then
+    cpu_count=$(sysctl -n hw.ncpu 2>/dev/null || true)
+    if [ -n "$cpu_count" ]; then
+      printf '%s\n' "$cpu_count"
+    fi
+  fi
+}
+
+validate_positive_integer() {
+  value="$1"
+  label="$2"
+  case "$value" in
+    ''|*[!0-9]*|0)
+      echo "$label must be a positive integer: $value" >&2
+      exit 2
+      ;;
+  esac
+}
+
 case "$action" in
   add-repo)
     repo_url_input="${1:-}"
@@ -147,6 +187,16 @@ case "$action" in
     fi
     git submodule add -- "${repo_url}" "${repo_dir}"
     git config -f .gitmodules "submodule.${repo_dir}.shallow" true
+    ;;
+
+  init-all-repos)
+    jobs=$(resolve_submodule_jobs "${1:-}")
+    if [ -n "$jobs" ]; then
+      validate_positive_integer "$jobs" "JOBS"
+      git submodule update --init --recursive --recommend-shallow --jobs "$jobs"
+    else
+      git submodule update --init --recursive --recommend-shallow
+    fi
     ;;
 
   remove-repo)

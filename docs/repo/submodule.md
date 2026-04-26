@@ -11,6 +11,8 @@ Use these commands when you want to add, remove, sync, or inspect managed submod
 ```sh
 just repo::submodule::add <owner>/<repo>
 just repo::submodule::remove <repo|owner/repo|repo/github.com/owner/repo>
+just repo::submodule::init-all
+just repo::submodule::init-all <jobs>
 just repo::submodule::sync-default-branch <repo|owner/repo|repo/github.com/owner/repo>
 just repo::submodule::sync-all-default-branch
 just repo::submodule::commit-pointers
@@ -29,6 +31,7 @@ just repo::submodule::every '<command>'
 
 - These commands operate on the consumer repository that imports `just-submodules-hub`.
 - `add` records new submodules with `shallow = true` in `.gitmodules`; later setup commands that use `git submodule update --recommend-shallow` can then avoid fetching full history.
+- `init-all` initializes registered submodules with `--recursive --recommend-shallow`. Pass `jobs` explicitly, or configure `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
 - Short names work only when they resolve to exactly one managed repository.
 - `commit-pointers` stages and commits only gitlink updates.
 - `root-status::hide` changes the consumer repository's local `.git/config`, not `.gitmodules`.
