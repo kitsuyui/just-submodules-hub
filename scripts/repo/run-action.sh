@@ -110,6 +110,21 @@ print_submodule_visibility_status() {
   done
 }
 
+submodule_pointer_changed() {
+  repo_path="$1"
+  index_oid=$(git ls-files -s -- "$repo_path" | awk '{print $2}')
+  if [ -z "$index_oid" ]; then
+    return 1
+  fi
+
+  worktree_oid=$(git -C "$repo_path" rev-parse HEAD 2>/dev/null || true)
+  if [ -z "$worktree_oid" ]; then
+    return 1
+  fi
+
+  [ "$index_oid" != "$worktree_oid" ]
+}
+
 case "$action" in
   add-repo)
     repo_url_input="${1:-}"
@@ -190,7 +205,7 @@ case "$action" in
     changed=""
     while IFS= read -r repo_path; do
       [ -n "$repo_path" ] || continue
-      if ! git diff --quiet -- "$repo_path"; then
+      if submodule_pointer_changed "$repo_path"; then
         changed="$changed $repo_path"
       fi
     done <<EOF_PATHS
@@ -204,26 +219,26 @@ EOF_PATHS
 
     # shellcheck disable=SC2086
     git add -- $changed
-    if git diff --cached --quiet; then
+    if git diff --cached --ignore-submodules=none --quiet; then
       echo "No staged changes after selecting submodule pointers"
       exit 0
     fi
     git commit -m "$message"
     ;;
 
-  submodule-hide-worktree-changes|submodule-ignore-dirty-on)
+  submodule-hide-root-status-changes|submodule-hide-worktree-changes|submodule-hide-all-changes|submodule-ignore-all-on)
     repo_input="${1:-}"
-    set_submodule_ignore_value dirty "$repo_input"
+    set_submodule_ignore_value all "$repo_input"
     ;;
 
-  submodule-show-worktree-changes|submodule-ignore-dirty-off)
+  submodule-show-root-status-changes|submodule-show-worktree-changes|submodule-show-all-changes|submodule-ignore-all-off)
     repo_input="${1:-}"
     clear_submodule_ignore_value "$repo_input"
     ;;
 
-  submodule-worktree-changes-visibility)
+  submodule-root-status-changes-visibility|submodule-worktree-changes-visibility|submodule-all-changes-visibility)
     repo_input="${1:-}"
-    print_submodule_visibility_status dirty "$repo_input"
+    print_submodule_visibility_status all "$repo_input"
     ;;
 
   submodule-ignore-dirty-status)
@@ -231,19 +246,14 @@ EOF_PATHS
     print_submodule_ignore_raw_status dirty "$repo_input"
     ;;
 
-  submodule-hide-all-changes|submodule-ignore-all-on)
+  submodule-ignore-dirty-on)
     repo_input="${1:-}"
-    set_submodule_ignore_value all "$repo_input"
+    set_submodule_ignore_value dirty "$repo_input"
     ;;
 
-  submodule-show-all-changes|submodule-ignore-all-off)
+  submodule-ignore-dirty-off)
     repo_input="${1:-}"
     clear_submodule_ignore_value "$repo_input"
-    ;;
-
-  submodule-all-changes-visibility)
-    repo_input="${1:-}"
-    print_submodule_visibility_status all "$repo_input"
     ;;
 
   submodule-ignore-all-status)

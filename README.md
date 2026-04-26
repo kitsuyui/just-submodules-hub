@@ -53,8 +53,8 @@ Examples:
 
 ```sh
 just repo::submodule::sync-all-default-branch
-just repo::submodule::hide-worktree-changes
-just repo::submodule::hide-worktree-changes just-submodules-hub
+just repo::submodule::hide-root-status-changes
+just repo::submodule::hide-root-status-changes just-submodules-hub
 just repo::catalog::python
 just repo::open::codex just-submodules-hub
 just github::repos::list
@@ -75,25 +75,23 @@ import? "repo/github.com/kitsuyui/just-submodules-hub/just/index.just"
 
 The namespace guides in [`docs/`](docs/README.md) are the canonical reference. Keep consumer-specific README customization in the consumer repository, not here.
 
-### Submodule Dirty-Status Noise
+### Submodule Status Noise
 
-If a consumer hub frequently keeps local worktrees dirty, you can suppress that noise in the parent repository with:
+If a consumer hub treats each submodule as an independent working repository, you can suppress submodule noise in the parent repository with:
 
 ```sh
-just repo::submodule::hide-worktree-changes
-just repo::submodule::hide-worktree-changes owner/repo
-just repo::submodule::worktree-changes-visibility
-just repo::submodule::hide-all-changes
-just repo::submodule::hide-all-changes owner/repo
+just repo::submodule::hide-root-status-changes
+just repo::submodule::hide-root-status-changes owner/repo
+just repo::submodule::root-status-changes-visibility
 ```
 
 This uses Git's local `submodule.<name>.ignore` setting in the consumer repository's `.git/config`.
 
-- `hide-worktree-changes` suppresses modified and untracked content noise.
-- `hide-all-changes` also suppresses `new commits` noise in the parent repository status.
-- `show-worktree-changes` and `show-all-changes` restore visibility.
-- `worktree-changes-visibility` and `all-changes-visibility` report `hidden` or `visible`.
-- Legacy `ignore-dirty-*` and `ignore-all-*` aliases remain available for compatibility.
+- `hide-root-status-changes` sets `ignore=all`, suppressing modified, untracked, and `new commits` noise in the parent repository status.
+- `show-root-status-changes` clears the local ignore setting and restores visibility.
+- `root-status-changes-visibility` reports `hidden` or `visible`.
+- `commit-pointers` still stages and commits intentional gitlink updates by comparing the recorded gitlink with the submodule `HEAD`.
+- Legacy `hide-worktree-changes`, `hide-all-changes`, `ignore-dirty-*`, and `ignore-all-*` aliases remain available for compatibility.
 
 ### Sync Options
 
