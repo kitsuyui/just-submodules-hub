@@ -396,7 +396,7 @@ EOF_PATHS
     command -v gh >/dev/null 2>&1 || { echo "gh command not found" >&2; exit 1; }
     for owner in $(printf '%s\n' "$owners" | tr ',' ' '); do
       [ -n "$owner" ] || continue
-      just github repos list-owner "$owner" "$visibility"
+      just github repos owner list "$owner" "$visibility"
     done | awk -F'\t' '!seen[$1]++'
     ;;
 
@@ -415,7 +415,7 @@ EOF_PATHS
     managed_file=$(mktemp)
     trap 'rm -f "$public_file" "$managed_file"' EXIT
     just github repos list "$owners" "$visibility" | cut -f1 | sort > "$public_file"
-    just repo submodule list-managed | sort > "$managed_file"
+    just repo submodule managed list | sort > "$managed_file"
     comm -23 "$public_file" "$managed_file"
     ;;
 

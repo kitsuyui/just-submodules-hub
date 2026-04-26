@@ -24,7 +24,7 @@ def test_imported_repo_submodule_list_managed_uses_consumer_invocation_directory
     add_submodule(hub_repo, remote, "repo/github.com/example-owner/managed")
 
     proc = subprocess.run(
-        ["just", "repo", "submodule", "list-managed"],
+        ["just", "repo", "submodule", "managed", "list"],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
@@ -54,7 +54,7 @@ def test_imported_repo_submodule_commit_pointers_uses_consumer_invocation_direct
     assert sync_proc.returncode == 0, sync_proc.stderr
 
     commit_proc = subprocess.run(
-        ["just", "repo", "submodule", "commit-pointers", "Update submodule pointers"],
+        ["just", "repo", "submodule", "pointers", "commit", "Update submodule pointers"],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,

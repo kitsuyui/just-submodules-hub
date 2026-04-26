@@ -3,20 +3,27 @@ module_default_visibility := "all"
 
 github_repos_source_dir := source_directory()
 
-# Create a new public GitHub repository and add it as a submodule (REPO format: owner/name).
+mod owner "repos/owner.just"
+mod private "repos/private.just"
+mod public "repos/public.just"
+
+# Deprecated alias for public::create.
 create-public REPO:
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{github_repos_source_dir}}/../../scripts/repo/run-with-hooks.sh" create-public-repo "{{REPO}}"
+  echo "warning: github::repos::create-public is deprecated; use github::repos::public::create" >&2
+  cd "{{invocation_directory()}}" && just github repos public create "{{REPO}}"
 
-# Create a new private GitHub repository and add it as a submodule (REPO format: owner/name).
+# Deprecated alias for private::create.
 create-private REPO:
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{github_repos_source_dir}}/../../scripts/repo/run-with-hooks.sh" create-private-repo "{{REPO}}"
+  echo "warning: github::repos::create-private is deprecated; use github::repos::private::create" >&2
+  cd "{{invocation_directory()}}" && just github repos private create "{{REPO}}"
 
-# List repositories for an owner (VISIBILITY: public/private/internal/all).
+# Deprecated alias for owner::list.
 list-owner OWNER VISIBILITY=module_default_visibility:
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{github_repos_source_dir}}/../../scripts/repo/run-with-hooks.sh" list-github-repos-owner "{{OWNER}}" "{{VISIBILITY}}"
+  echo "warning: github::repos::list-owner is deprecated; use github::repos::owner::list" >&2
+  cd "{{invocation_directory()}}" && just github repos owner list "{{OWNER}}" "{{VISIBILITY}}"
 
 # List repositories for owners (comma- or space-separated).
 list OWNERS=module_default_owners VISIBILITY=module_default_visibility:
