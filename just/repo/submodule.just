@@ -15,6 +15,11 @@ remove REPO:
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" remove-repo "{{REPO}}"
 
+# Initialize all registered submodules.
+init-all JOBS="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" init-all-repos "{{JOBS}}"
+
 # Sync one repository to its default branch.
 sync-default-branch REPO:
   #!/bin/sh

@@ -53,6 +53,7 @@ Examples:
 
 ```sh
 just repo::submodule::sync-all-default-branch
+just repo::submodule::init-all
 just repo::submodule::root-status::hide
 just repo::submodule::root-status::hide just-submodules-hub
 just repo::catalog::python
@@ -104,6 +105,8 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 
 `repo::submodule::add` records new submodules with `shallow = true` in `.gitmodules`.
 When a hub is cloned later, `git submodule update --recommend-shallow` can use that hint to keep initial setup lighter.
+Use `repo::submodule::init-all` to initialize registered submodules recursively with recommended shallow behavior.
+Pass a jobs value explicitly, or set Git's `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
 
 ## License Scope
 
