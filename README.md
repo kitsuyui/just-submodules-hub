@@ -91,7 +91,9 @@ The namespace guides in [`docs/`](docs/README.md) are the canonical reference. F
 
 ### Submodule Status Noise
 
-If a consumer hub treats each submodule as an independent working repository, you can suppress submodule noise in the parent repository with:
+Consumer hubs usually treat each submodule as an independent working repository. For that workflow, `repo::submodule::add` and `repo::submodule::init-all` set `submodule.<name>.ignore=all` in the consumer repository's local `.git/config` by default.
+
+You can also manage that setting explicitly with:
 
 ```sh
 just repo::submodule::root-status::hide
@@ -101,6 +103,7 @@ just repo::submodule::root-status::visibility
 
 This uses Git's local `submodule.<name>.ignore` setting in the consumer repository's `.git/config`.
 
+- `add` and `init-all` default submodules to `ignore=all` for parent status noise reduction.
 - `root-status::hide` sets `ignore=all`, suppressing modified, untracked, and `new commits` noise in the parent repository status.
 - `root-status::show` clears the local ignore setting and restores visibility.
 - `root-status::visibility` reports `hidden` or `visible`.
@@ -116,9 +119,9 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 
 ### Shallow Submodule Setup
 
-`repo::submodule::add` records new submodules with `shallow = true` in `.gitmodules`.
+`repo::submodule::add` records new submodules with `shallow = true` in `.gitmodules` and sets the local parent-status visibility to hidden.
 When a hub is cloned later, `git submodule update --recommend-shallow` can use that hint to keep initial setup lighter.
-Use `repo::submodule::init-all` to initialize registered submodules recursively with recommended shallow behavior.
+Use `repo::submodule::init-all` to initialize registered submodules recursively with recommended shallow behavior and to default registered submodules to hidden parent status.
 Pass a jobs value explicitly, or set Git's `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
 
 ## License Scope

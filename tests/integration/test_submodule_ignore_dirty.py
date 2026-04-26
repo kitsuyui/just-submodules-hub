@@ -69,6 +69,31 @@ def test_submodule_ignore_dirty_toggle_updates_local_config(tmp_path: Path, hub_
     assert f"{submodule_path}\toff" in status_after_proc.stdout.splitlines()
 
 
+def test_init_all_repos_hides_root_status_for_registered_submodules(
+    tmp_path: Path,
+    hub_repo: Path,
+) -> None:
+    remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "init-hidden",
+        {"README.md": "hello\n"},
+    )
+    submodule_path = "repo/github.com/example-owner/init-hidden"
+    section = "submodule.repo/github.com/example-owner/init-hidden"
+    add_submodule(hub_repo, remote, submodule_path)
+
+    init_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "init-all-repos", "1"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert init_proc.returncode == 0, init_proc.stderr
+    assert run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo) == "all"
+
+
 def test_submodule_ignore_dirty_toggle_supports_targeted_repo(tmp_path: Path, hub_repo: Path) -> None:
     remote_a = create_remote(
         tmp_path,

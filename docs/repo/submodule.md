@@ -31,9 +31,12 @@ just repo::submodule::every '<command>'
 
 - These commands operate on the consumer repository that imports `just-submodules-hub`.
 - `add` records new submodules with `shallow = true` in `.gitmodules`; later setup commands that use `git submodule update --recommend-shallow` can then avoid fetching full history.
+- `add` also sets the new submodule to `ignore=all` in the consumer repository's local `.git/config`.
 - `init-all` initializes registered submodules with `--recursive --recommend-shallow`. Pass `jobs` explicitly, or configure `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
+- `init-all` also defaults registered submodules to `ignore=all` in the consumer repository's local `.git/config`.
 - Short names work only when they resolve to exactly one managed repository.
 - `pointers::commit` stages and commits only gitlink updates.
+- Parent status visibility is hidden by default after `add` and `init-all`.
 - `root-status::hide` changes the consumer repository's local `.git/config`, not `.gitmodules`.
 - `root-status::hide` without arguments updates all managed submodules.
 - `root-status::hide <repo>` targets only the resolved managed submodule.
