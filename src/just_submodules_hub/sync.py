@@ -3,16 +3,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
-from tqdm import tqdm
-
 from .gitmodules import read_gitmodules_paths
 from .repo_paths import repo_display_name, repo_owner, resolve_repo_input
 from .shell import run
+from .submodule_batch import BatchFailure, positive_int as batch_positive_int, progress_bar, run_parallel, tick
 
 
 GRAPHQL_QUERY = """
@@ -39,9 +37,6 @@ query($owner: String!, $cursor: String) {
 }
 """
 
-TQDM_BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
-
-
 @dataclass
 class SyncResult:
     repo_path: str
@@ -53,13 +48,7 @@ class SyncResult:
 
 
 def positive_int(raw: str) -> int:
-    try:
-        value = int(raw)
-    except ValueError as exc:
-        raise argparse.ArgumentTypeError("must be an integer") from exc
-    if value < 1:
-        raise argparse.ArgumentTypeError("must be >= 1")
-    return value
+    return batch_positive_int(raw)
 
 
 def parse_repo_paths(repo_root: Path | str = ".") -> List[str]:
@@ -87,7 +76,7 @@ def extract_default_head(node: dict, owner: str) -> tuple[str, tuple[str, str]] 
     return f"{owner}/{repo_name}", (name, oid)
 
 
-def fetch_owner_default_heads(owner: str, bar: tqdm) -> Dict[str, Tuple[str, str]]:
+def fetch_owner_default_heads(owner: str, bar) -> Dict[str, Tuple[str, str]]:
     cursor: str | None = None
     found: Dict[str, Tuple[str, str]] = {}
 
@@ -148,7 +137,7 @@ def should_sync_target(
     return not (local_branch == remote_branch and local_oid == remote_oid)
 
 
-def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> List[str]:
+def build_sync_targets(paths: Iterable[str], prefilter: bool, bar) -> List[str]:
     path_list = list(paths)
     if not prefilter:
         return path_list
@@ -166,7 +155,7 @@ def build_sync_targets(paths: Iterable[str], prefilter: bool, bar: tqdm) -> List
         remote = heads.get(slug)
         local_branch, local_oid = local_head(repo_path)
         if not should_sync_target(remote, local_branch, local_oid):
-            bar.update(1)
+            tick(bar)
             continue
         targets.append(repo_path)
 
@@ -264,20 +253,8 @@ def render_sync_result(name: str, result: SyncResult, verbose: bool) -> str | No
     return f"{name}: {' '.join(parts)}"
 
 
-def sync_all(paths: List[str], jobs: int, verbose: bool, bar: tqdm) -> Tuple[int, int]:
-    failures: List[Tuple[str, str]] = []
-    results: List[SyncResult] = []
-
-    with ThreadPoolExecutor(max_workers=jobs) as pool:
-        future_map = {pool.submit(sync_one, p): p for p in paths}
-        for fut in as_completed(future_map):
-            repo_path = future_map[fut]
-            try:
-                results.append(fut.result())
-            except Exception as exc:
-                failures.append((repo_path, str(exc)))
-            finally:
-                bar.update(1)
+def sync_all(paths: List[str], jobs: int, verbose: bool, bar) -> Tuple[int, int]:
+    results, failures = run_parallel(paths, sync_one, jobs=jobs, on_done=lambda: tick(bar))
 
     changed_count = 0
     for result in sorted(results, key=lambda r: r.repo_path):
@@ -291,9 +268,9 @@ def sync_all(paths: List[str], jobs: int, verbose: bool, bar: tqdm) -> Tuple[int
     return 0, changed_count
 
 
-def print_failures(failures: list[tuple[str, str]]) -> None:
-    for repo_path, msg in failures:
-        print(f"{repo_display_name(repo_path)}: {msg}", file=sys.stderr)
+def print_failures(failures: list[BatchFailure]) -> None:
+    for failure in failures:
+        print(f"{repo_display_name(failure.item)}: {failure.message}", file=sys.stderr)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -335,13 +312,10 @@ def handle_all_action(args: argparse.Namespace) -> int:
         print("No submodule paths found in .gitmodules")
         return 0
 
-    with tqdm(
+    with progress_bar(
         total=len(paths) + owner_prefilter_total(paths, args.prefilter),
         desc="sync-all",
         unit="task",
-        leave=False,
-        dynamic_ncols=True,
-        bar_format=TQDM_BAR_FORMAT,
     ) as bar:
         targets = build_sync_targets(paths, args.prefilter, bar)
         if not targets:

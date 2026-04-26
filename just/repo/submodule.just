@@ -8,6 +8,8 @@ mod managed "submodule/managed.just"
 mod pointers "submodule/pointers.just"
 mod root-status "submodule/root-status.just"
 mod unmanaged "submodule/unmanaged.just"
+mod worktree "submodule/worktree.just"
+mod worktrees "submodule/worktrees.just"
 
 # Add a submodule.
 add REPO_URL:
@@ -45,9 +47,9 @@ alias ignore-all-off := root-status::show
 alias ignore-all-status := root-status::visibility
 
 # Run a command for each submodule.
-every COMMAND:
+every COMMAND +ARGS="":
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" every-repo "{{COMMAND}}"
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" every-repo {{quote(COMMAND)}} {{ARGS}}
 
 # Run git grep including submodules.
 grep +ARGS:
