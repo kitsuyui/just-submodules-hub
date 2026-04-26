@@ -3,6 +3,8 @@ module_default_visibility := "all"
 
 repo_submodule_source_dir := source_directory()
 
+mod root-status "submodule/root-status.just"
+
 # Add a submodule.
 add REPO_URL:
   #!/bin/sh
@@ -28,17 +30,32 @@ commit-pointers MESSAGE="Update submodule pointers":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" commit-submodule-pointers "{{MESSAGE}}"
 
-# Hide worktree-only submodule changes from the parent repository status.
+# Deprecated alias for root-status::hide.
+hide-root-status-changes REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-hide-root-status-changes "{{REPO}}"
+
+# Deprecated alias for root-status::show.
+show-root-status-changes REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-show-root-status-changes "{{REPO}}"
+
+# Deprecated alias for root-status::visibility.
+root-status-changes-visibility REPO="":
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-root-status-changes-visibility "{{REPO}}"
+
+# Deprecated alias for hide-root-status-changes.
 hide-worktree-changes REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-hide-worktree-changes "{{REPO}}"
 
-# Show worktree-only submodule changes in the parent repository status again.
+# Deprecated alias for show-root-status-changes.
 show-worktree-changes REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-show-worktree-changes "{{REPO}}"
 
-# Show whether worktree-only submodule changes are hidden or visible.
+# Deprecated alias for root-status-changes-visibility.
 worktree-changes-visibility REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-worktree-changes-visibility "{{REPO}}"
@@ -58,17 +75,17 @@ ignore-dirty-status REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-ignore-dirty-status "{{REPO}}"
 
-# Hide all submodule changes, including new commits, from the parent repository status.
+# Deprecated alias for hide-root-status-changes.
 hide-all-changes REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-hide-all-changes "{{REPO}}"
 
-# Show all submodule changes in the parent repository status again.
+# Deprecated alias for show-root-status-changes.
 show-all-changes REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-show-all-changes "{{REPO}}"
 
-# Show whether all submodule changes are hidden or visible.
+# Deprecated alias for root-status-changes-visibility.
 all-changes-visibility REPO="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" submodule-all-changes-visibility "{{REPO}}"

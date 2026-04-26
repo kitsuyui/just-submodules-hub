@@ -149,6 +149,7 @@ def test_submodule_worktree_visibility_commands_use_hidden_visible_labels(
         {"README.md": "hello\n"},
     )
     submodule_path = "repo/github.com/example-owner/hide-me"
+    section = "submodule.repo/github.com/example-owner/hide-me"
     add_submodule(hub_repo, remote, submodule_path)
 
     hide_proc = subprocess.run(
@@ -159,6 +160,7 @@ def test_submodule_worktree_visibility_commands_use_hidden_visible_labels(
         check=False,
     )
     assert hide_proc.returncode == 0, hide_proc.stderr
+    assert run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo) == "all"
 
     status_proc = subprocess.run(
         [str(ACTION_SCRIPT), "submodule-worktree-changes-visibility"],
@@ -188,6 +190,81 @@ def test_submodule_worktree_visibility_commands_use_hidden_visible_labels(
     )
     assert status_after_proc.returncode == 0, status_after_proc.stderr
     assert status_after_proc.stdout.splitlines() == [f"{submodule_path}\tvisible"]
+
+
+def test_submodule_root_status_visibility_commands_use_hidden_visible_labels(
+    tmp_path: Path,
+    hub_repo: Path,
+) -> None:
+    remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "hide-root-me",
+        {"README.md": "hello\n"},
+    )
+    submodule_path = "repo/github.com/example-owner/hide-root-me"
+    section = "submodule.repo/github.com/example-owner/hide-root-me"
+    add_submodule(hub_repo, remote, submodule_path)
+
+    hide_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-root-status-hide"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert hide_proc.returncode == 0, hide_proc.stderr
+    assert run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo) == "all"
+
+    status_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-root-status-visibility"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert status_proc.returncode == 0, status_proc.stderr
+    assert status_proc.stdout.splitlines() == [f"{submodule_path}\thidden"]
+
+    show_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-root-status-show"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert show_proc.returncode == 0, show_proc.stderr
+
+    status_after_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-root-status-visibility"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert status_after_proc.returncode == 0, status_after_proc.stderr
+    assert status_after_proc.stdout.splitlines() == [f"{submodule_path}\tvisible"]
+
+
+def test_deprecated_root_status_action_emits_warning(tmp_path: Path, hub_repo: Path) -> None:
+    remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "deprecated-hide-root-me",
+        {"README.md": "hello\n"},
+    )
+    add_submodule(hub_repo, remote, "repo/github.com/example-owner/deprecated-hide-root-me")
+
+    hide_proc = subprocess.run(
+        [str(ACTION_SCRIPT), "submodule-hide-root-status-changes"],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert hide_proc.returncode == 0, hide_proc.stderr
+    assert "deprecated" in hide_proc.stderr
+    assert "submodule-root-status-hide" in hide_proc.stderr
 
 
 def test_submodule_ignore_all_toggle_supports_targeted_repo(tmp_path: Path, hub_repo: Path) -> None:
