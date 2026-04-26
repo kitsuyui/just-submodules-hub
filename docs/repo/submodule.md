@@ -20,11 +20,6 @@ just repo::submodule::root-status::show
 just repo::submodule::root-status::show <repo|owner/repo|repo/github.com/owner/repo>
 just repo::submodule::root-status::visibility
 just repo::submodule::root-status::visibility <repo|owner/repo|repo/github.com/owner/repo>
-just repo::submodule::hide-root-status-changes
-just repo::submodule::show-root-status-changes
-just repo::submodule::root-status-changes-visibility
-just repo::submodule::hide-worktree-changes
-just repo::submodule::hide-all-changes
 just repo::submodule::list-managed
 just repo::submodule::list-unmanaged
 just repo::submodule::every '<command>'
@@ -41,4 +36,25 @@ just repo::submodule::every '<command>'
 - `root-status::hide` sets `ignore=all`, hiding local dirt and `new commits` in the parent repository status.
 - `root-status::visibility` reports `hidden` or `visible`.
 - `commit-pointers` compares the recorded gitlink with the submodule `HEAD`, so intentional gitlink updates remain committable while root status is hidden.
-- Deprecated aliases such as `hide-root-status-changes`, `hide-worktree-changes`, `hide-all-changes`, `ignore-dirty-*`, and `ignore-all-*` remain available for compatibility and emit a warning.
+
+## Deprecated aliases
+
+The following aliases remain available for compatibility and emit a warning. Prefer the primary commands above.
+
+| Deprecated alias | Use instead |
+| --- | --- |
+| `hide-root-status-changes` | `root-status::hide` |
+| `hide-worktree-changes` | `root-status::hide` |
+| `hide-all-changes` | `root-status::hide` |
+| `ignore-all-on` | `root-status::hide` |
+| `show-root-status-changes` | `root-status::show` |
+| `show-worktree-changes` | `root-status::show` |
+| `show-all-changes` | `root-status::show` |
+| `ignore-all-off` | `root-status::show` |
+| `root-status-changes-visibility` | `root-status::visibility` |
+| `worktree-changes-visibility` | `root-status::visibility` |
+| `all-changes-visibility` | `root-status::visibility` |
+| `ignore-all-status` | `root-status::visibility` |
+| `ignore-dirty-on` | `root-status::hide` |
+| `ignore-dirty-off` | `root-status::show` |
+| `ignore-dirty-status` | `root-status::visibility` |
