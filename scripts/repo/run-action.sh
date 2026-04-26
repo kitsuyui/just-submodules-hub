@@ -14,6 +14,7 @@ open_repo_script="$script_dir/open-repo.sh"
 resolve_repo_script="$script_dir/resolve_repo.py"
 reconcile_worktrees_script="$script_dir/reconcile_submodule_worktrees.py"
 submodule_command_script="$script_dir/run_submodule_command.py"
+cleanup_branches_script="$script_dir/cleanup_merged_branches.py"
 
 repo_input_to_path() {
   input="$1"
@@ -277,6 +278,18 @@ case "$action" in
 
   reconcile-worktrees)
     uv run --project "$project_root" python "$reconcile_worktrees_script" root-and-all "$@"
+    ;;
+
+  cleanup-branches)
+    uv run --project "$project_root" python "$cleanup_branches_script" one "$@"
+    ;;
+
+  cleanup-submodule-branches)
+    uv run --project "$project_root" python "$cleanup_branches_script" all "$@"
+    ;;
+
+  cleanup-worktree-branches)
+    uv run --project "$project_root" python "$cleanup_branches_script" root-and-all "$@"
     ;;
 
   commit-submodule-pointers)

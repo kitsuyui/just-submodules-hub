@@ -1,5 +1,7 @@
 repo_worktrees_source_dir := source_directory()
 
+mod branches "worktrees/branches.just"
+
 # Reconcile the root repository and all managed submodule worktrees.
 reconcile +ARGS="":
   #!/bin/sh

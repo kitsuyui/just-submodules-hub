@@ -11,6 +11,8 @@ Use these commands when you want to add, remove, sync, or inspect managed submod
 ```sh
 just repo::submodule::add <owner>/<repo>
 just repo::submodule::remove <repo|owner/repo|repo/github.com/owner/repo>
+just repo::submodule::branches::cleanup
+just repo::submodule::branches::cleanup --apply
 just repo::submodule::init-all
 just repo::submodule::init-all <jobs>
 just repo::submodule::default-branch::sync <repo|owner/repo|repo/github.com/owner/repo>
@@ -41,6 +43,7 @@ just repo::submodule::every '<command>' --format jsonl --jobs 8
 - `init-all` initializes registered submodules with `--recursive --recommend-shallow`. Pass `jobs` explicitly, or configure `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
 - `init-all` also defaults registered submodules to `ignore=all` in the consumer repository's local `.git/config`.
 - Short names work only when they resolve to exactly one managed repository.
+- `branches::cleanup` finds branches in managed submodules whose pull requests are already merged. It is dry-run by default; pass `--apply` to delete branches. Remote branch cleanup only includes merged pull requests authored by the authenticated GitHub user unless `--include-non-owner-remote` is passed.
 - `pointers::commit` stages and commits only gitlink updates.
 - Parent status visibility is hidden by default after `add` and `init-all`.
 - `root-status::hide` changes the consumer repository's local `.git/config`, not `.gitmodules`.

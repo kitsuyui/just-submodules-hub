@@ -54,6 +54,8 @@ Examples:
 ```sh
 just repo::submodule::default-branch::sync-all
 just repo::submodule::init-all
+just repo::branches::cleanup
+just repo::worktrees::branches::cleanup
 just repo::submodule::root-status::hide
 just repo::submodule::root-status::hide just-submodules-hub
 just repo::submodule::worktree::reconcile just-submodules-hub
@@ -124,6 +126,20 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 - Use `repo::submodule::default-branch::sync-all` when the goal is to move managed submodules to their default branches.
 - Use `repo::submodule::worktrees::reconcile` when the goal is to preserve topic/PR branch context and clean up only states that can be settled non-destructively.
 - Use `repo::worktrees::reconcile` when the root repository and all submodule worktrees should be made fresh together.
+
+### Branch Cleanup
+
+Use these commands to delete local or remote branches whose pull requests are already merged:
+
+```sh
+just repo::branches::cleanup
+just repo::submodule::branches::cleanup --format jsonl
+just repo::worktrees::branches::cleanup --apply
+```
+
+Branch cleanup is dry-run by default. It skips default branches, current branches, and branches with open pull requests. Pass `--apply` to delete candidates, and use `--no-local` or `--no-remote` to limit the target.
+Remote branch cleanup only includes merged pull requests authored by the authenticated GitHub user by default. Pass `--include-non-owner-remote` only when branches from merged pull requests authored by other users are intentionally in scope.
+Skipped branches are hidden by default; pass `--include-skipped` when you want to audit every branch decision.
 
 ### Submodule Worktree Reconciliation
 
