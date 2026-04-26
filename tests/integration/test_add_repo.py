@@ -41,4 +41,5 @@ exit 0
     assert calls == [
         "submodule add -- git@github.com:example-owner/example-repo.git repo/github.com/example-owner/example-repo",
         "config -f .gitmodules submodule.repo/github.com/example-owner/example-repo.shallow true",
+        "config --local submodule.repo/github.com/example-owner/example-repo.ignore all",
     ]

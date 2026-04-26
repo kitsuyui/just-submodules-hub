@@ -187,6 +187,7 @@ case "$action" in
     fi
     git submodule add -- "${repo_url}" "${repo_dir}"
     git config -f .gitmodules "submodule.${repo_dir}.shallow" true
+    git config --local "submodule.${repo_dir}.ignore" all
     ;;
 
   init-all-repos)
@@ -197,6 +198,7 @@ case "$action" in
     else
       git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow
     fi
+    set_submodule_ignore_value all
     ;;
 
   remove-repo)
