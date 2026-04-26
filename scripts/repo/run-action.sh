@@ -193,9 +193,9 @@ case "$action" in
     jobs=$(resolve_submodule_jobs "${1:-}")
     if [ -n "$jobs" ]; then
       validate_positive_integer "$jobs" "JOBS"
-      git submodule update --init --recursive --recommend-shallow --jobs "$jobs"
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs "$jobs"
     else
-      git submodule update --init --recursive --recommend-shallow
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow
     fi
     ;;
 

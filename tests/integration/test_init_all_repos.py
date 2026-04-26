@@ -38,7 +38,7 @@ exit 0
 
     assert proc.returncode == 0, proc.stderr
     assert calls_file.read_text(encoding="utf-8").splitlines() == [
-        "submodule update --init --recursive --recommend-shallow --jobs 4",
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs 4",
     ]
 
 
@@ -73,5 +73,5 @@ exit 0
     assert proc.returncode == 0, proc.stderr
     assert calls_file.read_text(encoding="utf-8").splitlines() == [
         "config --get submodule.fetchJobs",
-        "submodule update --init --recursive --recommend-shallow --jobs 6",
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs 6",
     ]
