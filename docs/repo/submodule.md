@@ -23,10 +23,10 @@ just repo::submodule::root-status::show <repo|owner/repo|repo/github.com/owner/r
 just repo::submodule::root-status::visibility
 just repo::submodule::root-status::visibility <repo|owner/repo|repo/github.com/owner/repo>
 just repo::submodule::worktree::reconcile <repo|owner/repo|repo/github.com/owner/repo>
-just repo::submodule::worktree::reconcile <repo|owner/repo|repo/github.com/owner/repo> jsonl
+just repo::submodule::worktree::reconcile <repo|owner/repo|repo/github.com/owner/repo> --format jsonl
 just repo::submodule::worktrees::reconcile
-just repo::submodule::worktrees::reconcile tsv
-just repo::submodule::worktrees::reconcile table 8
+just repo::submodule::worktrees::reconcile --format tsv
+just repo::submodule::worktrees::reconcile --format table --jobs 8
 just repo::submodule::managed::list
 just repo::submodule::unmanaged::list
 just repo::submodule::every '<command>'
@@ -51,8 +51,9 @@ just repo::submodule::every '<command>' --format jsonl --jobs 8
 - `pointers::commit` compares the recorded gitlink with the submodule `HEAD`, so intentional gitlink updates remain committable while root status is hidden.
 - `worktree::reconcile` updates one managed submodule worktree using non-destructive Git operations.
 - `worktrees::reconcile` applies the same operation to every managed submodule and aggregates the result.
-- `worktrees::reconcile` accepts a jobs value after the format argument.
+- `worktrees::reconcile` accepts `--format`, `--jobs`, `--prefilter`, and `--no-prefilter`.
 - Reconciliation output formats are `table`, `tsv`, and `jsonl`.
+- Reconciliation uses an owner-level GraphQL default-branch prefilter by default. Submodules already on the remote default branch HEAD are reported as `noop` without running per-repository `pull`.
 - Reconciliation does not commit parent gitlink changes; use `pointers::commit` separately after reviewing the result.
 - `every` runs an arbitrary shell command per managed submodule through the same batch execution and record rendering foundation.
 
@@ -62,7 +63,8 @@ just repo::submodule::every '<command>' --format jsonl --jobs 8
 
 The current behavior is:
 
-- default branch: run `git pull --ff-only`
+- default branch already matching the remote default HEAD: report `noop` from the prefilter
+- default branch needing work: run `git pull --ff-only`
 - pull request branch with a merged PR: fetch the default branch, switch to it, then pull with `--ff-only`
 - pull request branch with an open PR: run `git pull --ff-only` on the current branch
 - pull request branch with a closed unmerged PR: report `skipped`
@@ -81,6 +83,8 @@ The aggregate report uses these statuses:
 | `failed` | A required Git operation failed. |
 
 `worktrees::reconcile` exits with `1` when at least one row has `failed`; `skipped` rows do not make the command fail.
+
+Use `default-branch::sync-all` when the intended outcome is to move submodules to their default branches. Use `worktrees::reconcile` when topic branches, PR branches, and detached HEADs should be interpreted before deciding whether to pull, switch, settle, or skip.
 
 ## Batch operation pattern
 

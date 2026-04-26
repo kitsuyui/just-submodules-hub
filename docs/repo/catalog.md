@@ -10,11 +10,17 @@ Use these commands when you want a quick local catalog of managed repositories b
 
 ```sh
 just repo::catalog::languages::python::list
+just repo::catalog::languages::python::every '<command>'
 just repo::catalog::languages::js::list
+just repo::catalog::languages::js::every '<command>'
 just repo::catalog::languages::go::list
+just repo::catalog::languages::go::every '<command>'
 just repo::catalog::languages::rust::list
+just repo::catalog::languages::rust::every '<command>'
 just repo::catalog::duplicates::filenames::list
 ```
+
+`languages::*::every` uses the same batch runner as `repo::submodule::every`, but prefilters the submodule set with the language marker used by `languages::*::list`.
 
 ## Deprecated aliases
 

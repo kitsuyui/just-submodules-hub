@@ -4,6 +4,7 @@ from configparser import ConfigParser
 from pathlib import Path
 
 from .repo_paths import repo_display_name, repo_owner
+from .submodule_filters import SubmoduleFilter
 
 
 def parse_gitmodules_paths(text: str) -> list[str]:
@@ -43,8 +44,4 @@ def find_submodules_with_marker(marker_file: str, repo_root: Path | str = ".") -
         raise ValueError("marker file is required")
 
     root = Path(repo_root)
-    matches: list[str] = []
-    for path in read_gitmodules_paths(root):
-        if any((root / path).rglob(marker_file)):
-            matches.append(path)
-    return matches
+    return SubmoduleFilter(marker_files=(marker_file,)).apply(read_gitmodules_paths(root), root)

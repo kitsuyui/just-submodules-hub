@@ -1,41 +1,22 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Iterable, List
 
+from .default_heads import (
+    DefaultHead,
+    fetch_owner_default_heads,
+    local_head,
+    owner_prefilter_total,
+)
 from .gitmodules import read_gitmodules_paths
 from .repo_paths import repo_display_name, repo_owner, resolve_repo_input
 from .shell import run
 from .submodule_batch import BatchFailure, positive_int as batch_positive_int, progress_bar, run_parallel, tick
 
-
-GRAPHQL_QUERY = """
-query($owner: String!, $cursor: String) {
-  repositoryOwner(login: $owner) {
-    repositories(first: 100, after: $cursor, ownerAffiliations: OWNER) {
-      nodes {
-        name
-        defaultBranchRef {
-          name
-          target {
-            ... on Commit {
-              oid
-            }
-          }
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-  }
-}
-"""
 
 @dataclass
 class SyncResult:
@@ -55,85 +36,17 @@ def parse_repo_paths(repo_root: Path | str = ".") -> List[str]:
     return read_gitmodules_paths(repo_root)
 
 
-def gh_graphql(owner: str, cursor: str | None) -> dict:
-    cmd = ["gh", "api", "graphql", "-F", f"owner={owner}", "-f", f"query={GRAPHQL_QUERY}"]
-    if cursor:
-        cmd.extend(["-F", f"cursor={cursor}"])
-    out = run(cmd)
-    return json.loads(out)
-
-
-def extract_default_head(node: dict, owner: str) -> tuple[str, tuple[str, str]] | None:
-    default_ref = node.get("defaultBranchRef")
-    if not default_ref:
-        return None
-    target = default_ref.get("target") or {}
-    oid = target.get("oid")
-    name = default_ref.get("name")
-    repo_name = node.get("name")
-    if not oid or not name or not repo_name:
-        return None
-    return f"{owner}/{repo_name}", (name, oid)
-
-
-def fetch_owner_default_heads(owner: str, bar) -> Dict[str, Tuple[str, str]]:
-    cursor: str | None = None
-    found: Dict[str, Tuple[str, str]] = {}
-
-    while True:
-        payload = gh_graphql(owner, cursor)
-        bar.update(1)
-
-        repo_owner_payload = payload.get("data", {}).get("repositoryOwner")
-        if repo_owner_payload is None:
-            raise RuntimeError(f"repository owner not found: {owner}")
-
-        repos = repo_owner_payload["repositories"]
-        for node in repos.get("nodes", []):
-            extracted = extract_default_head(node, owner)
-            if extracted is None:
-                continue
-            slug, head = extracted
-            found[slug] = head
-
-        page_info = repos.get("pageInfo", {})
-        if not page_info.get("hasNextPage"):
-            break
-
-        cursor = page_info.get("endCursor")
-        if not cursor:
-            break
-        bar.total = (bar.total or 0) + 1
-        bar.refresh()
-
-    return found
-
-
-def owner_prefilter_total(paths: Iterable[str], prefilter: bool) -> int:
-    if not prefilter:
-        return 0
-    return len({repo_owner(path) for path in paths})
-
-
-def local_head(repo_path: str) -> Tuple[str, str]:
-    cwd = Path(repo_path)
-    branch = "DETACHED"
-    try:
-        branch = run(["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=cwd)
-    except Exception:
-        pass
-    oid = run(["git", "rev-parse", "HEAD"], cwd=cwd)
-    return branch, oid
-
-
 def should_sync_target(
-    remote_head: tuple[str, str] | None,
+    remote_head: tuple[str, str] | DefaultHead | None,
     local_branch: str,
     local_oid: str,
 ) -> bool:
     if remote_head is None:
         return True
-    remote_branch, remote_oid = remote_head
+    if isinstance(remote_head, DefaultHead):
+        remote_branch, remote_oid = remote_head.branch, remote_head.oid
+    else:
+        remote_branch, remote_oid = remote_head
     return not (local_branch == remote_branch and local_oid == remote_oid)
 
 
@@ -142,10 +55,9 @@ def build_sync_targets(paths: Iterable[str], prefilter: bool, bar) -> List[str]:
     if not prefilter:
         return path_list
 
-    owners = sorted({repo_owner(path) for path in path_list})
-    heads: Dict[str, Tuple[str, str]] = {}
+    heads: dict[str, DefaultHead | tuple[str, str]] = {}
 
-    for owner in owners:
+    for owner in sorted({repo_owner(path) for path in path_list}):
         heads.update(fetch_owner_default_heads(owner, bar))
 
     targets: List[str] = []

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from just_submodules_hub import sync
+from just_submodules_hub import default_heads
 
 
 class DummyBar:
@@ -54,7 +55,7 @@ def test_build_sync_targets_skips_up_to_date_repositories(monkeypatch) -> None:
 
 
 def test_extract_default_head_ignores_incomplete_nodes() -> None:
-    assert sync.extract_default_head({"name": "sample-repo"}, "kitsuyui") is None
+    assert default_heads.extract_default_head({"name": "sample-repo"}, "kitsuyui") is None
 
 
 def test_should_sync_target_handles_missing_remote_head() -> None:
@@ -190,17 +191,20 @@ def test_fetch_owner_default_heads_handles_pagination(monkeypatch) -> None:
             },
         ]
     )
-    monkeypatch.setattr(sync, "gh_graphql", lambda owner, cursor: next(responses))
-    heads = sync.fetch_owner_default_heads("kitsuyui", bar)
-    assert heads == {"kitsuyui/sample-repo": ("main", "aaa"), "kitsuyui/sample-repo-2": ("trunk", "bbb")}
+    monkeypatch.setattr(default_heads, "gh_graphql", lambda owner, cursor: next(responses))
+    heads = default_heads.fetch_owner_default_heads("kitsuyui", bar)
+    assert heads == {
+        "kitsuyui/sample-repo": default_heads.DefaultHead("main", "aaa"),
+        "kitsuyui/sample-repo-2": default_heads.DefaultHead("trunk", "bbb"),
+    }
     assert bar.updated == 2
 
 
 def test_fetch_owner_default_heads_rejects_missing_owner(monkeypatch) -> None:
     bar = DummyBar()
-    monkeypatch.setattr(sync, "gh_graphql", lambda owner, cursor: {"data": {"repositoryOwner": None}})
+    monkeypatch.setattr(default_heads, "gh_graphql", lambda owner, cursor: {"data": {"repositoryOwner": None}})
     try:
-        sync.fetch_owner_default_heads("kitsuyui", bar)
+        default_heads.fetch_owner_default_heads("kitsuyui", bar)
     except RuntimeError as exc:
         assert str(exc) == "repository owner not found: kitsuyui"
     else:
@@ -239,8 +243,8 @@ def test_local_head_returns_detached_when_symbolic_ref_fails(monkeypatch) -> Non
             return "abc123"
         raise AssertionError(f"unexpected command: {cmd}")
 
-    monkeypatch.setattr(sync, "run", fake_run)
-    assert sync.local_head("repo/github.com/kitsuyui/sample-repo") == ("DETACHED", "abc123")
+    monkeypatch.setattr(default_heads, "run", fake_run)
+    assert default_heads.local_head("repo/github.com/kitsuyui/sample-repo") == ("DETACHED", "abc123")
 
 
 def test_sync_one_rejects_missing_repository(tmp_path) -> None:

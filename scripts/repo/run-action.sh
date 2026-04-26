@@ -275,6 +275,10 @@ case "$action" in
     uv run --project "$project_root" python "$reconcile_worktrees_script" all "$@"
     ;;
 
+  reconcile-worktrees)
+    uv run --project "$project_root" python "$reconcile_worktrees_script" root-and-all "$@"
+    ;;
+
   commit-submodule-pointers)
     message="${1:-Update submodule pointers}"
     changed=""

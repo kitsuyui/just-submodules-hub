@@ -58,8 +58,10 @@ just repo::submodule::root-status::hide
 just repo::submodule::root-status::hide just-submodules-hub
 just repo::submodule::worktree::reconcile just-submodules-hub
 just repo::submodule::worktrees::reconcile
+just repo::worktrees::reconcile
 just repo::submodule::every "git status --short"
 just repo::catalog::languages::python::list
+just repo::catalog::languages::python::every "uv run pytest"
 just repo::open::tools::codex::open just-submodules-hub
 just github::repos::list
 just github::prs::summaries::show
@@ -119,6 +121,9 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --jobs 8 --no-prefilter --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --final-submodule-update`
 - `repo::submodule::default-branch::sync-all` uses Python + `tqdm` with one transient progress bar
+- Use `repo::submodule::default-branch::sync-all` when the goal is to move managed submodules to their default branches.
+- Use `repo::submodule::worktrees::reconcile` when the goal is to preserve topic/PR branch context and clean up only states that can be settled non-destructively.
+- Use `repo::worktrees::reconcile` when the root repository and all submodule worktrees should be made fresh together.
 
 ### Submodule Worktree Reconciliation
 
@@ -127,13 +132,16 @@ Use these commands when submodules may be on a mix of default branches, topic br
 ```sh
 just repo::submodule::worktree::reconcile owner/repo
 just repo::submodule::worktrees::reconcile
-just repo::submodule::worktrees::reconcile jsonl
-just repo::submodule::worktrees::reconcile table 8
+just repo::submodule::worktrees::reconcile --format jsonl
+just repo::submodule::worktrees::reconcile --format table --jobs 8
+just repo::worktrees::reconcile
 ```
 
 The reconciler keeps pointer commits separate from worktree cleanup. It only runs non-destructive Git operations such as `pull --ff-only`, normal `switch`, and `fetch`; intentional gitlink updates still belong to `repo::submodule::pointers::commit`.
 
-The aggregate command reports one row per submodule with `status`, `action`, branch, PR number, dirty state, and message. It uses a shared progress-bar and parallel execution helper, accepts a jobs value, and exits with `1` only when one or more submodules fail. Skipped states, such as an open PR branch, are reported but are not treated as failures.
+The aggregate command reports one row per worktree with `status`, `action`, branch, PR number, dirty state, and message. It uses a shared progress-bar and parallel execution helper, accepts a jobs value, and exits with `1` only when one or more worktrees fail. Skipped states, such as an open PR branch, are reported but are not treated as failures.
+
+By default, reconciliation uses the same owner-level GraphQL default-branch prefilter as `default-branch::sync-all`. Submodules already on the remote default branch HEAD are reported as `noop` without running per-repository `pull`.
 
 `repo::submodule::every` uses the same batch foundation for arbitrary shell commands:
 
@@ -141,9 +149,10 @@ The aggregate command reports one row per submodule with `status`, `action`, bra
 just repo::submodule::every ls
 just repo::submodule::every "git status --short"
 just repo::submodule::every ls --format jsonl --jobs 8
+just repo::catalog::languages::python::every "uv run pytest" --format jsonl --jobs 8
 ```
 
-By default, it prints simple per-submodule command output. Use `--format table`, `--format tsv`, or `--format jsonl` when you need per-submodule `stdout`, `stderr`, and exit code records. The overall command exits non-zero when any submodule command fails.
+By default, it prints simple per-submodule command output. Use `--format table`, `--format tsv`, or `--format jsonl` when you need per-submodule `stdout`, `stderr`, and exit code records. The `catalog::languages::*::every` commands use the corresponding language marker as a prefilter before running the same batch command runner. The overall command exits non-zero when any submodule command fails.
 
 ### Shallow Submodule Setup
 
