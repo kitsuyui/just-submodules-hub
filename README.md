@@ -34,7 +34,7 @@ On macOS, install them with Homebrew:
 brew install just git uv
 ```
 
-If you use GitHub-related commands such as `just github::repos::create-public`, `just github::repos::create-private`, `just github::repos::list`, or `just github::prs::list`, install the GitHub CLI as well:
+If you use GitHub-related commands such as `just github::repos::public::create`, `just github::repos::private::create`, `just github::repos::list`, or `just github::prs::list`, install the GitHub CLI as well:
 
 ```sh
 brew install gh
@@ -52,7 +52,7 @@ Shared commands are grouped into two top-level namespaces:
 Examples:
 
 ```sh
-just repo::submodule::sync-all-default-branch
+just repo::submodule::default-branch::sync-all
 just repo::submodule::init-all
 just repo::submodule::root-status::hide
 just repo::submodule::root-status::hide just-submodules-hub
@@ -60,13 +60,14 @@ just repo::catalog::python
 just repo::open::codex just-submodules-hub
 just github::repos::list
 just github::prs::summary
-just github::branch-protection::status-all
+just github::branch-protection::all::status
 ```
 
 Detailed command guides live under [`docs/`](docs/README.md):
 
 - [`docs/repo/`](docs/repo/README.md)
 - [`docs/github/`](docs/github/README.md)
+- [`docs/command-naming.md`](docs/command-naming.md)
 
 The recommended entrypoint is:
 
@@ -74,7 +75,7 @@ The recommended entrypoint is:
 import? "repo/github.com/kitsuyui/just-submodules-hub/just/index.just"
 ```
 
-The namespace guides in [`docs/`](docs/README.md) are the canonical reference. Keep consumer-specific README customization in the consumer repository, not here.
+The namespace guides in [`docs/`](docs/README.md) are the canonical reference. Follow [`docs/command-naming.md`](docs/command-naming.md) when adding or renaming recipes. Keep consumer-specific README customization in the consumer repository, not here.
 
 ### Submodule Status Noise
 
@@ -91,7 +92,7 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 - `root-status::hide` sets `ignore=all`, suppressing modified, untracked, and `new commits` noise in the parent repository status.
 - `root-status::show` clears the local ignore setting and restores visibility.
 - `root-status::visibility` reports `hidden` or `visible`.
-- `commit-pointers` still stages and commits intentional gitlink updates by comparing the recorded gitlink with the submodule `HEAD`.
+- `pointers::commit` still stages and commits intentional gitlink updates by comparing the recorded gitlink with the submodule `HEAD`.
 - Deprecated aliases such as `hide-root-status-changes`, `hide-worktree-changes`, `hide-all-changes`, `ignore-dirty-*`, and `ignore-all-*` remain available for compatibility and emit a warning.
 
 ### Sync Options
@@ -99,7 +100,7 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 - `scripts/repo/run-action.sh sync-repo-default-branch <repo|owner/repo|repo/github.com/owner/repo> --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --jobs 8 --no-prefilter --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --final-submodule-update`
-- `repo::submodule::sync-all-default-branch` uses Python + `tqdm` with one transient progress bar
+- `repo::submodule::default-branch::sync-all` uses Python + `tqdm` with one transient progress bar
 
 ### Shallow Submodule Setup
 

@@ -10,9 +10,9 @@ Use these commands when you want to list repositories on GitHub or create a new 
 
 ```sh
 just github::repos::list
-just github::repos::list-owner kitsuyui
-just github::repos::create-public kitsuyui/new-repo
-just github::repos::create-private kitsuyui/new-private-repo
+just github::repos::owner::list kitsuyui
+just github::repos::public::create kitsuyui/new-repo
+just github::repos::private::create kitsuyui/new-private-repo
 ```
 
 ## Requirements
@@ -20,3 +20,13 @@ just github::repos::create-private kitsuyui/new-private-repo
 - `gh` must be installed
 - `gh auth login` must be completed
 - creating repositories requires the necessary GitHub permissions
+
+## Deprecated aliases
+
+The following aliases remain available for compatibility and emit a warning. Prefer the primary commands above.
+
+| Deprecated alias | Use instead |
+| --- | --- |
+| `list-owner` | `owner::list` |
+| `create-public` | `public::create` |
+| `create-private` | `private::create` |

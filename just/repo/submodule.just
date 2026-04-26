@@ -3,7 +3,11 @@ module_default_visibility := "all"
 
 repo_submodule_source_dir := source_directory()
 
+mod default-branch "submodule/default-branch.just"
+mod managed "submodule/managed.just"
+mod pointers "submodule/pointers.just"
 mod root-status "submodule/root-status.just"
+mod unmanaged "submodule/unmanaged.just"
 
 # Add a submodule.
 add REPO_URL:
@@ -20,20 +24,23 @@ init-all JOBS="":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" init-all-repos "{{JOBS}}"
 
-# Sync one repository to its default branch.
+# Deprecated alias for default-branch::sync.
 sync-default-branch REPO:
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" sync-repo-default-branch "{{REPO}}"
+  echo "warning: repo::submodule::sync-default-branch is deprecated; use repo::submodule::default-branch::sync" >&2
+  cd "{{invocation_directory()}}" && just repo submodule default-branch sync "{{REPO}}"
 
-# Sync all repositories to their default branches.
+# Deprecated alias for default-branch::sync-all.
 sync-all-default-branch:
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" sync-all-repo-default-branch
+  echo "warning: repo::submodule::sync-all-default-branch is deprecated; use repo::submodule::default-branch::sync-all" >&2
+  cd "{{invocation_directory()}}" && just repo submodule default-branch sync-all
 
-# Commit only submodule pointer changes in the parent repository.
+# Deprecated alias for pointers::commit.
 commit-pointers MESSAGE="Update submodule pointers":
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" commit-submodule-pointers "{{MESSAGE}}"
+  echo "warning: repo::submodule::commit-pointers is deprecated; use repo::submodule::pointers::commit" >&2
+  cd "{{invocation_directory()}}" && just repo submodule pointers commit "{{MESSAGE}}"
 
 # Deprecated alias for root-status::hide.
 hide-root-status-changes REPO="":
@@ -120,12 +127,14 @@ grep +ARGS:
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" grep {{ARGS}}
 
-# List submodules managed by this repository.
+# Deprecated alias for managed::list.
 list-managed:
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" list-managed-repos
+  echo "warning: repo::submodule::list-managed is deprecated; use repo::submodule::managed::list" >&2
+  cd "{{invocation_directory()}}" && just repo submodule managed list
 
-# List unmanaged repositories among the target owners.
+# Deprecated alias for unmanaged::list.
 list-unmanaged OWNERS=module_default_owners VISIBILITY=module_default_visibility:
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" list-unmanaged-repos "{{OWNERS}}" "{{VISIBILITY}}"
+  echo "warning: repo::submodule::list-unmanaged is deprecated; use repo::submodule::unmanaged::list" >&2
+  cd "{{invocation_directory()}}" && just repo submodule unmanaged list "{{OWNERS}}" "{{VISIBILITY}}"
