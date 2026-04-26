@@ -28,6 +28,7 @@ just repo::submodule::every '<command>'
 ## Notes
 
 - These commands operate on the consumer repository that imports `just-submodules-hub`.
+- `add` records new submodules with `shallow = true` in `.gitmodules`; later setup commands that use `git submodule update --recommend-shallow` can then avoid fetching full history.
 - Short names work only when they resolve to exactly one managed repository.
 - `commit-pointers` stages and commits only gitlink updates.
 - `root-status::hide` changes the consumer repository's local `.git/config`, not `.gitmodules`.
