@@ -318,7 +318,7 @@ def test_handle_one_action(monkeypatch) -> None:
 def test_handle_all_action_reports_all_up_to_date(monkeypatch, capsys) -> None:
     monkeypatch.setattr(sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"])
     monkeypatch.setattr(sync, "build_sync_targets", lambda paths, prefilter, bar: [])
-    monkeypatch.setattr(sync, "tqdm", lambda **kwargs: DummyBar())
+    monkeypatch.setattr(sync, "progress_bar", lambda **kwargs: DummyBar())
     args = type("Args", (), {"prefilter": True, "jobs": 1, "verbose": False})()
     assert sync.handle_all_action(args) == 0
     assert "All submodules are up to date." in capsys.readouterr().out
@@ -328,7 +328,7 @@ def test_handle_all_action_runs_sync_all(monkeypatch) -> None:
     monkeypatch.setattr(sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"])
     monkeypatch.setattr(sync, "build_sync_targets", lambda paths, prefilter, bar: list(paths))
     monkeypatch.setattr(sync, "sync_all", lambda paths, jobs, verbose, bar: (0, 1))
-    monkeypatch.setattr(sync, "tqdm", lambda **kwargs: DummyBar())
+    monkeypatch.setattr(sync, "progress_bar", lambda **kwargs: DummyBar())
     args = type("Args", (), {"prefilter": True, "jobs": 3, "verbose": False})()
     assert sync.handle_all_action(args) == 0
 
@@ -337,7 +337,7 @@ def test_handle_all_action_prints_when_sync_all_reports_no_changes(monkeypatch, 
     monkeypatch.setattr(sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"])
     monkeypatch.setattr(sync, "build_sync_targets", lambda paths, prefilter, bar: list(paths))
     monkeypatch.setattr(sync, "sync_all", lambda paths, jobs, verbose, bar: (0, 0))
-    monkeypatch.setattr(sync, "tqdm", lambda **kwargs: DummyBar())
+    monkeypatch.setattr(sync, "progress_bar", lambda **kwargs: DummyBar())
     args = type("Args", (), {"prefilter": True, "jobs": 1, "verbose": False})()
     assert sync.handle_all_action(args) == 0
     assert "All submodules are up to date." in capsys.readouterr().out

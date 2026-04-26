@@ -56,6 +56,9 @@ just repo::submodule::default-branch::sync-all
 just repo::submodule::init-all
 just repo::submodule::root-status::hide
 just repo::submodule::root-status::hide just-submodules-hub
+just repo::submodule::worktree::reconcile just-submodules-hub
+just repo::submodule::worktrees::reconcile
+just repo::submodule::every "git status --short"
 just repo::catalog::languages::python::list
 just repo::open::tools::codex::open just-submodules-hub
 just github::repos::list
@@ -116,6 +119,31 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --jobs 8 --no-prefilter --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --final-submodule-update`
 - `repo::submodule::default-branch::sync-all` uses Python + `tqdm` with one transient progress bar
+
+### Submodule Worktree Reconciliation
+
+Use these commands when submodules may be on a mix of default branches, topic branches, pull request branches, or detached HEADs:
+
+```sh
+just repo::submodule::worktree::reconcile owner/repo
+just repo::submodule::worktrees::reconcile
+just repo::submodule::worktrees::reconcile jsonl
+just repo::submodule::worktrees::reconcile table 8
+```
+
+The reconciler keeps pointer commits separate from worktree cleanup. It only runs non-destructive Git operations such as `pull --ff-only`, normal `switch`, and `fetch`; intentional gitlink updates still belong to `repo::submodule::pointers::commit`.
+
+The aggregate command reports one row per submodule with `status`, `action`, branch, PR number, dirty state, and message. It uses a shared progress-bar and parallel execution helper, accepts a jobs value, and exits with `1` only when one or more submodules fail. Skipped states, such as an open PR branch, are reported but are not treated as failures.
+
+`repo::submodule::every` uses the same batch foundation for arbitrary shell commands:
+
+```sh
+just repo::submodule::every ls
+just repo::submodule::every "git status --short"
+just repo::submodule::every ls --format jsonl --jobs 8
+```
+
+By default, it prints simple per-submodule command output. Use `--format table`, `--format tsv`, or `--format jsonl` when you need per-submodule `stdout`, `stderr`, and exit code records. The overall command exits non-zero when any submodule command fails.
 
 ### Shallow Submodule Setup
 

@@ -12,6 +12,8 @@ project_root=$(CDPATH='' cd -- "$script_dir/../.." && pwd)
 sync_script="$script_dir/sync-default-branch.sh"
 open_repo_script="$script_dir/open-repo.sh"
 resolve_repo_script="$script_dir/resolve_repo.py"
+reconcile_worktrees_script="$script_dir/reconcile_submodule_worktrees.py"
+submodule_command_script="$script_dir/run_submodule_command.py"
 
 repo_input_to_path() {
   input="$1"
@@ -259,6 +261,20 @@ case "$action" in
     fi
     ;;
 
+  reconcile-submodule-worktree)
+    repo_input="${1:-}"
+    shift
+    if [ -z "$repo_input" ]; then
+      echo "REPO is required" >&2
+      exit 2
+    fi
+    uv run --project "$project_root" python "$reconcile_worktrees_script" one "$repo_input" "$@"
+    ;;
+
+  reconcile-submodule-worktrees)
+    uv run --project "$project_root" python "$reconcile_worktrees_script" all "$@"
+    ;;
+
   commit-submodule-pointers)
     message="${1:-Update submodule pointers}"
     changed=""
@@ -353,13 +369,11 @@ EOF_PATHS
     ;;
 
   every-repo)
-    command_to_run="${1:-}"
-    if [ -z "$command_to_run" ]; then
+    if [ "$#" -eq 0 ]; then
       echo "COMMAND is required" >&2
       exit 2
     fi
-    # Iterate over submodule paths and run the command
-    git submodule foreach --recursive "echo \"Running command in \$path\"; $command_to_run"
+    uv run --project "$project_root" python "$submodule_command_script" "$@"
     ;;
 
   grep)
