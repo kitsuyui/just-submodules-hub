@@ -169,13 +169,19 @@ def sync_all(paths: List[str], jobs: int, verbose: bool, bar) -> Tuple[int, int]
     results, failures = run_parallel(paths, sync_one, jobs=jobs, on_done=lambda: tick(bar))
 
     changed_count = 0
+    skipped_count = 0
     for result in sorted(results, key=lambda r: r.repo_path):
+        if result.skipped:
+            skipped_count += 1
         if print_result(result, verbose):
             changed_count += 1
 
     if failures:
         print_failures(failures)
         print("One or more repositories failed to sync", file=sys.stderr)
+        return 1, changed_count
+    if skipped_count:
+        print("One or more repositories were skipped", file=sys.stderr)
         return 1, changed_count
     return 0, changed_count
 
@@ -215,6 +221,8 @@ def build_parser() -> argparse.ArgumentParser:
 def handle_one_action(args: argparse.Namespace) -> int:
     result = sync_one(resolve_repo_input(args.repo_path, Path.cwd()))
     print_result(result, args.verbose)
+    if result.skipped:
+        return 1
     return 0
 
 

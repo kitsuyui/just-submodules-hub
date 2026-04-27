@@ -232,6 +232,33 @@ def test_sync_all_reports_failures(monkeypatch, capsys) -> None:
     assert "kitsuyui/bad: boom" in captured.err
 
 
+def test_sync_all_reports_skipped_repositories(monkeypatch, capsys) -> None:
+    bar = DummyBar()
+
+    def fake_sync_one(path: str):
+        return sync.SyncResult(
+            repo_path=path,
+            default_branch="main",
+            switched=False,
+            updated=False,
+            skipped=True,
+            skip_reason="dirty working tree",
+        )
+
+    monkeypatch.setattr(sync, "sync_one", fake_sync_one)
+    code, changed_count = sync.sync_all(
+        ["repo/github.com/kitsuyui/dirty"],
+        jobs=1,
+        verbose=False,
+        bar=bar,
+    )
+    captured = capsys.readouterr()
+    assert code == 1
+    assert changed_count == 0
+    assert "kitsuyui/dirty: skipped (dirty working tree)" in captured.out
+    assert "One or more repositories were skipped" in captured.err
+
+
 def test_local_head_returns_detached_when_symbolic_ref_fails(monkeypatch) -> None:
     calls = []
 
@@ -317,6 +344,26 @@ def test_handle_one_action(monkeypatch) -> None:
     args = type("Args", (), {"repo_path": "repo/github.com/kitsuyui/sample-repo", "verbose": True})()
     assert sync.handle_one_action(args) == 0
     assert calls == [("repo/github.com/kitsuyui/sample-repo", True)]
+
+
+def test_handle_one_action_returns_failure_for_skipped_repository(monkeypatch) -> None:
+    calls = []
+    monkeypatch.setattr(
+        sync,
+        "sync_one",
+        lambda repo_path: sync.SyncResult(
+            repo_path=repo_path,
+            default_branch="main",
+            switched=False,
+            updated=False,
+            skipped=True,
+            skip_reason="dirty working tree",
+        ),
+    )
+    monkeypatch.setattr(sync, "print_result", lambda result, verbose: calls.append((result.repo_path, verbose)) or False)
+    args = type("Args", (), {"repo_path": "repo/github.com/kitsuyui/sample-repo", "verbose": False})()
+    assert sync.handle_one_action(args) == 1
+    assert calls == [("repo/github.com/kitsuyui/sample-repo", False)]
 
 
 def test_handle_all_action_reports_all_up_to_date(monkeypatch, capsys) -> None:
