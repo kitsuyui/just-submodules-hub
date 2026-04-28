@@ -16,6 +16,8 @@ just repo::linked-worktrees::add ../hub-feature --branch feature/hub --start-poi
 just repo::linked-worktrees::add ../hub-feature --fetch-fallback --jobs 4
 just repo::linked-worktrees::add ../hub-feature --no-submodules
 just repo::linked-worktrees::remove ../hub-feature
+just repo::linked-worktrees::sync::plan
+just repo::linked-worktrees::sync::plan --format jsonl
 ```
 
 ## Notes
@@ -26,4 +28,7 @@ just repo::linked-worktrees::remove ../hub-feature
 - `add` wraps `git worktree add` and initializes submodules in the new worktree unless `--no-submodules` is passed.
 - `add --no-fetch` and `add --fetch-fallback` pass the corresponding low-fetch behavior to `repo::submodule::init-all` in the new worktree.
 - `remove` is a thin wrapper around `git worktree remove`; pass `--force` only when Git's normal safety check should be overridden.
-- Follow-up commands for sync, cleanup, and hooks should build on this namespace after their safety behavior is specified.
+- `sync::plan` is read-only. It reports the default safe decision for each worktree without rebasing, switching, deleting, or removing anything.
+- The sync planner skips dirty worktrees, detached worktrees, locked worktrees, prunable worktrees, and open non-draft pull request branches.
+- The sync planner treats missing `gh` or unavailable pull request metadata conservatively and skips topic branches rather than assuming they are private WIP.
+- Follow-up commands for sync apply, cleanup, and hooks should build on this namespace after their safety behavior is specified.

@@ -16,6 +16,7 @@ reconcile_worktrees_script="$script_dir/reconcile_submodule_worktrees.py"
 submodule_command_script="$script_dir/run_submodule_command.py"
 cleanup_branches_script="$script_dir/cleanup_merged_branches.py"
 linked_worktrees_script="$script_dir/list_linked_worktrees.py"
+linked_worktree_sync_plan_script="$script_dir/plan_linked_worktree_sync.py"
 
 repo_input_to_path() {
   input="$1"
@@ -389,6 +390,10 @@ case "$action" in
 
   list-linked-worktrees)
     uv run --project "$project_root" python "$linked_worktrees_script" "$@"
+    ;;
+
+  plan-linked-worktree-sync)
+    uv run --project "$project_root" python "$linked_worktree_sync_plan_script" "$@"
     ;;
 
   add-linked-worktree)

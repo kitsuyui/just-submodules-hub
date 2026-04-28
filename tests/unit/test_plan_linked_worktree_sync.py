@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+import importlib.util
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/plan_linked_worktree_sync.py"
+
+spec = importlib.util.spec_from_file_location("plan_linked_worktree_sync", SCRIPT_PATH)
+assert spec is not None
+planner = importlib.util.module_from_spec(spec)
+sys.modules["plan_linked_worktree_sync"] = planner
+assert spec.loader is not None
+spec.loader.exec_module(planner)
+
+
+def completed(args: list[str], stdout: str = "", stderr: str = "", returncode: int = 0) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(args, returncode, stdout, stderr)
+
+
+def worktree(branch: str = "feature/test", *, path: str = "/repo-feature", detached: str = "no") -> object:
+    return planner.WorktreeRecord(
+        path=path,
+        head="1111111111111111111111111111111111111111",
+        branch=branch,
+        detached=detached,
+        locked="no",
+        prunable="no",
+        message="",
+    )
+
+
+def test_plan_one_skips_dirty_worktree(monkeypatch) -> None:
+    monkeypatch.setattr(planner, "dirty_state", lambda repo: "dirty")
+
+    assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
+        path="/repo-feature",
+        branch="feature/test",
+        dirty="dirty",
+        pr="",
+        draft="",
+        status="skipped",
+        action="skip-dirty",
+        target="",
+        message="worktree has local changes",
+    )
+
+
+def test_plan_one_retires_branch_without_unique_commits(monkeypatch) -> None:
+    monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
+    monkeypatch.setattr(planner, "branch_has_unique_commits", lambda repo, branch, default: False)
+
+    assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
+        path="/repo-feature",
+        branch="feature/test",
+        dirty="clean",
+        pr="",
+        draft="",
+        status="planned",
+        action="retire-contained",
+        target="origin/main",
+        message="branch has no commits outside default branch",
+    )
+
+
+def test_plan_one_skips_open_non_draft_pull_request(monkeypatch) -> None:
+    monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
+    monkeypatch.setattr(planner, "branch_has_unique_commits", lambda repo, branch, default: True)
+    monkeypatch.setattr(planner, "gh_pr_view", lambda repo: planner.PullRequestState("12", "open", "no", ""))
+
+    assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
+        path="/repo-feature",
+        branch="feature/test",
+        dirty="clean",
+        pr="12",
+        draft="no",
+        status="skipped",
+        action="skip-open-pr",
+        target="",
+        message="open non-draft pull request",
+    )
+
+
+def test_plan_one_rebases_draft_pr_to_remote_branch(monkeypatch) -> None:
+    monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
+    monkeypatch.setattr(planner, "branch_has_unique_commits", lambda repo, branch, default: True)
+    monkeypatch.setattr(planner, "gh_pr_view", lambda repo: planner.PullRequestState("12", "open", "yes", ""))
+    monkeypatch.setattr(planner, "remote_branch_exists", lambda repo, branch: True)
+
+    assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
+        path="/repo-feature",
+        branch="feature/test",
+        dirty="clean",
+        pr="12",
+        draft="yes",
+        status="planned",
+        action="rebase-branch",
+        target="origin/feature/test",
+        message="draft PR or private branch with remote tracking branch",
+    )
+
+
+def test_plan_one_skips_when_pr_metadata_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
+    monkeypatch.setattr(planner, "branch_has_unique_commits", lambda repo, branch, default: True)
+    monkeypatch.setattr(planner, "gh_pr_view", lambda repo: planner.PullRequestState("", "unknown", "", "gh not found"))
+
+    assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
+        path="/repo-feature",
+        branch="feature/test",
+        dirty="clean",
+        pr="",
+        draft="",
+        status="skipped",
+        action="skip-pr-unknown",
+        target="",
+        message="gh not found",
+    )
+
+
+def test_gh_pr_view_treats_missing_pr_as_none(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/gh")
+
+    def fake_run(*args, **kwargs):
+        return completed([], stderr="no pull requests found for branch", returncode=1)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert planner.gh_pr_view(tmp_path) == planner.PullRequestState("", "none", "", "no pull request metadata")

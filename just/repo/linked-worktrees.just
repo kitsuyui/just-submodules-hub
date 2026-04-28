@@ -1,5 +1,7 @@
 repo_linked_worktrees_source_dir := source_directory()
 
+mod sync "linked-worktrees/sync.just"
+
 # List Git linked worktrees for the parent repository.
 list +ARGS="":
   #!/bin/sh

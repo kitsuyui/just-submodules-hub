@@ -62,6 +62,7 @@ just repo::submodule::worktree::reconcile just-submodules-hub
 just repo::submodule::worktrees::reconcile
 just repo::linked-worktrees::list
 just repo::linked-worktrees::add ../hub-feature --branch feature/hub --fetch-fallback
+just repo::linked-worktrees::sync::plan --format jsonl
 just repo::worktrees::reconcile
 just repo::submodule::every "git status --short"
 just repo::catalog::languages::python::list
