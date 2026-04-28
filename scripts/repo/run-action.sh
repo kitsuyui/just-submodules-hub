@@ -347,17 +347,7 @@ case "$action" in
     ;;
 
   sync-all-repo-default-branch)
-    final_submodule_update=0
-    if [ "${1:-}" = "--final-submodule-update" ]; then
-      final_submodule_update=1
-      shift
-    fi
-
     "$sync_script" all "$@"
-    if [ "$final_submodule_update" -eq 1 ]; then
-      echo "Running final submodule update (--remote --rebase --recursive --recommend-shallow)..."
-      git submodule update --remote --rebase --recursive --recommend-shallow --progress
-    fi
     ;;
 
   reconcile-submodule-worktree)

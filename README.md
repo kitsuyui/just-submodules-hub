@@ -53,6 +53,7 @@ Examples:
 
 ```sh
 just repo::submodule::default-branch::sync-all
+just repo::submodule::default-branch::sync-all --token-env SUBMODULES_TOKEN --no-prefilter
 just repo::submodule::init-all
 just repo::branches::cleanup
 just repo::worktrees::branches::cleanup
@@ -128,8 +129,10 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 - `scripts/repo/run-action.sh sync-repo-default-branch <repo|owner/repo|repo/github.com/owner/repo> --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --jobs 8 --no-prefilter --verbose`
 - `scripts/repo/run-action.sh sync-all-repo-default-branch --final-submodule-update`
+- `scripts/repo/run-action.sh sync-all-repo-default-branch --token-env SUBMODULES_TOKEN --no-prefilter`
 - `repo::submodule::default-branch::sync-all` uses Python + `tqdm` with one transient progress bar
 - Use `repo::submodule::default-branch::sync-all` when the goal is to move managed submodules to their default branches.
+- Pass `--token-env <ENV>` in CI when GitHub submodule URLs need temporary HTTPS token authentication. The named environment variable must contain a token with `contents: read` access to every target submodule repository. The command restores tokenized parent submodule URLs and initialized submodule origins after success or failure.
 - Use `repo::submodule::worktrees::reconcile` when the goal is to preserve topic/PR branch context and clean up only states that can be settled non-destructively.
 - Use `repo::worktrees::reconcile` when the root repository and all submodule worktrees should be made fresh together.
 
