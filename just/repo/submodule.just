@@ -23,9 +23,9 @@ remove REPO:
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" remove-repo "{{REPO}}"
 
 # Initialize all registered submodules.
-init-all JOBS="":
+init-all +ARGS="":
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" init-all-repos "{{JOBS}}"
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" init-all-repos {{ARGS}}
 
 # Deprecated compatibility aliases. Prefer the canonical namespace/resource/verb commands.
 alias sync-default-branch := default-branch::sync

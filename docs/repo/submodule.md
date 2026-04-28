@@ -15,6 +15,9 @@ just repo::submodule::branches::cleanup
 just repo::submodule::branches::cleanup --apply
 just repo::submodule::init-all
 just repo::submodule::init-all <jobs>
+just repo::submodule::init-all --jobs <jobs>
+just repo::submodule::init-all --no-fetch
+just repo::submodule::init-all --fetch-fallback
 just repo::submodule::default-branch::sync <repo|owner/repo|repo/github.com/owner/repo>
 just repo::submodule::default-branch::sync-all
 just repo::submodule::pointers::commit
@@ -40,7 +43,9 @@ just repo::submodule::every '<command>' --format jsonl --jobs 8
 - These commands operate on the consumer repository that imports `just-submodules-hub`.
 - `add` records new submodules with `shallow = true` in `.gitmodules`; later setup commands that use `git submodule update --recommend-shallow` can then avoid fetching full history.
 - `add` also sets the new submodule to `ignore=all` in the consumer repository's local `.git/config`.
-- `init-all` initializes registered submodules with `--recursive --recommend-shallow`. Pass `jobs` explicitly, or configure `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
+- `init-all` initializes registered submodules with `--recursive --recommend-shallow`. Pass `jobs` explicitly, use `--jobs <jobs>`, or configure `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
+- `init-all --no-fetch` adds Git's `--no-fetch` mode for linked worktree and pre-fetched workflows where the needed submodule objects are already available locally.
+- `init-all --fetch-fallback` tries the no-fetch update first and retries with normal fetching if that update fails.
 - `init-all` also defaults registered submodules to `ignore=all` in the consumer repository's local `.git/config`.
 - Short names work only when they resolve to exactly one managed repository.
 - `branches::cleanup` finds branches in managed submodules whose pull requests are already merged. It is dry-run by default; pass `--apply` to delete branches. Remote branch cleanup only includes merged pull requests authored by the authenticated GitHub user unless `--include-non-owner-remote` is passed.
