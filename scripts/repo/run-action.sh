@@ -175,6 +175,38 @@ validate_positive_integer() {
   esac
 }
 
+run_init_all_in_worktree() {
+  worktree_path="$1"
+  init_mode="$2"
+  init_jobs="$3"
+
+  if [ -n "$init_jobs" ]; then
+    validate_positive_integer "$init_jobs" "JOBS"
+  fi
+
+  set -- init-all-repos
+  case "$init_mode" in
+    fetch-fallback)
+      set -- "$@" --fetch-fallback
+      ;;
+    no-fetch)
+      set -- "$@" --no-fetch
+      ;;
+    normal)
+      ;;
+    *)
+      echo "unknown submodule init mode: $init_mode" >&2
+      exit 2
+      ;;
+  esac
+
+  if [ -n "$init_jobs" ]; then
+    set -- "$@" --jobs "$init_jobs"
+  fi
+
+  (cd "$worktree_path" && "$script_dir/run-action.sh" "$@")
+}
+
 run_submodule_update() {
   no_fetch="$1"
   jobs="$2"
@@ -357,6 +389,128 @@ case "$action" in
 
   list-linked-worktrees)
     uv run --project "$project_root" python "$linked_worktrees_script" "$@"
+    ;;
+
+  add-linked-worktree)
+    worktree_path="${1:-}"
+    if [ -z "$worktree_path" ]; then
+      echo "PATH is required" >&2
+      exit 2
+    fi
+    shift
+
+    branch=""
+    start_point=""
+    init_submodules=1
+    init_mode="normal"
+    init_jobs=""
+
+    while [ "$#" -gt 0 ]; do
+      case "${1:-}" in
+        --branch|-b)
+          shift
+          if [ $# -eq 0 ] || [ -z "${1:-}" ]; then
+            echo "--branch requires a value" >&2
+            exit 2
+          fi
+          branch="$1"
+          ;;
+        --branch=*)
+          branch=${1#--branch=}
+          ;;
+        --start-point)
+          shift
+          if [ $# -eq 0 ] || [ -z "${1:-}" ]; then
+            echo "--start-point requires a value" >&2
+            exit 2
+          fi
+          start_point="$1"
+          ;;
+        --start-point=*)
+          start_point=${1#--start-point=}
+          ;;
+        --no-submodules)
+          init_submodules=0
+          ;;
+        --no-fetch|--submodule-no-fetch)
+          init_mode="no-fetch"
+          ;;
+        --fetch-fallback|--submodule-fetch-fallback)
+          init_mode="fetch-fallback"
+          ;;
+        --jobs|--submodule-jobs)
+          option_name="$1"
+          shift
+          if [ $# -eq 0 ] || [ -z "${1:-}" ]; then
+            echo "$option_name requires a value" >&2
+            exit 2
+          fi
+          init_jobs="$1"
+          ;;
+        --jobs=*|--submodule-jobs=*)
+          init_jobs=${1#*=}
+          ;;
+        --*)
+          echo "unknown linked worktree add option: $1" >&2
+          exit 2
+          ;;
+        *)
+          if [ -n "$start_point" ]; then
+            echo "unexpected linked worktree add argument: $1" >&2
+            exit 2
+          fi
+          start_point="$1"
+          ;;
+      esac
+      shift
+    done
+
+    if [ -n "$branch" ] && [ -n "$start_point" ]; then
+      git worktree add -b "$branch" "$worktree_path" "$start_point"
+    elif [ -n "$branch" ]; then
+      git worktree add -b "$branch" "$worktree_path"
+    elif [ -n "$start_point" ]; then
+      git worktree add "$worktree_path" "$start_point"
+    else
+      git worktree add "$worktree_path"
+    fi
+
+    if [ "$init_submodules" -eq 1 ]; then
+      run_init_all_in_worktree "$worktree_path" "$init_mode" "$init_jobs"
+    fi
+    ;;
+
+  remove-linked-worktree)
+    worktree_path="${1:-}"
+    if [ -z "$worktree_path" ]; then
+      echo "PATH is required" >&2
+      exit 2
+    fi
+    shift
+
+    force=0
+    while [ "$#" -gt 0 ]; do
+      case "${1:-}" in
+        --force|-f)
+          force=1
+          ;;
+        --*)
+          echo "unknown linked worktree remove option: $1" >&2
+          exit 2
+          ;;
+        *)
+          echo "unexpected linked worktree remove argument: $1" >&2
+          exit 2
+          ;;
+      esac
+      shift
+    done
+
+    if [ "$force" -eq 1 ]; then
+      git worktree remove --force "$worktree_path"
+    else
+      git worktree remove "$worktree_path"
+    fi
     ;;
 
   commit-submodule-pointers)
