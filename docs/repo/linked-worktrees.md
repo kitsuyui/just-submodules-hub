@@ -18,6 +18,8 @@ just repo::linked-worktrees::add ../hub-feature --no-submodules
 just repo::linked-worktrees::remove ../hub-feature
 just repo::linked-worktrees::sync::plan
 just repo::linked-worktrees::sync::plan --format jsonl
+just repo::linked-worktrees::sync::apply
+just repo::linked-worktrees::sync::apply --format jsonl
 ```
 
 ## Notes
@@ -31,4 +33,6 @@ just repo::linked-worktrees::sync::plan --format jsonl
 - `sync::plan` is read-only. It reports the default safe decision for each worktree without rebasing, switching, deleting, or removing anything.
 - The sync planner skips dirty worktrees, detached worktrees, locked worktrees, prunable worktrees, and open non-draft pull request branches.
 - The sync planner treats missing `gh` or unavailable pull request metadata conservatively and skips topic branches rather than assuming they are private WIP.
-- Follow-up commands for sync apply, cleanup, and hooks should build on this namespace after their safety behavior is specified.
+- `sync::apply` runs only actions that `sync::plan` reports as `planned`. Skipped and failed plans remain unchanged in the output.
+- `sync::apply` does not force-push, delete branches, or remove worktrees.
+- Follow-up commands for cleanup and hooks should build on this namespace after their safety behavior is specified.
