@@ -77,3 +77,74 @@ exit 0
         "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs 6",
         "config -f .gitmodules --name-only --get-regexp ^submodule\\..*\\.path$",
     ]
+
+
+def test_init_all_repos_supports_no_fetch_and_jobs_flag(tmp_path: Path) -> None:
+    hub_repo = tmp_path / "hub"
+    hub_repo.mkdir()
+
+    calls_file = tmp_path / "git-calls.txt"
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    write_executable(
+        fake_bin / "git",
+        f"""#!/bin/sh
+printf '%s\\n' "$*" >> "{calls_file}"
+exit 0
+""",
+    )
+
+    env = {**os.environ, "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"}
+    proc = subprocess.run(
+        [str(RUN_ACTION_SCRIPT), "init-all-repos", "--no-fetch", "--jobs", "4"],
+        cwd=str(hub_repo),
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert calls_file.read_text(encoding="utf-8").splitlines() == [
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch --jobs 4",
+        "config -f .gitmodules --name-only --get-regexp ^submodule\\..*\\.path$",
+    ]
+
+
+def test_init_all_repos_fetch_fallback_retries_without_no_fetch(tmp_path: Path) -> None:
+    hub_repo = tmp_path / "hub"
+    hub_repo.mkdir()
+
+    calls_file = tmp_path / "git-calls.txt"
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    write_executable(
+        fake_bin / "git",
+        f"""#!/bin/sh
+printf '%s\\n' "$*" >> "{calls_file}"
+case "$*" in
+  *"--no-fetch"*)
+    exit 1
+    ;;
+esac
+exit 0
+""",
+    )
+
+    env = {**os.environ, "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"}
+    proc = subprocess.run(
+        [str(RUN_ACTION_SCRIPT), "init-all-repos", "--fetch-fallback", "--jobs=2"],
+        cwd=str(hub_repo),
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert "retrying with normal fetch" in proc.stderr
+    assert calls_file.read_text(encoding="utf-8").splitlines() == [
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch --jobs 2",
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs 2",
+        "config -f .gitmodules --name-only --get-regexp ^submodule\\..*\\.path$",
+    ]

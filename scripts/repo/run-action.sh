@@ -174,6 +174,21 @@ validate_positive_integer() {
   esac
 }
 
+run_submodule_update() {
+  no_fetch="$1"
+  jobs="$2"
+
+  if [ "$no_fetch" -eq 1 ] && [ -n "$jobs" ]; then
+    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch --jobs "$jobs"
+  elif [ "$no_fetch" -eq 1 ]; then
+    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch
+  elif [ -n "$jobs" ]; then
+    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs "$jobs"
+  else
+    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow
+  fi
+}
+
 case "$action" in
   add-repo)
     repo_url_input="${1:-}"
@@ -194,12 +209,59 @@ case "$action" in
     ;;
 
   init-all-repos)
-    jobs=$(resolve_submodule_jobs "${1:-}")
+    requested_jobs=""
+    no_fetch=0
+    fetch_fallback=0
+
+    while [ "$#" -gt 0 ]; do
+      case "${1:-}" in
+        "")
+          ;;
+        --no-fetch)
+          no_fetch=1
+          ;;
+        --fetch-fallback)
+          fetch_fallback=1
+          no_fetch=1
+          ;;
+        --jobs)
+          shift
+          if [ $# -eq 0 ] || [ -z "${1:-}" ]; then
+            echo "--jobs requires a value" >&2
+            exit 2
+          fi
+          requested_jobs="$1"
+          ;;
+        --jobs=*)
+          requested_jobs=${1#--jobs=}
+          ;;
+        --*)
+          echo "unknown init-all option: $1" >&2
+          exit 2
+          ;;
+        *)
+          if [ -n "$requested_jobs" ]; then
+            echo "unexpected init-all argument: $1" >&2
+            exit 2
+          fi
+          requested_jobs="$1"
+          ;;
+      esac
+      shift
+    done
+
+    jobs=$(resolve_submodule_jobs "$requested_jobs")
     if [ -n "$jobs" ]; then
       validate_positive_integer "$jobs" "JOBS"
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs "$jobs"
+    fi
+
+    if [ "$no_fetch" -eq 1 ] && [ "$fetch_fallback" -eq 1 ]; then
+      if ! run_submodule_update 1 "$jobs"; then
+        echo "no-fetch submodule update failed; retrying with normal fetch" >&2
+        run_submodule_update 0 "$jobs"
+      fi
     else
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow
+      run_submodule_update "$no_fetch" "$jobs"
     fi
     set_submodule_ignore_value all
     ;;

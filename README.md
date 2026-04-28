@@ -175,7 +175,8 @@ By default, it prints simple per-submodule command output. Use `--format table`,
 `repo::submodule::add` records new submodules with `shallow = true` in `.gitmodules` and sets the local parent-status visibility to hidden.
 When a hub is cloned later, `git submodule update --recommend-shallow` can use that hint to keep initial setup lighter.
 Use `repo::submodule::init-all` to initialize registered submodules recursively with recommended shallow behavior and to default registered submodules to hidden parent status.
-Pass a jobs value explicitly, or set Git's `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
+Pass a jobs value explicitly, use `--jobs <n>`, or set Git's `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
+Use `--no-fetch` to initialize from already available local objects without contacting remotes. Use `--fetch-fallback` to try the no-fetch path first and retry with normal fetching if that update fails.
 
 ## License Scope
 
