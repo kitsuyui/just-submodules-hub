@@ -62,6 +62,8 @@ just repo::submodule::worktree::reconcile just-submodules-hub
 just repo::submodule::worktrees::reconcile
 just repo::linked-worktrees::list
 just repo::linked-worktrees::add ../hub-feature --branch feature/hub --fetch-fallback
+just repo::linked-worktrees::hooks::install
+just repo::linked-worktrees::cleanup --path-glob '../hub-*'
 just repo::linked-worktrees::sync::plan --format jsonl
 just repo::linked-worktrees::sync::apply --format jsonl
 just repo::worktrees::reconcile
