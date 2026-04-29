@@ -20,6 +20,7 @@ just repo::submodule::init-all --no-fetch
 just repo::submodule::init-all --fetch-fallback
 just repo::submodule::default-branch::sync <repo|owner/repo|repo/github.com/owner/repo>
 just repo::submodule::default-branch::sync-all
+just repo::submodule::default-branch::sync-all --token-env SUBMODULES_TOKEN --no-prefilter
 just repo::submodule::pointers::commit
 just repo::submodule::root-status::hide
 just repo::submodule::root-status::hide <repo|owner/repo|repo/github.com/owner/repo>
@@ -57,6 +58,8 @@ just repo::submodule::every '<command>' --format jsonl --jobs 8
 - `root-status::hide` sets `ignore=all`, hiding local dirt and `new commits` in the parent repository status.
 - `root-status::visibility` reports `hidden` or `visible`.
 - `pointers::commit` compares the recorded gitlink with the submodule `HEAD`, so intentional gitlink updates remain committable while root status is hidden.
+- `default-branch::sync-all --token-env <ENV>` temporarily authenticates GitHub submodule URLs with the token stored in `ENV`. Use a token with `contents: read` access to every target submodule repository; in GitHub Actions, `GITHUB_TOKEN` works only for repositories that token is allowed to read, so cross-repository private submodules usually need a PAT or GitHub App token.
+- `--token-env` rewrites parent `submodule.*.url` local config and initialized submodule `origin` URLs only for the command duration, then restores them on success or failure. Use `--no-prefilter` if the environment does not have an authenticated `gh` CLI session for the GraphQL prefilter.
 - `worktree::reconcile` updates one managed submodule worktree using non-destructive Git operations.
 - `worktrees::reconcile` applies the same operation to every managed submodule and aggregates the result.
 - `worktrees::reconcile` accepts `--format`, `--jobs`, `--prefilter`, and `--no-prefilter`.

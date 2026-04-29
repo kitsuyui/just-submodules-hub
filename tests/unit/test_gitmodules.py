@@ -4,6 +4,7 @@ from just_submodules_hub.gitmodules import (
     find_submodules_with_marker,
     managed_repo_owners,
     managed_repo_slugs,
+    parse_gitmodules_entries,
     parse_gitmodules_paths,
 )
 
@@ -47,3 +48,18 @@ def test_find_submodules_with_marker(tmp_path: Path) -> None:
 
 def test_parse_gitmodules_paths_returns_empty_for_blank_text() -> None:
     assert parse_gitmodules_paths("") == []
+
+
+def test_parse_gitmodules_entries_preserves_section_name_and_url() -> None:
+    text = """
+[submodule "custom.name"]
+    path = repo/github.com/example-owner/example-repo
+    url = git@github.com:example-owner/example-repo.git
+""".strip()
+
+    entries = parse_gitmodules_entries(text)
+
+    assert len(entries) == 1
+    assert entries[0].name == "custom.name"
+    assert entries[0].path == "repo/github.com/example-owner/example-repo"
+    assert entries[0].url == "git@github.com:example-owner/example-repo.git"
