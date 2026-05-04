@@ -11,6 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: kitsuyui/happy-commit@main
+      - uses: kitsuyui/happy-commit@3e38265c6049c71a351c126da827c54dfaeaf1ee
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
