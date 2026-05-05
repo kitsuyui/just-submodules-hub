@@ -69,6 +69,7 @@ just repo::linked-worktrees::sync::plan --format jsonl
 just repo::linked-worktrees::sync::apply --format jsonl
 just repo::worktrees::reconcile
 just repo::submodule::every "git status --short"
+just repo::submodule::managed::list kitsuyui private
 just repo::catalog::languages::python::list
 just repo::catalog::languages::python::every "uv run pytest"
 just repo::open::tools::codex::open just-submodules-hub

@@ -117,6 +117,41 @@ print_submodule_visibility_status() {
   done
 }
 
+print_managed_repos() {
+  git config -f .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | sed 's#^repo/github.com/##' | sort
+}
+
+filter_repos_by_owners() {
+  owners="$1"
+  awk -v owners="$owners" '
+    BEGIN {
+      n = split(owners, owner_list, /[ ,]+/)
+      for (i = 1; i <= n; i++) {
+        if (owner_list[i] != "") {
+          allowed[owner_list[i]] = 1
+        }
+      }
+    }
+    {
+      split($0, parts, "/")
+      if (allowed[parts[1]]) {
+        print
+      }
+    }
+  '
+}
+
+validate_github_repo_visibility() {
+  visibility="$1"
+  case "$visibility" in
+    public|private|internal|all) ;;
+    *)
+      echo "VISIBILITY must be one of: public/private/internal/all: $visibility" >&2
+      exit 2
+      ;;
+  esac
+}
+
 warn_deprecated_submodule_action() {
   old_name="$1"
   new_name="$2"
@@ -639,13 +674,7 @@ EOF_PATHS
       exit 2
     fi
     command -v gh >/dev/null 2>&1 || { echo "gh command not found" >&2; exit 1; }
-    case "$visibility" in
-      public|private|internal|all) ;;
-      *)
-        echo "VISIBILITY must be one of: public/private/internal/all: $visibility" >&2
-        exit 2
-        ;;
-    esac
+    validate_github_repo_visibility "$visibility"
     if [ "$visibility" = "all" ]; then
       gh repo list "$owner" --limit 1000 --json nameWithOwner,url,isArchived,isFork --jq '.[] | select((.isArchived | not) and (.isFork | not)) | "\(.nameWithOwner)\t\(.url)"'
     else
@@ -668,7 +697,27 @@ EOF_PATHS
     ;;
 
   list-managed-repos)
-    git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | sed 's#^repo/github.com/##' | sort
+    owners="${1:-}"
+    visibility="${2:-all}"
+    validate_github_repo_visibility "$visibility"
+    if [ "$visibility" = "all" ]; then
+      if [ -z "$owners" ]; then
+        print_managed_repos
+      else
+        print_managed_repos | filter_repos_by_owners "$owners"
+      fi
+      exit 0
+    fi
+    if [ -z "$owners" ]; then
+      echo "OWNERS is required when VISIBILITY is not all" >&2
+      exit 2
+    fi
+    github_file=$(mktemp)
+    managed_file=$(mktemp)
+    trap 'rm -f "$github_file" "$managed_file"' EXIT
+    just github repos list "$owners" "$visibility" | cut -f1 | sort > "$github_file"
+    print_managed_repos > "$managed_file"
+    comm -12 "$managed_file" "$github_file"
     ;;
 
   list-unmanaged-repos)
@@ -678,6 +727,7 @@ EOF_PATHS
       echo "OWNERS and VISIBILITY are required" >&2
       exit 2
     fi
+    validate_github_repo_visibility "$visibility"
     public_file=$(mktemp)
     managed_file=$(mktemp)
     trap 'rm -f "$public_file" "$managed_file"' EXIT
