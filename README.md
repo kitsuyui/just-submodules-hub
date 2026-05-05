@@ -34,7 +34,7 @@ On macOS, install them with Homebrew:
 brew install just git uv
 ```
 
-If you use GitHub-related commands such as `just github::repos::public::create`, `just github::repos::private::create`, `just github::repos::list`, or `just github::prs::list`, install the GitHub CLI as well:
+If you use GitHub-related commands such as `just github::repos::public::create`, `just github::repos::private::create`, `just github::repos::list`, `just github::prs::list`, or `just github::issues::list`, install the GitHub CLI as well:
 
 ```sh
 brew install gh
@@ -47,7 +47,7 @@ Make sure `gh auth login` has been completed before using those commands.
 Shared commands are grouped into two top-level namespaces:
 
 - `repo`: local hub operations such as submodule management, cataloging, and opening repositories
-- `github`: GitHub-facing operations such as repository listing, PR inspection, and branch protection
+- `github`: GitHub-facing operations such as repository listing, PR/issue inspection, and branch protection
 
 Examples:
 
@@ -75,6 +75,7 @@ just repo::catalog::languages::python::every "uv run pytest"
 just repo::open::tools::codex::open just-submodules-hub
 just github::repos::list
 just github::prs::summaries::show
+just github::issues::summaries::show
 just github::branch-protection::all::status
 ```
 
