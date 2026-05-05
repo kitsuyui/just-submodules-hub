@@ -34,7 +34,9 @@ just repo::submodule::worktrees::reconcile
 just repo::submodule::worktrees::reconcile --format tsv
 just repo::submodule::worktrees::reconcile --format table --jobs 8
 just repo::submodule::managed::list
+just repo::submodule::managed::list kitsuyui private
 just repo::submodule::unmanaged::list
+just repo::submodule::unmanaged::list kitsuyui private
 just repo::submodule::every '<command>'
 just repo::submodule::every '<command>' --format jsonl --jobs 8
 ```
@@ -66,6 +68,9 @@ just repo::submodule::every '<command>' --format jsonl --jobs 8
 - Reconciliation output formats are `table`, `tsv`, and `jsonl`.
 - Reconciliation uses an owner-level GraphQL default-branch prefilter by default. Submodules already on the remote default branch HEAD are reported as `noop` without running per-repository `pull`.
 - Reconciliation does not commit parent gitlink changes; use `pointers::commit` separately after reviewing the result.
+- `managed::list` without arguments lists all locally managed submodules from `.gitmodules`.
+- `managed::list <owners> <visibility>` filters managed submodules by GitHub repository visibility. The visibility value can be `public`, `private`, `internal`, or `all`.
+- `unmanaged::list <owners> <visibility>` uses the same owner and visibility argument order, then subtracts managed submodules from GitHub repositories.
 - `every` runs an arbitrary shell command per managed submodule through the same batch execution and record rendering foundation.
 
 ## Worktree reconciliation
