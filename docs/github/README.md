@@ -6,3 +6,4 @@ GitHub-facing operations are documented under this directory.
 - [`prs`](prs.md)
 - [`issues`](issues.md)
 - [`branch-protection`](branch-protection.md)
+- [`merge-policy`](merge-policy.md)

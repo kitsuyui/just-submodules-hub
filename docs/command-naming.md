@@ -20,6 +20,7 @@ just repo::submodule::pointers::commit
 just repo::submodule::managed::list
 just github::repos::public::create
 just github::branch-protection::all::rulesets::cleanup
+just github::merge-policy::squash::all::disable
 ```
 
 ## Design Principles

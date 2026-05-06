@@ -47,7 +47,7 @@ Make sure `gh auth login` has been completed before using those commands.
 Shared commands are grouped into two top-level namespaces:
 
 - `repo`: local hub operations such as submodule management, cataloging, and opening repositories
-- `github`: GitHub-facing operations such as repository listing, PR/issue inspection, and branch protection
+- `github`: GitHub-facing operations such as repository listing, PR/issue inspection, branch protection, and merge policy
 
 Examples:
 
@@ -77,6 +77,7 @@ just github::repos::list
 just github::prs::summaries::show
 just github::issues::summaries::show
 just github::branch-protection::all::status
+just github::merge-policy::squash::all::status
 ```
 
 For command discovery, use:
