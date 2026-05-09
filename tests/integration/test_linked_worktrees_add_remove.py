@@ -52,7 +52,7 @@ exit 0
     assert proc.returncode == 0, proc.stderr
     assert calls_file.read_text(encoding="utf-8").splitlines() == [
         f"{repo}|worktree add -b feature/test {linked} main",
-        f"{linked}|-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch --jobs 2",
+        f"{linked}|-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch --jobs 2",
         f"{linked}|config -f .gitmodules --name-only --get-regexp ^submodule\\..*\\.path$",
     ]
 

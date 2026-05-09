@@ -249,14 +249,21 @@ run_submodule_update() {
   no_fetch="$1"
   jobs="$2"
 
+  # `--force` ensures the working tree is checked out even when the parent
+  # index already matches the submodule HEAD. Without it, `git submodule
+  # update --init` is a no-op for "ghost" submodules where the .git data
+  # exists but the working tree is empty (a common state after `git worktree
+  # add` creates a new linked worktree, since git does not check out
+  # submodule working trees automatically). With `--force`, `init-all`
+  # converges to a fully hydrated state in every worktree.
   if [ "$no_fetch" -eq 1 ] && [ -n "$jobs" ]; then
-    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch --jobs "$jobs"
+    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch --jobs "$jobs"
   elif [ "$no_fetch" -eq 1 ]; then
-    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch
+    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch
   elif [ -n "$jobs" ]; then
-    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs "$jobs"
+    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --jobs "$jobs"
   else
-    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow
+    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force
   fi
 }
 
