@@ -10,10 +10,8 @@ shift
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 project_root=$(CDPATH='' cd -- "$script_dir/../.." && pwd)
 sync_script="$script_dir/sync-default-branch.sh"
-open_repo_script="$script_dir/open-repo.sh"
 resolve_repo_script="$script_dir/resolve_repo.py"
 reconcile_worktrees_script="$script_dir/reconcile_submodule_worktrees.py"
-submodule_command_script="$script_dir/run_submodule_command.py"
 cleanup_branches_script="$script_dir/cleanup_merged_branches.py"
 linked_worktrees_script="$script_dir/list_linked_worktrees.py"
 linked_worktree_sync_plan_script="$script_dir/plan_linked_worktree_sync.py"
@@ -284,6 +282,14 @@ run_submodule_update() {
     fi
   fi
 }
+
+
+# Actions migrated to the Python entrypoint (#60 item 3, phase 1).
+case "$action" in
+  list-github-repos-owner|list-github-repos|list-managed-repos|list-unmanaged-repos|open-repo|every-repo|grep)
+    exec uv run --project "$project_root" env PYTHONPATH="$project_root/src${PYTHONPATH:+:$PYTHONPATH}" python -m just_submodules_hub.run_action "$action" "$@"
+    ;;
+esac
 
 case "$action" in
   add-repo)
@@ -671,98 +677,6 @@ EOF_PATHS
     repo_input="${1:-}"
     warn_deprecated_submodule_action "$action" "submodule-root-status-visibility"
     print_submodule_ignore_raw_status all "$repo_input"
-    ;;
-
-  open-repo)
-    tool="${1:-}"
-    repo_input="${2:-}"
-    if [ -z "$tool" ] || [ -z "$repo_input" ]; then
-      echo "TOOL and REPO are required" >&2
-      exit 2
-    fi
-    exec "$open_repo_script" "$tool" "$repo_input"
-    ;;
-
-  every-repo)
-    if [ "$#" -eq 0 ]; then
-      echo "COMMAND is required" >&2
-      exit 2
-    fi
-    uv run --project "$project_root" python "$submodule_command_script" "$@"
-    ;;
-
-  grep)
-    git grep --recurse-submodules "$@"
-    ;;
-
-  list-github-repos-owner)
-    owner="${1:-}"
-    visibility="${2:-}"
-    if [ -z "$owner" ] || [ -z "$visibility" ]; then
-      echo "OWNER and VISIBILITY are required" >&2
-      exit 2
-    fi
-    command -v gh >/dev/null 2>&1 || { echo "gh command not found" >&2; exit 1; }
-    validate_github_repo_visibility "$visibility"
-    if [ "$visibility" = "all" ]; then
-      gh repo list "$owner" --limit 1000 --json nameWithOwner,url,isArchived,isFork --jq '.[] | select((.isArchived | not) and (.isFork | not)) | "\(.nameWithOwner)\t\(.url)"'
-    else
-      gh repo list "$owner" --visibility "$visibility" --limit 1000 --json nameWithOwner,url,isArchived,isFork --jq '.[] | select((.isArchived | not) and (.isFork | not)) | "\(.nameWithOwner)\t\(.url)"'
-    fi
-    ;;
-
-  list-github-repos)
-    owners="${1:-}"
-    visibility="${2:-}"
-    if [ -z "$owners" ] || [ -z "$visibility" ]; then
-      echo "OWNERS and VISIBILITY are required" >&2
-      exit 2
-    fi
-    command -v gh >/dev/null 2>&1 || { echo "gh command not found" >&2; exit 1; }
-    for owner in $(printf '%s\n' "$owners" | tr ',' ' '); do
-      [ -n "$owner" ] || continue
-      just github repos owner list "$owner" "$visibility"
-    done | awk -F'\t' '!seen[$1]++'
-    ;;
-
-  list-managed-repos)
-    owners="${1:-}"
-    visibility="${2:-all}"
-    validate_github_repo_visibility "$visibility"
-    if [ "$visibility" = "all" ]; then
-      if [ -z "$owners" ]; then
-        print_managed_repos
-      else
-        print_managed_repos | filter_repos_by_owners "$owners"
-      fi
-      exit 0
-    fi
-    if [ -z "$owners" ]; then
-      echo "OWNERS is required when VISIBILITY is not all" >&2
-      exit 2
-    fi
-    github_file=$(mktemp)
-    managed_file=$(mktemp)
-    trap 'rm -f "$github_file" "$managed_file"' EXIT
-    just github repos list "$owners" "$visibility" | cut -f1 | sort > "$github_file"
-    print_managed_repos > "$managed_file"
-    comm -12 "$managed_file" "$github_file"
-    ;;
-
-  list-unmanaged-repos)
-    owners="${1:-}"
-    visibility="${2:-}"
-    if [ -z "$owners" ] || [ -z "$visibility" ]; then
-      echo "OWNERS and VISIBILITY are required" >&2
-      exit 2
-    fi
-    validate_github_repo_visibility "$visibility"
-    public_file=$(mktemp)
-    managed_file=$(mktemp)
-    trap 'rm -f "$public_file" "$managed_file"' EXIT
-    just github repos list "$owners" "$visibility" | cut -f1 | sort > "$public_file"
-    just repo submodule managed list | sort > "$managed_file"
-    comm -23 "$public_file" "$managed_file"
     ;;
 
   *)

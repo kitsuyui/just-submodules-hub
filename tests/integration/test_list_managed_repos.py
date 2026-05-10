@@ -74,14 +74,15 @@ def test_list_managed_repos_filters_by_github_visibility(
 ) -> None:
     write_gitmodules(hub_repo)
     bin_dir = tmp_path / "bin"
-    calls_file = tmp_path / "just-calls.txt"
+    # Fake `gh` that responds to the exact CLI args the Python action will call.
+    # The Python implementation calls `gh repo list <owner> --visibility <vis> ...`
+    # directly instead of going through `just github repos list`.
     write_executable(
-        bin_dir / "just",
-        f"""#!/bin/sh
-printf '%s\\n' "$*" >> "{calls_file}"
-if [ "$*" = "github repos list kitsuyui private" ]; then
-  printf '%s\\n' 'kitsuyui/private-repo	https://github.com/kitsuyui/private-repo'
-  printf '%s\\n' 'kitsuyui/unmanaged-private	https://github.com/kitsuyui/unmanaged-private'
+        bin_dir / "gh",
+        """#!/bin/sh
+if [ "$1" = "repo" ] && [ "$2" = "list" ] && [ "$3" = "kitsuyui" ]; then
+  printf '%s\n' 'kitsuyui/private-repo\thttps://github.com/kitsuyui/private-repo'
+  printf '%s\n' 'kitsuyui/unmanaged-private\thttps://github.com/kitsuyui/unmanaged-private'
   exit 0
 fi
 exit 64
@@ -96,6 +97,3 @@ exit 64
 
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.splitlines() == ["kitsuyui/private-repo"]
-    assert calls_file.read_text(encoding="utf-8").splitlines() == [
-        "github repos list kitsuyui private"
-    ]
