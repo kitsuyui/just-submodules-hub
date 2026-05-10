@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/apply_linked_worktree_sync.py"
@@ -45,11 +47,13 @@ def test_apply_plan_leaves_skipped_records_unchanged() -> None:
     assert apply_sync.apply_plan(skipped) == skipped
 
 
-def test_apply_plan_fast_forwards_default_branch(monkeypatch) -> None:
+def test_apply_plan_fast_forwards_default_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[tuple[Path, list[str]]] = []
     heads = iter(["before", "after"])
 
-    def fake_run_git(repo: Path, args: list[str]):
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
         calls.append((repo, args))
         if args == ["rev-parse", "HEAD"]:
             return completed(args, stdout=f"{next(heads)}\n")
@@ -76,10 +80,12 @@ def test_apply_plan_fast_forwards_default_branch(monkeypatch) -> None:
     ]
 
 
-def test_apply_plan_retires_branch_by_resetting_to_target(monkeypatch) -> None:
+def test_apply_plan_retires_branch_by_resetting_to_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[list[str]] = []
 
-    def fake_run_git(repo: Path, args: list[str]):
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         if args == ["rev-parse", "HEAD"]:
             return completed(args, stdout="same\n")
@@ -99,10 +105,12 @@ def test_apply_plan_retires_branch_by_resetting_to_target(monkeypatch) -> None:
     ]
 
 
-def test_apply_plan_rebases_branch_without_force_push(monkeypatch) -> None:
+def test_apply_plan_rebases_branch_without_force_push(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[list[str]] = []
 
-    def fake_run_git(repo: Path, args: list[str]):
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         if args == ["rev-parse", "HEAD"]:
             return completed(args, stdout="before\n" if len(calls) == 1 else "after\n")
@@ -122,8 +130,8 @@ def test_apply_plan_rebases_branch_without_force_push(monkeypatch) -> None:
     ]
 
 
-def test_apply_plan_reports_git_failures(monkeypatch) -> None:
-    def fake_run_git(repo: Path, args: list[str]):
+def test_apply_plan_reports_git_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
         if args == ["fetch", "origin", "main"]:
             return completed(args, stderr="fetch failed", returncode=1)
         return completed(args, stdout="before\n")

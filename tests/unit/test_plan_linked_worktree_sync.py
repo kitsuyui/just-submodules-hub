@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/plan_linked_worktree_sync.py"
@@ -38,7 +40,7 @@ def worktree(
     )
 
 
-def test_plan_one_skips_dirty_worktree(monkeypatch) -> None:
+def test_plan_one_skips_dirty_worktree(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "dirty")
 
     assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
@@ -54,7 +56,9 @@ def test_plan_one_skips_dirty_worktree(monkeypatch) -> None:
     )
 
 
-def test_plan_one_retires_branch_without_unique_commits(monkeypatch) -> None:
+def test_plan_one_retires_branch_without_unique_commits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
     monkeypatch.setattr(
         planner, "branch_has_unique_commits", lambda repo, branch, default: False
@@ -73,7 +77,9 @@ def test_plan_one_retires_branch_without_unique_commits(monkeypatch) -> None:
     )
 
 
-def test_plan_one_skips_open_non_draft_pull_request(monkeypatch) -> None:
+def test_plan_one_skips_open_non_draft_pull_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
     monkeypatch.setattr(
         planner, "branch_has_unique_commits", lambda repo, branch, default: True
@@ -97,7 +103,9 @@ def test_plan_one_skips_open_non_draft_pull_request(monkeypatch) -> None:
     )
 
 
-def test_plan_one_rebases_draft_pr_to_remote_branch(monkeypatch) -> None:
+def test_plan_one_rebases_draft_pr_to_remote_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
     monkeypatch.setattr(
         planner, "branch_has_unique_commits", lambda repo, branch, default: True
@@ -122,7 +130,9 @@ def test_plan_one_rebases_draft_pr_to_remote_branch(monkeypatch) -> None:
     )
 
 
-def test_plan_one_skips_when_pr_metadata_is_unavailable(monkeypatch) -> None:
+def test_plan_one_skips_when_pr_metadata_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
     monkeypatch.setattr(
         planner, "branch_has_unique_commits", lambda repo, branch, default: True
@@ -146,10 +156,12 @@ def test_plan_one_skips_when_pr_metadata_is_unavailable(monkeypatch) -> None:
     )
 
 
-def test_gh_pr_view_treats_missing_pr_as_none(monkeypatch, tmp_path: Path) -> None:
+def test_gh_pr_view_treats_missing_pr_as_none(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/gh")
 
-    def fake_run(*args, **kwargs):
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
         return completed([], stderr="no pull requests found for branch", returncode=1)
 
     monkeypatch.setattr(subprocess, "run", fake_run)

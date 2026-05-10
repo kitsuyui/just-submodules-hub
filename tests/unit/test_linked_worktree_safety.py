@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/linked_worktree_safety.py"
@@ -18,7 +20,7 @@ spec.loader.exec_module(safety)
 
 
 def test_install_hooks_keeps_existing_hook_and_writes_sample(
-    monkeypatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     repo = tmp_path / "repo"
     hooks = repo / ".git" / "hooks"
@@ -34,7 +36,9 @@ def test_install_hooks_keeps_existing_hook_and_writes_sample(
     assert (hooks / "pre-push.linked-worktrees.sample").exists()
 
 
-def test_reset_record_plans_backup_without_apply(monkeypatch, tmp_path: Path) -> None:
+def test_reset_record_plans_backup_without_apply(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     repo = tmp_path / "repo-feature"
     repo.mkdir()
     monkeypatch.setattr(safety, "current_branch", lambda repo: "feature/test")
@@ -56,7 +60,7 @@ def test_reset_record_plans_backup_without_apply(monkeypatch, tmp_path: Path) ->
 
 
 def test_reset_record_apply_creates_backup_before_reset(
-    monkeypatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     repo = tmp_path / "repo-feature"
     repo.mkdir()
@@ -66,7 +70,7 @@ def test_reset_record_apply_creates_backup_before_reset(
     monkeypatch.setattr(safety, "current_head", lambda repo: "abc123")
     monkeypatch.setattr(safety, "timestamp", lambda: "20260428000000")
 
-    def fake_run_git(repo: Path, args: list[str]):
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         return subprocess.CompletedProcess(["git", *args], 0, "", "")
 
@@ -85,7 +89,7 @@ def test_reset_record_apply_creates_backup_before_reset(
 
 
 def test_cleanup_records_plans_only_retire_candidates(
-    monkeypatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     root = tmp_path / "repo"
     root.mkdir()

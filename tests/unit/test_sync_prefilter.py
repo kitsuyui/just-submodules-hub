@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Sequence
 
 import pytest
 
@@ -21,14 +22,16 @@ class DummyBar:
     def refresh(self) -> None:
         return None
 
-    def __enter__(self):
+    def __enter__(self) -> DummyBar:
         return self
 
-    def __exit__(self, exc_type, exc, tb):
-        return False
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        pass
 
 
-def test_build_sync_targets_skips_up_to_date_repositories(monkeypatch) -> None:
+def test_build_sync_targets_skips_up_to_date_repositories(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     bar = DummyBar()
 
     monkeypatch.setattr(
@@ -168,7 +171,7 @@ def test_all_parser_accepts_token_env_and_final_update() -> None:
     assert not args.prefilter
 
 
-def test_parse_repo_paths_reads_gitmodules(tmp_path) -> None:
+def test_parse_repo_paths_reads_gitmodules(tmp_path: Path) -> None:
     (tmp_path / ".gitmodules").write_text(
         """
 [submodule "repo/github.com/kitsuyui/sample-repo"]
@@ -180,7 +183,7 @@ def test_parse_repo_paths_reads_gitmodules(tmp_path) -> None:
 
 
 def test_temporary_github_submodule_credentials_rewrites_and_restores(
-    monkeypatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     repo_path = tmp_path / "repo/github.com/kitsuyui/private-repo"
     (repo_path / ".git").mkdir(parents=True)
@@ -195,25 +198,25 @@ def test_temporary_github_submodule_credentials_rewrites_and_restores(
     parent_config: dict[str, str] = {}
     remotes = {repo_path: "git@github.com:kitsuyui/private-repo.git"}
 
-    def fake_run(cmd, cwd=None):
-        cwd_path = Path(cwd or tmp_path)
-        if cmd[:4] == ["git", "config", "--local", "--get"]:
-            key = cmd[4]
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        cwd_path = Path(str(cwd)) if cwd is not None else tmp_path
+        if list(cmd)[:4] == ["git", "config", "--local", "--get"]:
+            key = list(cmd)[4]
             if key not in parent_config:
                 raise RuntimeError("missing config")
             return parent_config[key]
-        if cmd[:3] == ["git", "config", "--local"] and cmd[3] == "--unset":
-            parent_config.pop(cmd[4], None)
+        if list(cmd)[:3] == ["git", "config", "--local"] and list(cmd)[3] == "--unset":
+            parent_config.pop(list(cmd)[4], None)
             return ""
-        if cmd[:3] == ["git", "config", "--local"]:
-            parent_config[cmd[3]] = cmd[4]
+        if list(cmd)[:3] == ["git", "config", "--local"]:
+            parent_config[list(cmd)[3]] = list(cmd)[4]
             return ""
-        if cmd == ["git", "remote", "get-url", "origin"]:
+        if list(cmd) == ["git", "remote", "get-url", "origin"]:
             return remotes[cwd_path]
-        if cmd[:4] == ["git", "remote", "set-url", "origin"]:
-            remotes[cwd_path] = cmd[4]
+        if list(cmd)[:4] == ["git", "remote", "set-url", "origin"]:
+            remotes[cwd_path] = list(cmd)[4]
             return ""
-        raise AssertionError(f"unexpected command: {cmd}")
+        raise AssertionError(f"unexpected command: {list(cmd)}")
 
     monkeypatch.setenv("SUBMODULE_TOKEN", "secret-token")
     monkeypatch.setattr(sync, "run", fake_run)
@@ -236,7 +239,7 @@ def test_temporary_github_submodule_credentials_rewrites_and_restores(
 
 
 def test_temporary_github_submodule_credentials_redacts_setup_errors(
-    monkeypatch, tmp_path: Path, capsys
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     (tmp_path / ".gitmodules").write_text(
         """
@@ -247,12 +250,12 @@ def test_temporary_github_submodule_credentials_redacts_setup_errors(
         encoding="utf-8",
     )
 
-    def fake_run(cmd, cwd=None):
-        if cmd[:4] == ["git", "config", "--local", "--get"]:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        if list(cmd)[:4] == ["git", "config", "--local", "--get"]:
             raise RuntimeError("missing config")
-        if cmd[:3] == ["git", "config", "--local"]:
+        if list(cmd)[:3] == ["git", "config", "--local"]:
             raise RuntimeError("failed for secret-token")
-        raise AssertionError(f"unexpected command: {cmd}")
+        raise AssertionError(f"unexpected command: {list(cmd)}")
 
     monkeypatch.setenv("SUBMODULE_TOKEN", "secret-token")
     monkeypatch.setattr(sync, "run", fake_run)
@@ -264,7 +267,9 @@ def test_temporary_github_submodule_credentials_redacts_setup_errors(
     assert "secret-token" not in capsys.readouterr().err
 
 
-def test_temporary_github_submodule_credentials_requires_env(monkeypatch) -> None:
+def test_temporary_github_submodule_credentials_requires_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("SUBMODULE_TOKEN", raising=False)
 
     with pytest.raises(
@@ -274,7 +279,7 @@ def test_temporary_github_submodule_credentials_requires_env(monkeypatch) -> Non
             pass
 
 
-def test_print_failures_redacts_token(capsys) -> None:
+def test_print_failures_redacts_token(capsys: pytest.CaptureFixture[str]) -> None:
     sync.print_failures(
         [
             BatchFailure(
@@ -290,26 +295,30 @@ def test_print_failures_redacts_token(capsys) -> None:
     assert "fatal: could not read <redacted>" in captured.err
 
 
-def test_resolve_default_branch_prefers_symbolic_ref(monkeypatch) -> None:
-    def fake_run(cmd, cwd=None):
-        if cmd[:3] == ["git", "symbolic-ref", "--short"]:
+def test_resolve_default_branch_prefers_symbolic_ref(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
             return "origin/main"
-        raise AssertionError(f"unexpected command: {cmd}")
+        raise AssertionError(f"unexpected command: {list(cmd)}")
 
     monkeypatch.setattr(db_module, "run", fake_run)
     assert sync.resolve_default_branch("repo/github.com/kitsuyui/sample-repo") == "main"
 
 
-def test_resolve_default_branch_falls_back_to_remote_show(monkeypatch) -> None:
-    calls = []
+def test_resolve_default_branch_falls_back_to_remote_show(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
 
-    def fake_run(cmd, cwd=None):
-        calls.append(cmd)
-        if cmd[:3] == ["git", "symbolic-ref", "--short"]:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        calls.append(list(cmd))
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
             raise RuntimeError("missing")
-        if cmd[:3] == ["git", "remote", "show"]:
+        if list(cmd)[:3] == ["git", "remote", "show"]:
             return "  HEAD branch: trunk\n"
-        raise AssertionError(f"unexpected command: {cmd}")
+        raise AssertionError(f"unexpected command: {list(cmd)}")
 
     monkeypatch.setattr(db_module, "run", fake_run)
     assert (
@@ -317,7 +326,9 @@ def test_resolve_default_branch_falls_back_to_remote_show(monkeypatch) -> None:
     )
 
 
-def test_main_reports_when_no_submodules(monkeypatch, capsys) -> None:
+def test_main_reports_when_no_submodules(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.setattr(sync, "parse_repo_paths", lambda: [])
     monkeypatch.setattr(
         sync.argparse.ArgumentParser,
@@ -332,7 +343,9 @@ def test_main_reports_when_no_submodules(monkeypatch, capsys) -> None:
     assert "No submodule paths found in .gitmodules" in capsys.readouterr().out
 
 
-def test_fetch_owner_default_heads_handles_pagination(monkeypatch) -> None:
+def test_fetch_owner_default_heads_handles_pagination(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     bar = DummyBar()
     responses = iter(
         [
@@ -385,7 +398,9 @@ def test_fetch_owner_default_heads_handles_pagination(monkeypatch) -> None:
     assert bar.updated == 2
 
 
-def test_fetch_owner_default_heads_rejects_missing_owner(monkeypatch) -> None:
+def test_fetch_owner_default_heads_rejects_missing_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     bar = DummyBar()
     monkeypatch.setattr(
         default_heads,
@@ -400,10 +415,12 @@ def test_fetch_owner_default_heads_rejects_missing_owner(monkeypatch) -> None:
         raise AssertionError("missing repository owner should raise")
 
 
-def test_sync_all_reports_failures(monkeypatch, capsys) -> None:
+def test_sync_all_reports_failures(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     bar = DummyBar()
 
-    def fake_sync_one(path: str):
+    def fake_sync_one(path: str) -> sync.SyncResult:
         if path.endswith("bad"):
             raise RuntimeError("boom")
         return sync.SyncResult(
@@ -423,10 +440,12 @@ def test_sync_all_reports_failures(monkeypatch, capsys) -> None:
     assert "kitsuyui/bad: boom" in captured.err
 
 
-def test_sync_all_reports_skipped_repositories(monkeypatch, capsys) -> None:
+def test_sync_all_reports_skipped_repositories(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     bar = DummyBar()
 
-    def fake_sync_one(path: str):
+    def fake_sync_one(path: str) -> sync.SyncResult:
         return sync.SyncResult(
             repo_path=path,
             default_branch="main",
@@ -450,16 +469,18 @@ def test_sync_all_reports_skipped_repositories(monkeypatch, capsys) -> None:
     assert "One or more repositories were skipped" in captured.err
 
 
-def test_local_head_returns_detached_when_symbolic_ref_fails(monkeypatch) -> None:
-    calls = []
+def test_local_head_returns_detached_when_symbolic_ref_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
 
-    def fake_run(cmd, cwd=None):
-        calls.append(cmd)
-        if cmd[:3] == ["git", "symbolic-ref", "--quiet"]:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        calls.append(list(cmd))
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--quiet"]:
             raise RuntimeError("detached")
-        if cmd[:2] == ["git", "rev-parse"]:
+        if list(cmd)[:2] == ["git", "rev-parse"]:
             return "abc123"
-        raise AssertionError(f"unexpected command: {cmd}")
+        raise AssertionError(f"unexpected command: {list(cmd)}")
 
     monkeypatch.setattr(default_heads, "run", fake_run)
     assert default_heads.local_head("repo/github.com/kitsuyui/sample-repo") == (
@@ -468,7 +489,7 @@ def test_local_head_returns_detached_when_symbolic_ref_fails(monkeypatch) -> Non
     )
 
 
-def test_sync_one_rejects_missing_repository(tmp_path) -> None:
+def test_sync_one_rejects_missing_repository(tmp_path: Path) -> None:
     try:
         sync.sync_one(str(tmp_path / "missing"))
     except RuntimeError as exc:
@@ -477,17 +498,19 @@ def test_sync_one_rejects_missing_repository(tmp_path) -> None:
         raise AssertionError("sync_one should reject missing repositories")
 
 
-def test_sync_one_skips_dirty_repository(monkeypatch, tmp_path) -> None:
+def test_sync_one_skips_dirty_repository(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / ".git").write_text("gitdir", encoding="utf-8")
 
-    def fake_run(cmd, cwd=None):
-        if cmd[:3] == ["git", "symbolic-ref", "--quiet"]:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--quiet"]:
             return "main"
-        if cmd[:3] == ["git", "status", "--porcelain"]:
+        if list(cmd)[:3] == ["git", "status", "--porcelain"]:
             return " M README.md"
-        raise AssertionError(f"unexpected command: {cmd}")
+        raise AssertionError(f"unexpected command: {list(cmd)}")
 
     monkeypatch.setattr(sync, "run", fake_run)
     result = sync.sync_one(str(repo))
@@ -495,30 +518,32 @@ def test_sync_one_skips_dirty_repository(monkeypatch, tmp_path) -> None:
     assert result.skip_reason == "dirty working tree"
 
 
-def test_sync_one_switches_and_updates(monkeypatch, tmp_path) -> None:
+def test_sync_one_switches_and_updates(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / ".git").write_text("gitdir", encoding="utf-8")
     state = {"head": "old", "branch": "feature"}
 
-    def fake_run(cmd, cwd=None):
-        if cmd[:3] == ["git", "symbolic-ref", "--quiet"]:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--quiet"]:
             return state["branch"]
-        if cmd[:3] == ["git", "status", "--porcelain"]:
+        if list(cmd)[:3] == ["git", "status", "--porcelain"]:
             return ""
-        if cmd[:3] == ["git", "fetch", "origin"]:
+        if list(cmd)[:3] == ["git", "fetch", "origin"]:
             return ""
-        if cmd[:3] == ["git", "symbolic-ref", "--short"]:
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
             return "origin/main"
-        if cmd[:2] == ["git", "switch"]:
-            state["branch"] = cmd[-1]
+        if list(cmd)[:2] == ["git", "switch"]:
+            state["branch"] = list(cmd)[-1]
             return ""
-        if cmd[:2] == ["git", "pull"]:
+        if list(cmd)[:2] == ["git", "pull"]:
             state["head"] = "new"
             return ""
-        if cmd[:2] == ["git", "rev-parse"]:
+        if list(cmd)[:2] == ["git", "rev-parse"]:
             return state["head"]
-        raise AssertionError(f"unexpected command: {cmd}")
+        raise AssertionError(f"unexpected command: {list(cmd)}")
 
     monkeypatch.setattr(sync, "run", fake_run)
     monkeypatch.setattr(db_module, "run", fake_run)
@@ -528,8 +553,8 @@ def test_sync_one_switches_and_updates(monkeypatch, tmp_path) -> None:
     assert result.updated
 
 
-def test_handle_one_action(monkeypatch) -> None:
-    calls = []
+def test_handle_one_action(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, bool]] = []
     monkeypatch.setattr(
         sync,
         "sync_one",
@@ -537,11 +562,12 @@ def test_handle_one_action(monkeypatch) -> None:
             repo_path=repo_path, default_branch="main", switched=False, updated=False
         ),
     )
-    monkeypatch.setattr(
-        sync,
-        "print_result",
-        lambda result, verbose: calls.append((result.repo_path, verbose)) or False,
-    )
+
+    def fake_print_result(result: sync.SyncResult, verbose: bool) -> bool:
+        calls.append((result.repo_path, verbose))
+        return False
+
+    monkeypatch.setattr(sync, "print_result", fake_print_result)
     args = type(
         "Args",
         (),
@@ -551,8 +577,10 @@ def test_handle_one_action(monkeypatch) -> None:
     assert calls == [("repo/github.com/kitsuyui/sample-repo", True)]
 
 
-def test_handle_one_action_returns_failure_for_skipped_repository(monkeypatch) -> None:
-    calls = []
+def test_handle_one_action_returns_failure_for_skipped_repository(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, bool]] = []
     monkeypatch.setattr(
         sync,
         "sync_one",
@@ -565,11 +593,12 @@ def test_handle_one_action_returns_failure_for_skipped_repository(monkeypatch) -
             skip_reason="dirty working tree",
         ),
     )
-    monkeypatch.setattr(
-        sync,
-        "print_result",
-        lambda result, verbose: calls.append((result.repo_path, verbose)) or False,
-    )
+
+    def fake_print_result(result: sync.SyncResult, verbose: bool) -> bool:
+        calls.append((result.repo_path, verbose))
+        return False
+
+    monkeypatch.setattr(sync, "print_result", fake_print_result)
     args = type(
         "Args",
         (),
@@ -579,7 +608,9 @@ def test_handle_one_action_returns_failure_for_skipped_repository(monkeypatch) -
     assert calls == [("repo/github.com/kitsuyui/sample-repo", False)]
 
 
-def test_handle_all_action_reports_all_up_to_date(monkeypatch, capsys) -> None:
+def test_handle_all_action_reports_all_up_to_date(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.setattr(
         sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"]
     )
@@ -590,8 +621,10 @@ def test_handle_all_action_reports_all_up_to_date(monkeypatch, capsys) -> None:
     assert "All submodules are up to date." in capsys.readouterr().out
 
 
-def test_handle_all_action_runs_final_update_after_success(monkeypatch) -> None:
-    calls = []
+def test_handle_all_action_runs_final_update_after_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
     monkeypatch.setattr(
         sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"]
     )
@@ -620,7 +653,7 @@ def test_handle_all_action_runs_final_update_after_success(monkeypatch) -> None:
     assert calls == ["final"]
 
 
-def test_handle_all_action_runs_sync_all(monkeypatch) -> None:
+def test_handle_all_action_runs_sync_all(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"]
     )
@@ -636,7 +669,7 @@ def test_handle_all_action_runs_sync_all(monkeypatch) -> None:
 
 
 def test_handle_all_action_prints_when_sync_all_reports_no_changes(
-    monkeypatch, capsys
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(
         sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"]
@@ -653,7 +686,9 @@ def test_handle_all_action_prints_when_sync_all_reports_no_changes(
     assert "All submodules are up to date." in capsys.readouterr().out
 
 
-def test_main_handles_runtime_error(monkeypatch, capsys) -> None:
+def test_main_handles_runtime_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.setattr(
         sync.argparse.ArgumentParser,
         "parse_args",
