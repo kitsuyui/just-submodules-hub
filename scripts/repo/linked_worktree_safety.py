@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from typing import Sequence
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from just_submodules_hub.default_branch import resolve_default_branch as default_branch
@@ -329,6 +331,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     root = Path.cwd()
+    records: Sequence[HookRecord | ResetRecord | CleanupRecord]
+    fields: Sequence[str]
     if args.command == "install-hooks":
         records = [install_hooks(root)]
         fields = HOOK_FIELDS

@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any, cast
 
 from just_submodules_hub.github_rulesets import (
     BASELINE_RULESET_NAME,
@@ -61,21 +62,31 @@ def run_gh(*args: str) -> str:
     return proc.stdout
 
 
-def load_repo_metadata(repo: str) -> dict:
-    return json.loads(
-        run_gh(
-            "repo", "view", repo, "--json", "nameWithOwner,visibility,defaultBranchRef"
-        )
+def load_repo_metadata(repo: str) -> dict[Any, Any]:
+    return cast(
+        dict[Any, Any],
+        json.loads(
+            run_gh(
+                "repo",
+                "view",
+                repo,
+                "--json",
+                "nameWithOwner,visibility,defaultBranchRef",
+            )
+        ),
     )
 
 
-def load_effective_rules(repo: str, branch: str) -> list[dict]:
-    return parse_json_payload(run_gh("api", f"repos/{repo}/rules/branches/{branch}"))
+def load_effective_rules(repo: str, branch: str) -> list[dict[Any, Any]]:
+    return cast(
+        list[dict[Any, Any]],
+        parse_json_payload(run_gh("api", f"repos/{repo}/rules/branches/{branch}")),
+    )
 
 
-def load_rulesets(repo: str) -> list[dict]:
+def load_rulesets(repo: str) -> list[dict[Any, Any]]:
     summaries = parse_json_payload(run_gh("api", f"repos/{repo}/rulesets"))
-    hydrated: list[dict] = []
+    hydrated: list[dict[Any, Any]] = []
     for item in summaries:
         ruleset_id = item.get("id")
         if ruleset_id is None:

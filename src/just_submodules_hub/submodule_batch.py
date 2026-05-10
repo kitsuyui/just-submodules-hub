@@ -7,7 +7,7 @@ from argparse import ArgumentTypeError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, is_dataclass
-from typing import Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
+from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
 
 from tqdm import tqdm
 
@@ -43,7 +43,7 @@ def progress_bar(
     desc: str,
     unit: str = "task",
     enabled: bool = True,
-) -> Iterator[tqdm | None]:
+) -> Iterator[tqdm[Any] | None]:
     if not enabled:
         yield None
         return
@@ -59,7 +59,7 @@ def progress_bar(
         yield bar
 
 
-def tick(bar: tqdm | None, amount: int = 1) -> None:
+def tick(bar: tqdm[Any] | None, amount: int = 1) -> None:
     if bar is not None:
         bar.update(amount)
 

@@ -54,6 +54,9 @@ jobs:
       - name: Lint (ruff check)
         run: uv run ruff check .
 
+      - name: Typecheck (mypy)
+        run: just typecheck
+
       - name: Run tests
         run: just test
 
