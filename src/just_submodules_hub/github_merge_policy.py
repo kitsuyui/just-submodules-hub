@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-MERGE_POLICY_FIELDS = "nameWithOwner,visibility,mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed"
+MERGE_POLICY_FIELDS = (
+    "nameWithOwner,visibility,mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed"
+)
 MERGE_METHODS = ("merge-commit", "squash", "rebase")
 
 FIELD_BY_METHOD = {
@@ -24,7 +26,9 @@ def merge_method_patch_payload(method: str, enabled: bool) -> dict[str, bool]:
     return {PATCH_FIELD_BY_METHOD[method]: enabled}
 
 
-def summarize_merge_method(repo: str, visibility: str, method: str, payload: dict) -> dict:
+def summarize_merge_method(
+    repo: str, visibility: str, method: str, payload: dict
+) -> dict:
     return {
         "repo": repo,
         "visibility": visibility.lower(),

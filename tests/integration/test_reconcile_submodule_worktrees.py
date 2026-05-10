@@ -4,7 +4,14 @@ import os
 import subprocess
 from pathlib import Path
 
-from .helpers import add_submodule, advance_remote, create_remote, git_head, run, write_executable
+from .helpers import (
+    add_submodule,
+    advance_remote,
+    create_remote,
+    git_head,
+    run,
+    write_executable,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -26,7 +33,13 @@ def test_reconcile_submodule_worktree_pulls_default_branch(
     expected = advance_remote(remote, "README.md", "after\n", "Update remote")
 
     proc = subprocess.run(
-        [str(ACTION_SCRIPT), "reconcile-submodule-worktree", submodule_path, "--format", "tsv"],
+        [
+            str(ACTION_SCRIPT),
+            "reconcile-submodule-worktree",
+            submodule_path,
+            "--format",
+            "tsv",
+        ],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
@@ -35,7 +48,10 @@ def test_reconcile_submodule_worktree_pulls_default_branch(
 
     assert proc.returncode == 0, proc.stderr
     assert git_head(hub_repo / submodule_path) == expected
-    assert f"{submodule_path}\tupdated\tpull-default\tmain\t\tclean\tfast-forwarded" in proc.stdout.splitlines()
+    assert (
+        f"{submodule_path}\tupdated\tpull-default\tmain\t\tclean\tfast-forwarded"
+        in proc.stdout.splitlines()
+    )
 
 
 def test_reconcile_submodule_worktree_settles_merged_pr_branch(
@@ -63,7 +79,13 @@ printf '%s\n' '{"number":123,"state":"MERGED","mergedAt":"2026-04-26T00:00:00Z"}
     )
 
     proc = subprocess.run(
-        [str(ACTION_SCRIPT), "reconcile-submodule-worktree", submodule_path, "--format", "tsv"],
+        [
+            str(ACTION_SCRIPT),
+            "reconcile-submodule-worktree",
+            submodule_path,
+            "--format",
+            "tsv",
+        ],
         cwd=str(hub_repo),
         env={**os.environ, "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"},
         text=True,
@@ -73,7 +95,10 @@ printf '%s\n' '{"number":123,"state":"MERGED","mergedAt":"2026-04-26T00:00:00Z"}
 
     assert proc.returncode == 0, proc.stderr
     assert run(["git", "branch", "--show-current"], cwd=submodule) == "main"
-    assert f"{submodule_path}\tsettled\tswitch-default\tmain\t123\tclean\tpr merged; switched to default branch" in proc.stdout.splitlines()
+    assert (
+        f"{submodule_path}\tsettled\tswitch-default\tmain\t123\tclean\tpr merged; switched to default branch"
+        in proc.stdout.splitlines()
+    )
 
 
 def test_reconcile_submodule_worktrees_aggregates_jsonl(
@@ -90,7 +115,13 @@ def test_reconcile_submodule_worktrees_aggregates_jsonl(
     add_submodule(hub_repo, remote, submodule_path)
 
     proc = subprocess.run(
-        [str(ACTION_SCRIPT), "reconcile-submodule-worktrees", "--format", "jsonl", "--no-prefilter"],
+        [
+            str(ACTION_SCRIPT),
+            "reconcile-submodule-worktrees",
+            "--format",
+            "jsonl",
+            "--no-prefilter",
+        ],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,

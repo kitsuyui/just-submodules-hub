@@ -18,11 +18,15 @@ assert spec.loader is not None
 spec.loader.exec_module(planner)
 
 
-def completed(args: list[str], stdout: str = "", stderr: str = "", returncode: int = 0) -> subprocess.CompletedProcess[str]:
+def completed(
+    args: list[str], stdout: str = "", stderr: str = "", returncode: int = 0
+) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(args, returncode, stdout, stderr)
 
 
-def worktree(branch: str = "feature/test", *, path: str = "/repo-feature", detached: str = "no") -> object:
+def worktree(
+    branch: str = "feature/test", *, path: str = "/repo-feature", detached: str = "no"
+) -> object:
     return planner.WorktreeRecord(
         path=path,
         head="1111111111111111111111111111111111111111",
@@ -52,7 +56,9 @@ def test_plan_one_skips_dirty_worktree(monkeypatch) -> None:
 
 def test_plan_one_retires_branch_without_unique_commits(monkeypatch) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
-    monkeypatch.setattr(planner, "branch_has_unique_commits", lambda repo, branch, default: False)
+    monkeypatch.setattr(
+        planner, "branch_has_unique_commits", lambda repo, branch, default: False
+    )
 
     assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
         path="/repo-feature",
@@ -69,8 +75,14 @@ def test_plan_one_retires_branch_without_unique_commits(monkeypatch) -> None:
 
 def test_plan_one_skips_open_non_draft_pull_request(monkeypatch) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
-    monkeypatch.setattr(planner, "branch_has_unique_commits", lambda repo, branch, default: True)
-    monkeypatch.setattr(planner, "gh_pr_view", lambda repo: planner.PullRequestState("12", "open", "no", ""))
+    monkeypatch.setattr(
+        planner, "branch_has_unique_commits", lambda repo, branch, default: True
+    )
+    monkeypatch.setattr(
+        planner,
+        "gh_pr_view",
+        lambda repo: planner.PullRequestState("12", "open", "no", ""),
+    )
 
     assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
         path="/repo-feature",
@@ -87,8 +99,14 @@ def test_plan_one_skips_open_non_draft_pull_request(monkeypatch) -> None:
 
 def test_plan_one_rebases_draft_pr_to_remote_branch(monkeypatch) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
-    monkeypatch.setattr(planner, "branch_has_unique_commits", lambda repo, branch, default: True)
-    monkeypatch.setattr(planner, "gh_pr_view", lambda repo: planner.PullRequestState("12", "open", "yes", ""))
+    monkeypatch.setattr(
+        planner, "branch_has_unique_commits", lambda repo, branch, default: True
+    )
+    monkeypatch.setattr(
+        planner,
+        "gh_pr_view",
+        lambda repo: planner.PullRequestState("12", "open", "yes", ""),
+    )
     monkeypatch.setattr(planner, "remote_branch_exists", lambda repo, branch: True)
 
     assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
@@ -106,8 +124,14 @@ def test_plan_one_rebases_draft_pr_to_remote_branch(monkeypatch) -> None:
 
 def test_plan_one_skips_when_pr_metadata_is_unavailable(monkeypatch) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
-    monkeypatch.setattr(planner, "branch_has_unique_commits", lambda repo, branch, default: True)
-    monkeypatch.setattr(planner, "gh_pr_view", lambda repo: planner.PullRequestState("", "unknown", "", "gh not found"))
+    monkeypatch.setattr(
+        planner, "branch_has_unique_commits", lambda repo, branch, default: True
+    )
+    monkeypatch.setattr(
+        planner,
+        "gh_pr_view",
+        lambda repo: planner.PullRequestState("", "unknown", "", "gh not found"),
+    )
 
     assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
         path="/repo-feature",
@@ -130,4 +154,6 @@ def test_gh_pr_view_treats_missing_pr_as_none(monkeypatch, tmp_path: Path) -> No
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    assert planner.gh_pr_view(tmp_path) == planner.PullRequestState("", "none", "", "no pull request metadata")
+    assert planner.gh_pr_view(tmp_path) == planner.PullRequestState(
+        "", "none", "", "no pull request metadata"
+    )

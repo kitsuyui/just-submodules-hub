@@ -42,7 +42,15 @@ class DefaultHead:
 
 
 def gh_graphql(owner: str, cursor: str | None) -> dict:
-    cmd = ["gh", "api", "graphql", "-F", f"owner={owner}", "-f", f"query={GRAPHQL_QUERY}"]
+    cmd = [
+        "gh",
+        "api",
+        "graphql",
+        "-F",
+        f"owner={owner}",
+        "-f",
+        f"query={GRAPHQL_QUERY}",
+    ]
     if cursor:
         cmd.extend(["-F", f"cursor={cursor}"])
     out = run(cmd)
@@ -124,7 +132,9 @@ def local_head(repo_path: str | Path) -> tuple[str, str]:
     return branch, oid
 
 
-def matching_default_head(repo_path: str, remote_heads: dict[str, DefaultHead]) -> DefaultHead | None:
+def matching_default_head(
+    repo_path: str, remote_heads: dict[str, DefaultHead]
+) -> DefaultHead | None:
     remote = remote_heads.get(repo_display_name(repo_path))
     if remote is None:
         return None

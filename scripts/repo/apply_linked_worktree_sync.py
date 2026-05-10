@@ -10,7 +10,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from just_submodules_hub.submodule_batch import print_records
-from plan_linked_worktree_sync import FIELDS, PlanRecord, default_branch, list_worktrees, plan_one, run_git, summarize
+from plan_linked_worktree_sync import (
+    FIELDS,
+    PlanRecord,
+    default_branch,
+    list_worktrees,
+    plan_one,
+    run_git,
+    summarize,
+)
 
 
 def current_head(repo: Path) -> str:
@@ -49,7 +57,9 @@ def apply_plan(record: PlanRecord) -> PlanRecord:
         success_status = "updated"
         success_message = f"rebased onto {record.target}"
     else:
-        return replace(record, status="failed", message=f"unsupported action: {record.action}")
+        return replace(
+            record, status="failed", message=f"unsupported action: {record.action}"
+        )
 
     if proc.returncode != 0:
         return replace(record, status="failed", message=summarize(proc))
@@ -61,7 +71,9 @@ def apply_plan(record: PlanRecord) -> PlanRecord:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Apply safe synchronization decisions for Git linked worktrees.")
+    parser = argparse.ArgumentParser(
+        description="Apply safe synchronization decisions for Git linked worktrees."
+    )
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
     return parser.parse_args()
 
@@ -70,7 +82,9 @@ def main() -> int:
     args = parse_args()
     root = Path.cwd()
     default = default_branch(root)
-    records = [apply_plan(plan_one(worktree, default)) for worktree in list_worktrees(root)]
+    records = [
+        apply_plan(plan_one(worktree, default)) for worktree in list_worktrees(root)
+    ]
     print_records(records, FIELDS, args.format)
     return 1 if any(record.status == "failed" for record in records) else 0
 

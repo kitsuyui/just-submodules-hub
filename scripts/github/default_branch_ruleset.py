@@ -37,7 +37,11 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("repo", help="Repository slug such as owner/name")
-    parser.add_argument("identifier", nargs="?", help="Legacy ruleset id or name for delete-if-redundant")
+    parser.add_argument(
+        "identifier",
+        nargs="?",
+        help="Legacy ruleset id or name for delete-if-redundant",
+    )
     return parser.parse_args()
 
 
@@ -49,12 +53,20 @@ def run_gh(*args: str) -> str:
         check=False,
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"gh command failed: {' '.join(args)}")
+        raise RuntimeError(
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or f"gh command failed: {' '.join(args)}"
+        )
     return proc.stdout
 
 
 def load_repo_metadata(repo: str) -> dict:
-    return json.loads(run_gh("repo", "view", repo, "--json", "nameWithOwner,visibility,defaultBranchRef"))
+    return json.loads(
+        run_gh(
+            "repo", "view", repo, "--json", "nameWithOwner,visibility,defaultBranchRef"
+        )
+    )
 
 
 def load_effective_rules(repo: str, branch: str) -> list[dict]:
@@ -90,10 +102,16 @@ def load_classic_branch_protection(repo: str, branch: str) -> dict | None:
             return payload
         raise RuntimeError("classic branch protection payload must be an object")
 
-    combined = "\n".join(part for part in (proc.stdout.strip(), proc.stderr.strip()) if part).lower()
+    combined = "\n".join(
+        part for part in (proc.stdout.strip(), proc.stderr.strip()) if part
+    ).lower()
     if "branch not protected" in combined:
         return None
-    raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "failed to load classic branch protection")
+    raise RuntimeError(
+        proc.stderr.strip()
+        or proc.stdout.strip()
+        or "failed to load classic branch protection"
+    )
 
 
 def write_json(data: dict) -> None:
@@ -189,7 +207,9 @@ def delete_if_redundant(repo: str, identifier: str | None) -> int:
     summary = summarize_legacy_rulesets(metadata, rulesets)
     target_summary = find_ruleset_by_identifier(summary["legacy_rulesets"], identifier)
     if not target_summary:
-        raise ValueError(f"legacy ruleset summary not found for identifier: {identifier}")
+        raise ValueError(
+            f"legacy ruleset summary not found for identifier: {identifier}"
+        )
     if not target_summary.get("deletable"):
         raise RuntimeError(
             "legacy ruleset is not redundant; manual review required for rule types: "
@@ -213,7 +233,9 @@ def classic_status(repo: str) -> int:
     metadata = parse_repo_metadata(json.dumps(load_repo_metadata(repo)))
     effective_rules = load_effective_rules(repo, metadata.default_branch)
     protection = load_classic_branch_protection(repo, metadata.default_branch)
-    write_json(summarize_classic_branch_protection(metadata, protection, effective_rules))
+    write_json(
+        summarize_classic_branch_protection(metadata, protection, effective_rules)
+    )
     return 0
 
 
@@ -230,7 +252,12 @@ def classic_delete_if_redundant(repo: str) -> int:
             + ", ".join(summary["uncovered_settings"])
         )
 
-    run_gh("api", "--method", "DELETE", f"repos/{repo}/branches/{metadata.default_branch}/protection")
+    run_gh(
+        "api",
+        "--method",
+        "DELETE",
+        f"repos/{repo}/branches/{metadata.default_branch}/protection",
+    )
     write_json(
         {
             "action": "deleted",

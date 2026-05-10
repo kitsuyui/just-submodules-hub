@@ -11,7 +11,9 @@ def test_run_returns_stdout(monkeypatch) -> None:
     monkeypatch.setattr(
         shell.subprocess,
         "run",
-        lambda *args, **kwargs: CompletedProcess(args[0], 0, stdout="hello\n", stderr=""),
+        lambda *args, **kwargs: CompletedProcess(
+            args[0], 0, stdout="hello\n", stderr=""
+        ),
     )
     assert shell.run(["echo", "hello"]) == "hello"
 
@@ -35,7 +37,9 @@ def test_run_raises_runtime_error_with_cwd(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(
         shell.subprocess,
         "run",
-        lambda *args, **kwargs: CompletedProcess(args[0], 2, stdout="bad path", stderr=""),
+        lambda *args, **kwargs: CompletedProcess(
+            args[0], 2, stdout="bad path", stderr=""
+        ),
     )
     with pytest.raises(RuntimeError) as excinfo:
         shell.run(["git", "status"], cwd=tmp_path)

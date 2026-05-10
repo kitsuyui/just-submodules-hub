@@ -12,7 +12,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from just_submodules_hub.gitmodules import read_gitmodules_paths
-from just_submodules_hub.submodule_batch import positive_int, print_records, run_parallel_with_progress
+from just_submodules_hub.submodule_batch import (
+    positive_int,
+    print_records,
+    run_parallel_with_progress,
+)
 
 
 FIELDS = ("repo", "target", "branch", "status", "reason")
@@ -109,18 +113,35 @@ def remote_branches(repo: Path, remote: str) -> tuple[str, ...]:
 def authenticated_login(repo: Path) -> str:
     proc = run_gh(repo, ["api", "user", "--jq", ".login"])
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "failed to resolve authenticated GitHub user")
+        raise RuntimeError(
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or "failed to resolve authenticated GitHub user"
+        )
     return proc.stdout.strip()
 
 
-def pr_heads(repo: Path, state: str, limit: int) -> tuple[frozenset[str], frozenset[str]]:
+def pr_heads(
+    repo: Path, state: str, limit: int
+) -> tuple[frozenset[str], frozenset[str]]:
     login = authenticated_login(repo) if state == "merged" else ""
     proc = run_gh(
         repo,
-        ["pr", "list", "--state", state, "--limit", str(limit), "--json", "headRefName,isCrossRepository,author"],
+        [
+            "pr",
+            "list",
+            "--state",
+            state,
+            "--limit",
+            str(limit),
+            "--json",
+            "headRefName,isCrossRepository,author",
+        ],
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "failed to list pull requests")
+        raise RuntimeError(
+            proc.stderr.strip() or proc.stdout.strip() or "failed to list pull requests"
+        )
     payload = json.loads(proc.stdout)
     heads: set[str] = set()
     owned_heads: set[str] = set()
@@ -176,18 +197,34 @@ def cleanup_branch(
     if reason:
         return BranchResult(repo_label, target, branch, "skipped", reason)
     if branch not in state.merged_pr_heads:
-        return BranchResult(repo_label, target, branch, "skipped", "no merged pull request")
-    if target == "remote" and not include_non_owner_remote and branch not in state.owned_merged_pr_heads:
-        return BranchResult(repo_label, target, branch, "skipped", "merged pull request not owned by authenticated user")
+        return BranchResult(
+            repo_label, target, branch, "skipped", "no merged pull request"
+        )
+    if (
+        target == "remote"
+        and not include_non_owner_remote
+        and branch not in state.owned_merged_pr_heads
+    ):
+        return BranchResult(
+            repo_label,
+            target,
+            branch,
+            "skipped",
+            "merged pull request not owned by authenticated user",
+        )
     if not apply:
-        return BranchResult(repo_label, target, branch, "would-delete", "merged pull request")
+        return BranchResult(
+            repo_label, target, branch, "would-delete", "merged pull request"
+        )
 
     if target == "local":
         proc = run_git(repo, ["branch", "-d", branch])
     else:
         proc = run_git(repo, ["push", remote, "--delete", branch])
     if proc.returncode != 0:
-        return BranchResult(repo_label, target, branch, "failed", (proc.stderr or proc.stdout).strip())
+        return BranchResult(
+            repo_label, target, branch, "failed", (proc.stderr or proc.stdout).strip()
+        )
     return BranchResult(repo_label, target, branch, "deleted", "merged pull request")
 
 
@@ -260,23 +297,67 @@ def target_paths(root: Path, mode: str) -> list[str]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Clean up branches whose pull requests are already merged.")
+    parser = argparse.ArgumentParser(
+        description="Clean up branches whose pull requests are already merged."
+    )
     parser.add_argument("mode", choices=("one", "all", "root-and-all"))
-    parser.add_argument("--apply", action="store_true", help="delete branches; default is dry-run")
-    parser.add_argument("--local", dest="include_local", action="store_true", default=True, help="include local branches")
-    parser.add_argument("--no-local", dest="include_local", action="store_false", help="exclude local branches")
-    parser.add_argument("--remote", dest="include_remote", action="store_true", default=True, help="include remote branches")
-    parser.add_argument("--no-remote", dest="include_remote", action="store_false", help="exclude remote branches")
+    parser.add_argument(
+        "--apply", action="store_true", help="delete branches; default is dry-run"
+    )
+    parser.add_argument(
+        "--local",
+        dest="include_local",
+        action="store_true",
+        default=True,
+        help="include local branches",
+    )
+    parser.add_argument(
+        "--no-local",
+        dest="include_local",
+        action="store_false",
+        help="exclude local branches",
+    )
+    parser.add_argument(
+        "--remote",
+        dest="include_remote",
+        action="store_true",
+        default=True,
+        help="include remote branches",
+    )
+    parser.add_argument(
+        "--no-remote",
+        dest="include_remote",
+        action="store_false",
+        help="exclude remote branches",
+    )
     parser.add_argument(
         "--include-non-owner-remote",
         action="store_true",
         help="include remote branch cleanup for merged pull requests not owned by the authenticated user",
     )
-    parser.add_argument("--remote-name", default="origin", help="remote name to inspect/delete (default: origin)")
-    parser.add_argument("--limit", type=positive_int, default=200, help="merged/open PR lookup limit (default: 200)")
-    parser.add_argument("--jobs", type=positive_int, default=4, help="parallel workers for all modes (default: 4)")
+    parser.add_argument(
+        "--remote-name",
+        default="origin",
+        help="remote name to inspect/delete (default: origin)",
+    )
+    parser.add_argument(
+        "--limit",
+        type=positive_int,
+        default=200,
+        help="merged/open PR lookup limit (default: 200)",
+    )
+    parser.add_argument(
+        "--jobs",
+        type=positive_int,
+        default=4,
+        help="parallel workers for all modes (default: 4)",
+    )
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
-    parser.add_argument("--include-skipped", action="store_true", help="include skipped branches in the output")
+    parser.add_argument(
+        "--include-skipped",
+        action="store_true",
+        help="include skipped branches in the output",
+    )
     return parser
 
 
@@ -301,7 +382,10 @@ def main() -> int:
         unit="repo",
     )
     rows = [row for repo_rows in results for row in repo_rows]
-    rows.extend(BranchResult(failure.item, "repo", "", "failed", failure.message) for failure in failures)
+    rows.extend(
+        BranchResult(failure.item, "repo", "", "failed", failure.message)
+        for failure in failures
+    )
     if not args.include_skipped:
         rows = [row for row in rows if row.status != "skipped"]
     rows.sort(key=lambda row: (row.repo, row.target, row.branch))

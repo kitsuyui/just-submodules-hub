@@ -13,15 +13,23 @@ from just_submodules_hub.repo_paths import (
 
 
 def test_normalize_repo_input_accepts_slug() -> None:
-    assert normalize_repo_input("kitsuyui/example") == "repo/github.com/kitsuyui/example"
+    assert (
+        normalize_repo_input("kitsuyui/example") == "repo/github.com/kitsuyui/example"
+    )
 
 
 def test_normalize_repo_input_accepts_https_url() -> None:
-    assert normalize_repo_input("https://github.com/kitsuyui/example.git") == "repo/github.com/kitsuyui/example"
+    assert (
+        normalize_repo_input("https://github.com/kitsuyui/example.git")
+        == "repo/github.com/kitsuyui/example"
+    )
 
 
 def test_normalize_repo_input_accepts_ssh_url() -> None:
-    assert normalize_repo_input("git@github.com:kitsuyui/example.git") == "repo/github.com/kitsuyui/example"
+    assert (
+        normalize_repo_input("git@github.com:kitsuyui/example.git")
+        == "repo/github.com/kitsuyui/example"
+    )
 
 
 def test_repo_helpers_strip_prefix() -> None:
@@ -89,7 +97,9 @@ def test_repo_abspath_resolves_existing_repository(tmp_path: Path) -> None:
     assert repo_abspath("kitsuyui/example", tmp_path) == repo.resolve()
 
 
-def test_repo_abspath_resolves_existing_repository_from_short_name(tmp_path: Path) -> None:
+def test_repo_abspath_resolves_existing_repository_from_short_name(
+    tmp_path: Path,
+) -> None:
     repo = tmp_path / "repo/github.com/kitsuyui/example"
     repo.mkdir(parents=True)
 

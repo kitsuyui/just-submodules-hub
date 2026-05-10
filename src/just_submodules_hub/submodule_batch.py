@@ -15,7 +15,9 @@ from tqdm import tqdm
 T = TypeVar("T")
 R = TypeVar("R")
 
-TQDM_BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+TQDM_BAR_FORMAT = (
+    "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+)
 
 
 @dataclass(frozen=True)
@@ -111,7 +113,9 @@ def record_to_dict(record: object) -> dict[str, str]:
 
 
 def print_tsv(records: Sequence[object], fields: Sequence[str]) -> None:
-    writer = csv.DictWriter(sys.stdout, fieldnames=list(fields), dialect="excel-tab", lineterminator="\n")
+    writer = csv.DictWriter(
+        sys.stdout, fieldnames=list(fields), dialect="excel-tab", lineterminator="\n"
+    )
     writer.writeheader()
     for record in records:
         writer.writerow(record_to_dict(record))
@@ -123,7 +127,10 @@ def print_jsonl(records: Sequence[object]) -> None:
 
 
 def print_table(records: Sequence[object], fields: Sequence[str]) -> None:
-    rows = [dict(zip(fields, fields, strict=True)), *(record_to_dict(record) for record in records)]
+    rows = [
+        dict(zip(fields, fields, strict=True)),
+        *(record_to_dict(record) for record in records),
+    ]
     widths = {field: max(len(row.get(field, "")) for row in rows) for field in fields}
     for index, row in enumerate(rows):
         print("  ".join(row.get(field, "").ljust(widths[field]) for field in fields))
@@ -131,7 +138,9 @@ def print_table(records: Sequence[object], fields: Sequence[str]) -> None:
             print("  ".join("-" * widths[field] for field in fields))
 
 
-def print_records(records: Sequence[object], fields: Sequence[str], output_format: str) -> None:
+def print_records(
+    records: Sequence[object], fields: Sequence[str], output_format: str
+) -> None:
     if output_format == "jsonl":
         print_jsonl(records)
     elif output_format == "tsv":

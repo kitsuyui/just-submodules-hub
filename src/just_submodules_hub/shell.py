@@ -59,5 +59,7 @@ def run(
     )
     if proc.returncode != 0:
         output = (proc.stderr or proc.stdout).strip()
-        raise RuntimeError(command_failure_message(cmd, proc.returncode, cwd, output, redactions))
+        raise RuntimeError(
+            command_failure_message(cmd, proc.returncode, cwd, output, redactions)
+        )
     return proc.stdout.strip()

@@ -16,7 +16,17 @@ from just_submodules_hub.submodule_batch import print_records
 from list_linked_worktrees import WorktreeRecord, parse_porcelain
 
 
-FIELDS = ("path", "branch", "dirty", "pr", "draft", "status", "action", "target", "message")
+FIELDS = (
+    "path",
+    "branch",
+    "dirty",
+    "pr",
+    "draft",
+    "status",
+    "action",
+    "target",
+    "message",
+)
 
 
 @dataclass(frozen=True)
@@ -41,7 +51,9 @@ class PullRequestState:
 
 
 def run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["git", "-C", str(repo), *args], text=True, capture_output=True, check=False)
+    return subprocess.run(
+        ["git", "-C", str(repo), *args], text=True, capture_output=True, check=False
+    )
 
 
 def summarize(proc: subprocess.CompletedProcess[str]) -> str:
@@ -79,7 +91,9 @@ def branch_has_unique_commits(repo: Path, branch: str, default: str) -> bool:
 
 
 def remote_branch_exists(repo: Path, branch: str) -> bool:
-    proc = run_git(repo, ["rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}"])
+    proc = run_git(
+        repo, ["rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}"]
+    )
     return proc.returncode == 0
 
 
@@ -125,17 +139,77 @@ def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:
     dirty = dirty_state(repo)
 
     if worktree.locked == "yes":
-        return PlanRecord(worktree.path, branch, dirty, "", "", "skipped", "skip-locked", "", worktree.message)
+        return PlanRecord(
+            worktree.path,
+            branch,
+            dirty,
+            "",
+            "",
+            "skipped",
+            "skip-locked",
+            "",
+            worktree.message,
+        )
     if worktree.prunable == "yes":
-        return PlanRecord(worktree.path, branch, dirty, "", "", "skipped", "skip-prunable", "", worktree.message)
+        return PlanRecord(
+            worktree.path,
+            branch,
+            dirty,
+            "",
+            "",
+            "skipped",
+            "skip-prunable",
+            "",
+            worktree.message,
+        )
     if dirty == "dirty":
-        return PlanRecord(worktree.path, branch, dirty, "", "", "skipped", "skip-dirty", "", "worktree has local changes")
+        return PlanRecord(
+            worktree.path,
+            branch,
+            dirty,
+            "",
+            "",
+            "skipped",
+            "skip-dirty",
+            "",
+            "worktree has local changes",
+        )
     if dirty == "unknown":
-        return PlanRecord(worktree.path, branch, dirty, "", "", "failed", "inspect", "", "cannot inspect worktree status")
+        return PlanRecord(
+            worktree.path,
+            branch,
+            dirty,
+            "",
+            "",
+            "failed",
+            "inspect",
+            "",
+            "cannot inspect worktree status",
+        )
     if worktree.detached == "yes" or not branch:
-        return PlanRecord(worktree.path, branch, dirty, "", "", "skipped", "skip-detached", "", "detached HEAD")
+        return PlanRecord(
+            worktree.path,
+            branch,
+            dirty,
+            "",
+            "",
+            "skipped",
+            "skip-detached",
+            "",
+            "detached HEAD",
+        )
     if branch == default:
-        return PlanRecord(worktree.path, branch, dirty, "", "", "planned", "pull-default", f"origin/{default}", "default branch")
+        return PlanRecord(
+            worktree.path,
+            branch,
+            dirty,
+            "",
+            "",
+            "planned",
+            "pull-default",
+            f"origin/{default}",
+            "default branch",
+        )
     if not branch_has_unique_commits(repo, branch, default):
         return PlanRecord(
             worktree.path,
@@ -151,7 +225,17 @@ def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:
 
     pr = gh_pr_view(repo)
     if pr.state == "unknown":
-        return PlanRecord(worktree.path, branch, dirty, pr.number, pr.draft, "skipped", "skip-pr-unknown", "", pr.message)
+        return PlanRecord(
+            worktree.path,
+            branch,
+            dirty,
+            pr.number,
+            pr.draft,
+            "skipped",
+            "skip-pr-unknown",
+            "",
+            pr.message,
+        )
     if pr.state == "open" and pr.draft != "yes":
         return PlanRecord(
             worktree.path,
@@ -215,7 +299,9 @@ def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plan safe synchronization decisions for Git linked worktrees.")
+    parser = argparse.ArgumentParser(
+        description="Plan safe synchronization decisions for Git linked worktrees."
+    )
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
     return parser.parse_args()
 

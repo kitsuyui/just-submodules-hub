@@ -18,7 +18,13 @@ from .default_heads import (
 from .gitmodules import SubmoduleEntry, read_gitmodules_entries, read_gitmodules_paths
 from .repo_paths import repo_display_name, repo_owner, resolve_repo_input
 from .shell import run
-from .submodule_batch import BatchFailure, positive_int as batch_positive_int, progress_bar, run_parallel, tick
+from .submodule_batch import (
+    BatchFailure,
+    positive_int as batch_positive_int,
+    progress_bar,
+    run_parallel,
+    tick,
+)
 
 
 @dataclass
@@ -143,7 +149,9 @@ def apply_token_url_overrides(
         source_parent_url = parent_url or entry.url
         token_parent_url = github_token_url(source_parent_url, token)
         if token_parent_url is not None and token_parent_url != parent_url:
-            parent_snapshots.append(ConfigSnapshot(repo_root, key, had_parent_url, parent_url))
+            parent_snapshots.append(
+                ConfigSnapshot(repo_root, key, had_parent_url, parent_url)
+            )
             git_config_set(repo_root, key, token_parent_url)
 
         submodule_path = repo_root / entry.path
@@ -156,7 +164,10 @@ def apply_token_url_overrides(
         token_origin_url = github_token_url(origin_url, token)
         if token_origin_url is not None and token_origin_url != origin_url:
             remote_snapshots.append(RemoteSnapshot(submodule_path, origin_url))
-            run(["git", "remote", "set-url", "origin", token_origin_url], cwd=submodule_path)
+            run(
+                ["git", "remote", "set-url", "origin", token_origin_url],
+                cwd=submodule_path,
+            )
 
 
 @contextmanager
@@ -201,7 +212,10 @@ def temporary_github_submodule_credentials(
             except RuntimeError as err:
                 restore_errors.append(redact_secrets(str(err), redactions))
         if restore_errors and sys.exc_info()[0] is None:
-            raise RuntimeError("Failed to restore tokenized submodule URLs: " + "; ".join(restore_errors))
+            raise RuntimeError(
+                "Failed to restore tokenized submodule URLs: "
+                + "; ".join(restore_errors)
+            )
 
 
 def build_sync_targets(paths: Iterable[str], prefilter: bool, bar) -> List[str]:
@@ -231,7 +245,9 @@ def build_sync_targets(paths: Iterable[str], prefilter: bool, bar) -> List[str]:
 def resolve_default_branch(repo_path: str) -> str:
     cwd = Path(repo_path)
     try:
-        out = run(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd=cwd)
+        out = run(
+            ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd=cwd
+        )
         if out.startswith("origin/"):
             return out[len("origin/") :]
         if out:
@@ -260,7 +276,9 @@ def sync_one(repo_path: str) -> SyncResult:
 
     current_branch = "DETACHED"
     try:
-        current_branch = run(["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=cwd)
+        current_branch = run(
+            ["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=cwd
+        )
     except Exception:
         pass
 
@@ -326,7 +344,9 @@ def sync_all(
     bar,
     redactions: Iterable[str] = (),
 ) -> tuple[int, int]:
-    results, failures = run_parallel(paths, sync_one, jobs=jobs, on_done=lambda: tick(bar))
+    results, failures = run_parallel(
+        paths, sync_one, jobs=jobs, on_done=lambda: tick(bar)
+    )
 
     changed_count = 0
     skipped_count = 0
@@ -346,14 +366,18 @@ def sync_all(
     return 0, changed_count
 
 
-def print_failures(failures: list[BatchFailure], redactions: Iterable[str] = ()) -> None:
+def print_failures(
+    failures: list[BatchFailure], redactions: Iterable[str] = ()
+) -> None:
     for failure in failures:
         message = redact_secrets(failure.message, redactions)
         print(f"{repo_display_name(failure.item)}: {message}", file=sys.stderr)
 
 
 def run_final_submodule_update() -> None:
-    print("Running final submodule update (--remote --rebase --recursive --recommend-shallow)...")
+    print(
+        "Running final submodule update (--remote --rebase --recursive --recommend-shallow)..."
+    )
     run(
         [
             "git",
@@ -373,12 +397,23 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="action", required=True)
 
     one = subparsers.add_parser("one", help="sync one repository")
-    one.add_argument("repo_path", help="repository name or path (e.g. example, owner/repo, or repo/github.com/owner/repo)")
-    one.add_argument("--verbose", action="store_true", help="show up-to-date repositories")
+    one.add_argument(
+        "repo_path",
+        help="repository name or path (e.g. example, owner/repo, or repo/github.com/owner/repo)",
+    )
+    one.add_argument(
+        "--verbose", action="store_true", help="show up-to-date repositories"
+    )
 
-    all_cmd = subparsers.add_parser("all", help="sync all repositories from .gitmodules")
-    all_cmd.add_argument("--jobs", type=positive_int, default=4, help="parallel workers (default: 4)")
-    all_cmd.add_argument("--verbose", action="store_true", help="show up-to-date repositories")
+    all_cmd = subparsers.add_parser(
+        "all", help="sync all repositories from .gitmodules"
+    )
+    all_cmd.add_argument(
+        "--jobs", type=positive_int, default=4, help="parallel workers (default: 4)"
+    )
+    all_cmd.add_argument(
+        "--verbose", action="store_true", help="show up-to-date repositories"
+    )
     all_cmd.add_argument(
         "--prefilter",
         dest="prefilter",
@@ -414,7 +449,9 @@ def handle_one_action(args: argparse.Namespace) -> int:
 
 
 def handle_all_action(args: argparse.Namespace) -> int:
-    with temporary_github_submodule_credentials(getattr(args, "token_env", None)) as redactions:
+    with temporary_github_submodule_credentials(
+        getattr(args, "token_env", None)
+    ) as redactions:
         paths = parse_repo_paths()
         if not paths:
             print("No submodule paths found in .gitmodules")
@@ -433,7 +470,9 @@ def handle_all_action(args: argparse.Namespace) -> int:
                 if getattr(args, "final_submodule_update", False):
                     run_final_submodule_update()
                 return 0
-            code, changed_count = sync_all(targets, args.jobs, args.verbose, bar, redactions)
+            code, changed_count = sync_all(
+                targets, args.jobs, args.verbose, bar, redactions
+            )
 
         if code == 0 and getattr(args, "final_submodule_update", False):
             run_final_submodule_update()

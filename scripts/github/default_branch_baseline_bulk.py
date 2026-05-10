@@ -9,7 +9,6 @@ from tqdm import tqdm
 
 from just_submodules_hub.gitmodules import managed_repo_slugs, read_gitmodules_paths
 from just_submodules_hub.github_rulesets import (
-    BASELINE_RULESET_NAME,
     candidate_legacy_rulesets,
     desired_ruleset_payload,
     find_ruleset_by_identifier,
@@ -21,16 +20,27 @@ from just_submodules_hub.github_rulesets import (
     summarize_ruleset_status,
 )
 
-TQDM_BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+TQDM_BAR_FORMAT = (
+    "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Bulk operations for default branch baseline protection.")
+    parser = argparse.ArgumentParser(
+        description="Bulk operations for default branch baseline protection."
+    )
     parser.add_argument(
         "action",
-        choices=("status-all", "apply-all", "cleanup-rulesets-all", "cleanup-classic-all"),
+        choices=(
+            "status-all",
+            "apply-all",
+            "cleanup-rulesets-all",
+            "cleanup-classic-all",
+        ),
     )
-    parser.add_argument("visibility", nargs="?", default="public", choices=("public", "private", "all"))
+    parser.add_argument(
+        "visibility", nargs="?", default="public", choices=("public", "private", "all")
+    )
     return parser.parse_args()
 
 
@@ -42,7 +52,11 @@ def run_gh(*args: str) -> str:
         check=False,
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"gh command failed: {' '.join(args)}")
+        raise RuntimeError(
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or f"gh command failed: {' '.join(args)}"
+        )
     return proc.stdout
 
 
@@ -55,7 +69,11 @@ def run_gh_with_json_input(args: list[str], payload: dict) -> dict:
         check=False,
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"gh command failed: {' '.join(args)}")
+        raise RuntimeError(
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or f"gh command failed: {' '.join(args)}"
+        )
     parsed = json.loads(proc.stdout)
     if not isinstance(parsed, dict):
         raise RuntimeError("GitHub API response must be a JSON object")
@@ -63,7 +81,11 @@ def run_gh_with_json_input(args: list[str], payload: dict) -> dict:
 
 
 def load_repo_metadata(repo: str) -> dict:
-    return json.loads(run_gh("repo", "view", repo, "--json", "nameWithOwner,visibility,defaultBranchRef"))
+    return json.loads(
+        run_gh(
+            "repo", "view", repo, "--json", "nameWithOwner,visibility,defaultBranchRef"
+        )
+    )
 
 
 def load_effective_rules(repo: str, branch: str) -> list[dict]:
@@ -96,10 +118,16 @@ def load_classic_branch_protection(repo: str, branch: str) -> dict | None:
             return payload
         raise RuntimeError("classic branch protection payload must be an object")
 
-    combined = "\n".join(part for part in (proc.stdout.strip(), proc.stderr.strip()) if part).lower()
+    combined = "\n".join(
+        part for part in (proc.stdout.strip(), proc.stderr.strip()) if part
+    ).lower()
     if "branch not protected" in combined:
         return None
-    raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "failed to load classic branch protection")
+    raise RuntimeError(
+        proc.stderr.strip()
+        or proc.stdout.strip()
+        or "failed to load classic branch protection"
+    )
 
 
 def write_json(data: dict) -> None:
@@ -112,10 +140,16 @@ def supports_branch_protection(repo: str) -> bool:
 
 
 def candidate_repositories() -> list[str]:
-    return [repo for repo in managed_repo_slugs(read_gitmodules_paths(".")) if supports_branch_protection(repo)]
+    return [
+        repo
+        for repo in managed_repo_slugs(read_gitmodules_paths("."))
+        if supports_branch_protection(repo)
+    ]
 
 
-def managed_repositories(visibility: str, bar: tqdm | None = None) -> list[tuple[str, dict]]:
+def managed_repositories(
+    visibility: str, bar: tqdm | None = None
+) -> list[tuple[str, dict]]:
     repos = managed_repo_slugs(read_gitmodules_paths("."))
     selected: list[tuple[str, dict]] = []
     for repo in repos:
@@ -159,9 +193,15 @@ def status_all(visibility: str) -> int:
                 {
                     "repo": repo,
                     "visibility": metadata.visibility,
-                    "ruleset_status": summarize_ruleset_status(metadata, effective_rules, rulesets),
-                    "legacy_rulesets": summarize_legacy_rulesets(metadata, rulesets)["legacy_rulesets"],
-                    "classic_protection": summarize_classic_branch_protection(metadata, classic, effective_rules),
+                    "ruleset_status": summarize_ruleset_status(
+                        metadata, effective_rules, rulesets
+                    ),
+                    "legacy_rulesets": summarize_legacy_rulesets(metadata, rulesets)[
+                        "legacy_rulesets"
+                    ],
+                    "classic_protection": summarize_classic_branch_protection(
+                        metadata, classic, effective_rules
+                    ),
                 }
             )
             bar.update(1)
@@ -190,10 +230,21 @@ def apply_all(visibility: str) -> int:
             payload = desired_ruleset_payload(metadata.default_branch)
             if managed_ruleset and managed_ruleset.get("id") is not None:
                 result = run_gh_with_json_input(
-                    ["api", "--method", "PUT", f"repos/{repo}/rulesets/{managed_ruleset['id']}"],
+                    [
+                        "api",
+                        "--method",
+                        "PUT",
+                        f"repos/{repo}/rulesets/{managed_ruleset['id']}",
+                    ],
                     payload,
                 )
-                results.append({"repo": repo, "action": "updated", "ruleset_id": result.get("id", managed_ruleset["id"])})
+                results.append(
+                    {
+                        "repo": repo,
+                        "action": "updated",
+                        "ruleset_id": result.get("id", managed_ruleset["id"]),
+                    }
+                )
                 bar.update(1)
                 continue
 
@@ -201,7 +252,9 @@ def apply_all(visibility: str) -> int:
                 ["api", "--method", "POST", f"repos/{repo}/rulesets"],
                 payload,
             )
-            results.append({"repo": repo, "action": "created", "ruleset_id": result.get("id")})
+            results.append(
+                {"repo": repo, "action": "created", "ruleset_id": result.get("id")}
+            )
             bar.update(1)
 
     write_json({"action": "apply-all", "visibility": visibility, "results": results})
@@ -221,11 +274,25 @@ def cleanup_rulesets_all(visibility: str) -> int:
             summary = summarize_legacy_rulesets(metadata, rulesets)
             for item in summary["legacy_rulesets"]:
                 if item["deletable"]:
-                    target = find_ruleset_by_identifier(candidate_legacy_rulesets(metadata, rulesets), str(item["id"]))
+                    target = find_ruleset_by_identifier(
+                        candidate_legacy_rulesets(metadata, rulesets), str(item["id"])
+                    )
                     if not target:
                         continue
-                    run_gh("api", "--method", "DELETE", f"repos/{repo}/rulesets/{target['id']}")
-                    results.append({"repo": repo, "action": "deleted", "ruleset_id": target["id"], "name": target["name"]})
+                    run_gh(
+                        "api",
+                        "--method",
+                        "DELETE",
+                        f"repos/{repo}/rulesets/{target['id']}",
+                    )
+                    results.append(
+                        {
+                            "repo": repo,
+                            "action": "deleted",
+                            "ruleset_id": target["id"],
+                            "name": target["name"],
+                        }
+                    )
                 else:
                     results.append(
                         {
@@ -238,7 +305,9 @@ def cleanup_rulesets_all(visibility: str) -> int:
                     )
             bar.update(1)
 
-    write_json({"action": "cleanup-rulesets-all", "visibility": visibility, "results": results})
+    write_json(
+        {"action": "cleanup-rulesets-all", "visibility": visibility, "results": results}
+    )
     return 0
 
 
@@ -253,13 +322,26 @@ def cleanup_classic_all(visibility: str) -> int:
             metadata = parse_repo_metadata(json.dumps(raw_metadata))
             effective_rules = load_effective_rules(repo, metadata.default_branch)
             protection = load_classic_branch_protection(repo, metadata.default_branch)
-            summary = summarize_classic_branch_protection(metadata, protection, effective_rules)
+            summary = summarize_classic_branch_protection(
+                metadata, protection, effective_rules
+            )
             if not summary["classic_branch_protection_found"]:
                 bar.update(1)
                 continue
             if summary["deletable"]:
-                run_gh("api", "--method", "DELETE", f"repos/{repo}/branches/{metadata.default_branch}/protection")
-                results.append({"repo": repo, "action": "deleted", "deleted": "classic_branch_protection"})
+                run_gh(
+                    "api",
+                    "--method",
+                    "DELETE",
+                    f"repos/{repo}/branches/{metadata.default_branch}/protection",
+                )
+                results.append(
+                    {
+                        "repo": repo,
+                        "action": "deleted",
+                        "deleted": "classic_branch_protection",
+                    }
+                )
             else:
                 results.append(
                     {
@@ -271,7 +353,9 @@ def cleanup_classic_all(visibility: str) -> int:
                 )
             bar.update(1)
 
-    write_json({"action": "cleanup-classic-all", "visibility": visibility, "results": results})
+    write_json(
+        {"action": "cleanup-classic-all", "visibility": visibility, "results": results}
+    )
     return 0
 
 

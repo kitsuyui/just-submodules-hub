@@ -69,9 +69,13 @@ def managed_repo_owners(paths: list[str]) -> list[str]:
     return sorted({repo_owner(path) for path in paths})
 
 
-def find_submodules_with_marker(marker_file: str, repo_root: Path | str = ".") -> list[str]:
+def find_submodules_with_marker(
+    marker_file: str, repo_root: Path | str = "."
+) -> list[str]:
     if not marker_file:
         raise ValueError("marker file is required")
 
     root = Path(repo_root)
-    return SubmoduleFilter(marker_files=(marker_file,)).apply(read_gitmodules_paths(root), root)
+    return SubmoduleFilter(marker_files=(marker_file,)).apply(
+        read_gitmodules_paths(root), root
+    )

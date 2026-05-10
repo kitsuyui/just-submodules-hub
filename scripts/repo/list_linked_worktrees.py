@@ -84,7 +84,9 @@ def parse_porcelain(text: str) -> list[WorktreeRecord]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="List Git linked worktrees for the current repository.")
+    parser = argparse.ArgumentParser(
+        description="List Git linked worktrees for the current repository."
+    )
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
     return parser.parse_args()
 
@@ -98,7 +100,10 @@ def main() -> int:
         check=False,
     )
     if proc.returncode != 0:
-        print((proc.stderr or proc.stdout).strip() or "git worktree list failed", file=sys.stderr)
+        print(
+            (proc.stderr or proc.stdout).strip() or "git worktree list failed",
+            file=sys.stderr,
+        )
         return proc.returncode
 
     print_records(parse_porcelain(proc.stdout), FIELDS, args.format)

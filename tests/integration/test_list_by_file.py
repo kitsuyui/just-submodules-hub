@@ -10,7 +10,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / "scripts/submodules/list-by-file.sh"
 
 
-def test_list_by_file_script_lists_matching_submodules(tmp_path: Path, hub_repo: Path) -> None:
+def test_list_by_file_script_lists_matching_submodules(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     python_remote = create_remote(
         tmp_path,
         "example-owner",

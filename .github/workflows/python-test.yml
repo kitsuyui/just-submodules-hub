@@ -48,6 +48,12 @@ jobs:
               ;;
           esac
 
+      - name: Check formatting (ruff format)
+        run: uv run ruff format --check .
+
+      - name: Lint (ruff check)
+        run: uv run ruff check .
+
       - name: Run tests
         run: just test
 

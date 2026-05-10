@@ -16,7 +16,9 @@ def run(cmd: list[str], cwd: Path, env: Mapping[str, str] | None = None) -> str:
         capture_output=True,
     )
     if proc.returncode != 0:
-        raise AssertionError(f"command failed: {' '.join(cmd)}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}")
+        raise AssertionError(
+            f"command failed: {' '.join(cmd)}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        )
     return proc.stdout.strip()
 
 
@@ -36,7 +38,13 @@ def commit_file(repo: Path, relative_path: str, content: str, message: str) -> s
     return run(["git", "rev-parse", "HEAD"], cwd=repo)
 
 
-def create_remote(tmp_path: Path, owner: str, name: str, files: Mapping[str, str], branch: str = "main") -> Path:
+def create_remote(
+    tmp_path: Path,
+    owner: str,
+    name: str,
+    files: Mapping[str, str],
+    branch: str = "main",
+) -> Path:
     seed = tmp_path / f"{name}-seed"
     remote = tmp_path / f"{name}.git"
     init_repo(seed, branch=branch)
@@ -58,11 +66,24 @@ def init_hub(path: Path) -> None:
 
 
 def add_submodule(hub: Path, remote: Path | str, submodule_path: str) -> None:
-    run(["git", "-c", "protocol.file.allow=always", "submodule", "add", str(remote), submodule_path], cwd=hub)
+    run(
+        [
+            "git",
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(remote),
+            submodule_path,
+        ],
+        cwd=hub,
+    )
     run(["git", "commit", "-m", f"Add {submodule_path}"], cwd=hub)
 
 
-def advance_remote(remote: Path, relative_path: str, content: str, message: str, branch: str = "main") -> str:
+def advance_remote(
+    remote: Path, relative_path: str, content: str, message: str, branch: str = "main"
+) -> str:
     with tempfile.TemporaryDirectory() as tmpdir:
         checkout = Path(tmpdir) / "checkout"
         clone_remote(remote, checkout)

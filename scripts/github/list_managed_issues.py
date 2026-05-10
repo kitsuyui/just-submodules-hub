@@ -20,7 +20,9 @@ from just_submodules_hub.gitmodules import managed_repo_owners, read_gitmodules_
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="List issues for managed submodules")
     parser.add_argument("state", nargs="?", default="open", help="open, closed, or all")
-    parser.add_argument("--repo-root", default=".", help="repository root (default: current directory)")
+    parser.add_argument(
+        "--repo-root", default=".", help="repository root (default: current directory)"
+    )
     return parser
 
 
@@ -65,7 +67,10 @@ def main() -> int:
             capture_output=True,
         )
         if proc.returncode != 0:
-            print((proc.stderr or proc.stdout).strip() or "gh search issues failed", file=sys.stderr)
+            print(
+                (proc.stderr or proc.stdout).strip() or "gh search issues failed",
+                file=sys.stderr,
+            )
             return 1
         records.extend(parse_issue_payload(proc.stdout))
 

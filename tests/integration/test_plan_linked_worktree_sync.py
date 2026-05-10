@@ -12,7 +12,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUN_ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
-def test_plan_linked_worktree_sync_routes_to_git_and_reports_plan(tmp_path: Path) -> None:
+def test_plan_linked_worktree_sync_routes_to_git_and_reports_plan(
+    tmp_path: Path,
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     feature = tmp_path / "repo-feature"

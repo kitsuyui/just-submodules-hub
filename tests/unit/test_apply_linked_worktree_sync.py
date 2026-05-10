@@ -31,12 +31,16 @@ def record(action: str, target: str = "origin/main") -> object:
     )
 
 
-def completed(args: list[str], stdout: str = "", stderr: str = "", returncode: int = 0) -> subprocess.CompletedProcess[str]:
+def completed(
+    args: list[str], stdout: str = "", stderr: str = "", returncode: int = 0
+) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(args, returncode, stdout, stderr)
 
 
 def test_apply_plan_leaves_skipped_records_unchanged() -> None:
-    skipped = apply_sync.PlanRecord("/repo", "feature/test", "dirty", "", "", "skipped", "skip-dirty", "", "dirty")
+    skipped = apply_sync.PlanRecord(
+        "/repo", "feature/test", "dirty", "", "", "skipped", "skip-dirty", "", "dirty"
+    )
 
     assert apply_sync.apply_plan(skipped) == skipped
 

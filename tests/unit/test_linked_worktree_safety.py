@@ -17,7 +17,9 @@ assert spec.loader is not None
 spec.loader.exec_module(safety)
 
 
-def test_install_hooks_keeps_existing_hook_and_writes_sample(monkeypatch, tmp_path: Path) -> None:
+def test_install_hooks_keeps_existing_hook_and_writes_sample(
+    monkeypatch, tmp_path: Path
+) -> None:
     repo = tmp_path / "repo"
     hooks = repo / ".git" / "hooks"
     hooks.mkdir(parents=True)
@@ -40,7 +42,9 @@ def test_reset_record_plans_backup_without_apply(monkeypatch, tmp_path: Path) ->
     monkeypatch.setattr(safety, "default_branch", lambda repo: "main")
     monkeypatch.setattr(safety, "timestamp", lambda: "20260428000000")
 
-    assert safety.reset_record(repo, target="", backup_prefix="stash", apply=False) == safety.ResetRecord(
+    assert safety.reset_record(
+        repo, target="", backup_prefix="stash", apply=False
+    ) == safety.ResetRecord(
         path=str(repo),
         branch="feature/test",
         status="planned",
@@ -51,7 +55,9 @@ def test_reset_record_plans_backup_without_apply(monkeypatch, tmp_path: Path) ->
     )
 
 
-def test_reset_record_apply_creates_backup_before_reset(monkeypatch, tmp_path: Path) -> None:
+def test_reset_record_apply_creates_backup_before_reset(
+    monkeypatch, tmp_path: Path
+) -> None:
     repo = tmp_path / "repo-feature"
     repo.mkdir()
     calls: list[list[str]] = []
@@ -66,7 +72,9 @@ def test_reset_record_apply_creates_backup_before_reset(monkeypatch, tmp_path: P
 
     monkeypatch.setattr(safety, "run_git", fake_run_git)
 
-    record = safety.reset_record(repo, target="origin/main", backup_prefix="stash", apply=True)
+    record = safety.reset_record(
+        repo, target="origin/main", backup_prefix="stash", apply=True
+    )
 
     assert record.status == "settled"
     assert calls == [
@@ -76,7 +84,9 @@ def test_reset_record_apply_creates_backup_before_reset(monkeypatch, tmp_path: P
     ]
 
 
-def test_cleanup_records_plans_only_retire_candidates(monkeypatch, tmp_path: Path) -> None:
+def test_cleanup_records_plans_only_retire_candidates(
+    monkeypatch, tmp_path: Path
+) -> None:
     root = tmp_path / "repo"
     root.mkdir()
     feature = tmp_path / "repo-feature"
@@ -103,6 +113,10 @@ def test_cleanup_records_plans_only_retire_candidates(monkeypatch, tmp_path: Pat
         ),
     )
 
-    assert safety.cleanup_records(root, path_glob="repo-*", apply=False, drop_branch=False, include_skipped=False) == [
-        safety.CleanupRecord(str(feature), "feature/test", "planned", "remove", "dry-run")
+    assert safety.cleanup_records(
+        root, path_glob="repo-*", apply=False, drop_branch=False, include_skipped=False
+    ) == [
+        safety.CleanupRecord(
+            str(feature), "feature/test", "planned", "remove", "dry-run"
+        )
     ]

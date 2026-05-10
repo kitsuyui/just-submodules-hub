@@ -11,10 +11,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-from just_submodules_hub.default_heads import matching_default_head, owner_prefilter_total
+from just_submodules_hub.default_heads import (
+    matching_default_head,
+    owner_prefilter_total,
+)
 from just_submodules_hub.gitmodules import read_gitmodules_paths
 from just_submodules_hub.repo_paths import resolve_repo_input
-from just_submodules_hub.submodule_batch import positive_int, print_records, progress_bar, run_parallel, tick
+from just_submodules_hub.submodule_batch import (
+    positive_int,
+    print_records,
+    progress_bar,
+    run_parallel,
+    tick,
+)
 
 
 FIELDS = ("repo", "status", "action", "branch", "pr", "dirty", "message")
@@ -31,7 +40,9 @@ class Result:
     message: str
 
 
-def run_git(repo: Path, args: list[str], *, check: bool = False) -> subprocess.CompletedProcess[str]:
+def run_git(
+    repo: Path, args: list[str], *, check: bool = False
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", "-C", str(repo), *args],
         text=True,
@@ -77,14 +88,18 @@ def default_branch(repo: Path) -> str:
     return "main"
 
 
-def pull_ff_only(repo: Path, action: str, repo_label: str, branch: str, pr: str, dirty: str) -> Result:
+def pull_ff_only(
+    repo: Path, action: str, repo_label: str, branch: str, pr: str, dirty: str
+) -> Result:
     before = current_head(repo)
     proc = run_git(repo, ["pull", "--ff-only"])
     after = current_head(repo)
     if proc.returncode != 0:
         return Result(repo_label, "failed", action, branch, pr, dirty, summarize(proc))
     if before and after and before != after:
-        return Result(repo_label, "updated", action, branch, pr, dirty, "fast-forwarded")
+        return Result(
+            repo_label, "updated", action, branch, pr, dirty, "fast-forwarded"
+        )
     return Result(repo_label, "noop", action, branch, pr, dirty, "already up to date")
 
 
@@ -115,46 +130,118 @@ def gh_pr_view(repo: Path) -> tuple[str, str, str]:
     return number, state.lower() or "unknown", ""
 
 
-def switch_default_and_pull(repo: Path, repo_label: str, branch: str, pr: str, dirty: str, default: str) -> Result:
+def switch_default_and_pull(
+    repo: Path, repo_label: str, branch: str, pr: str, dirty: str, default: str
+) -> Result:
     fetch_proc = run_git(repo, ["fetch", "origin", default])
     if fetch_proc.returncode != 0:
-        return Result(repo_label, "failed", "fetch-default", branch, pr, dirty, summarize(fetch_proc))
+        return Result(
+            repo_label,
+            "failed",
+            "fetch-default",
+            branch,
+            pr,
+            dirty,
+            summarize(fetch_proc),
+        )
     switch_proc = run_git(repo, ["switch", default])
     if switch_proc.returncode != 0:
-        return Result(repo_label, "failed", "switch-default", branch, pr, dirty, summarize(switch_proc))
+        return Result(
+            repo_label,
+            "failed",
+            "switch-default",
+            branch,
+            pr,
+            dirty,
+            summarize(switch_proc),
+        )
     pulled = pull_ff_only(repo, "switch-default", repo_label, default, pr, dirty)
     if pulled.status == "failed":
         return pulled
-    return Result(repo_label, "settled", "switch-default", default, pr, dirty, "pr merged; switched to default branch")
+    return Result(
+        repo_label,
+        "settled",
+        "switch-default",
+        default,
+        pr,
+        dirty,
+        "pr merged; switched to default branch",
+    )
 
 
 def detached_result(repo: Path, repo_label: str, dirty: str, default: str) -> Result:
     head = current_head(repo)
     if not head:
-        return Result(repo_label, "failed", "detached", "", "", dirty, "cannot resolve HEAD")
+        return Result(
+            repo_label, "failed", "detached", "", "", dirty, "cannot resolve HEAD"
+        )
     fetch_proc = run_git(repo, ["fetch", "origin", default])
     if fetch_proc.returncode != 0:
-        return Result(repo_label, "failed", "fetch-default", "", "", dirty, summarize(fetch_proc))
-    merge_base = run_git(repo, ["merge-base", "--is-ancestor", head, f"origin/{default}"])
+        return Result(
+            repo_label, "failed", "fetch-default", "", "", dirty, summarize(fetch_proc)
+        )
+    merge_base = run_git(
+        repo, ["merge-base", "--is-ancestor", head, f"origin/{default}"]
+    )
     if merge_base.returncode != 0:
-        return Result(repo_label, "skipped", "detached-unknown", "", "", dirty, "detached HEAD is not on default branch")
+        return Result(
+            repo_label,
+            "skipped",
+            "detached-unknown",
+            "",
+            "",
+            dirty,
+            "detached HEAD is not on default branch",
+        )
     switch_proc = run_git(repo, ["switch", default])
     if switch_proc.returncode != 0:
-        return Result(repo_label, "failed", "detached-default", "", "", dirty, summarize(switch_proc))
+        return Result(
+            repo_label,
+            "failed",
+            "detached-default",
+            "",
+            "",
+            dirty,
+            summarize(switch_proc),
+        )
     pulled = pull_ff_only(repo, "detached-default", repo_label, default, "", dirty)
     if pulled.status == "failed":
         return pulled
-    return Result(repo_label, "settled", "detached-default", default, "", dirty, "detached HEAD settled to default branch")
+    return Result(
+        repo_label,
+        "settled",
+        "detached-default",
+        default,
+        "",
+        dirty,
+        "detached HEAD settled to default branch",
+    )
 
 
 def reconcile_one(root: Path, repo_path: str) -> Result:
     repo = root / repo_path
     if not repo.exists():
-        return Result(repo_path, "failed", "inspect", "", "", "unknown", "submodule worktree does not exist")
+        return Result(
+            repo_path,
+            "failed",
+            "inspect",
+            "",
+            "",
+            "unknown",
+            "submodule worktree does not exist",
+        )
     if not (repo / ".git").exists():
         git_dir = run_git(repo, ["rev-parse", "--git-dir"])
         if git_dir.returncode != 0:
-            return Result(repo_path, "failed", "inspect", "", "", "unknown", "not a git repository")
+            return Result(
+                repo_path,
+                "failed",
+                "inspect",
+                "",
+                "",
+                "unknown",
+                "not a git repository",
+            )
 
     dirty = dirty_state(repo)
     branch = current_branch(repo)
@@ -170,7 +257,15 @@ def reconcile_one(root: Path, repo_path: str) -> Result:
     if pr_state == "open":
         return pull_ff_only(repo, "pull-topic", repo_path, branch, pr, dirty)
     if pr_state == "closed":
-        return Result(repo_path, "skipped", "pr-closed", branch, pr, dirty, "pr closed without merge")
+        return Result(
+            repo_path,
+            "skipped",
+            "pr-closed",
+            branch,
+            pr,
+            dirty,
+            "pr closed without merge",
+        )
     message = pr_error or "no pull request metadata"
     pulled = pull_ff_only(repo, "pull-topic", repo_path, branch, pr, dirty)
     if pulled.status == "failed":
@@ -223,11 +318,18 @@ def build_reconcile_targets(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Reconcile managed submodule worktrees.")
+    parser = argparse.ArgumentParser(
+        description="Reconcile managed submodule worktrees."
+    )
     parser.add_argument("mode", choices=("one", "all", "root-and-all"))
     parser.add_argument("repo", nargs="?")
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
-    parser.add_argument("--jobs", type=positive_int, default=4, help="parallel workers for all mode (default: 4)")
+    parser.add_argument(
+        "--jobs",
+        type=positive_int,
+        default=4,
+        help="parallel workers for all mode (default: 4)",
+    )
     parser.add_argument(
         "--prefilter",
         dest="prefilter",
@@ -268,7 +370,9 @@ def main() -> int:
             desc="reconcile",
             unit="repo",
         ) as bar:
-            targets, results = build_reconcile_targets(root, paths, prefilter=args.prefilter, bar=bar)
+            targets, results = build_reconcile_targets(
+                root, paths, prefilter=args.prefilter, bar=bar
+            )
             target_results, failures = run_parallel(
                 targets,
                 lambda path: reconcile_one(root, path),
@@ -277,7 +381,9 @@ def main() -> int:
             )
             results.extend(target_results)
             results.extend(
-                Result(failure.item, "failed", "batch", "", "", "unknown", failure.message)
+                Result(
+                    failure.item, "failed", "batch", "", "", "unknown", failure.message
+                )
                 for failure in failures
             )
         results.sort(key=lambda result: result.repo)

@@ -145,13 +145,21 @@ exit 1
     assert payload["after"]["allowed"] is True
 
 
-def test_repository_merge_policy_status_all_filters_managed_repositories(tmp_path: Path) -> None:
+def test_repository_merge_policy_status_all_filters_managed_repositories(
+    tmp_path: Path,
+) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
 
-    public_remote = create_remote(tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"})
-    private_remote = create_remote(tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"})
-    wiki_remote = create_remote(tmp_path, "kitsuyui", "public-repo.wiki", {"Home.md": "ok\n"})
+    public_remote = create_remote(
+        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+    )
+    private_remote = create_remote(
+        tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"}
+    )
+    wiki_remote = create_remote(
+        tmp_path, "kitsuyui", "public-repo.wiki", {"Home.md": "ok\n"}
+    )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, private_remote, "repo/github.com/kitsuyui/private-repo")
     add_submodule(hub_repo, wiki_remote, "repo/github.com/kitsuyui/public-repo.wiki")
@@ -204,12 +212,18 @@ exit 1
     assert "squash status-all" in proc.stderr
 
 
-def test_repository_merge_policy_disable_all_updates_filtered_repositories(tmp_path: Path) -> None:
+def test_repository_merge_policy_disable_all_updates_filtered_repositories(
+    tmp_path: Path,
+) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
 
-    public_remote = create_remote(tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"})
-    private_remote = create_remote(tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"})
+    public_remote = create_remote(
+        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+    )
+    private_remote = create_remote(
+        tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"}
+    )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, private_remote, "repo/github.com/kitsuyui/private-repo")
 
@@ -261,7 +275,9 @@ exit 1
     )
 
     assert proc.returncode == 0, proc.stderr
-    assert calls.read_text(encoding="utf-8").splitlines() == ["repos/kitsuyui/public-repo"]
+    assert calls.read_text(encoding="utf-8").splitlines() == [
+        "repos/kitsuyui/public-repo"
+    ]
     payload = json.loads(proc.stdout)
     assert payload["action"] == "disable-all"
     assert payload["method"] == "rebase"
@@ -274,8 +290,12 @@ def test_repository_merge_policy_all_actions_default_to_public(tmp_path: Path) -
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
 
-    public_remote = create_remote(tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"})
-    private_remote = create_remote(tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"})
+    public_remote = create_remote(
+        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+    )
+    private_remote = create_remote(
+        tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"}
+    )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, private_remote, "repo/github.com/kitsuyui/private-repo")
 

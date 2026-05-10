@@ -10,7 +10,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
-def test_submodule_ignore_dirty_toggle_updates_local_config(tmp_path: Path, hub_repo: Path) -> None:
+def test_submodule_ignore_dirty_toggle_updates_local_config(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     remote = create_remote(
         tmp_path,
         "example-owner",
@@ -29,7 +31,10 @@ def test_submodule_ignore_dirty_toggle_updates_local_config(tmp_path: Path, hub_
         check=False,
     )
     assert on_proc.returncode == 0, on_proc.stderr
-    assert run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo) == "dirty"
+    assert (
+        run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo)
+        == "dirty"
+    )
 
     status_proc = subprocess.run(
         [str(ACTION_SCRIPT), "submodule-ignore-dirty-status"],
@@ -91,10 +96,15 @@ def test_init_all_repos_hides_root_status_for_registered_submodules(
         check=False,
     )
     assert init_proc.returncode == 0, init_proc.stderr
-    assert run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo) == "all"
+    assert (
+        run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo)
+        == "all"
+    )
 
 
-def test_submodule_ignore_dirty_toggle_supports_targeted_repo(tmp_path: Path, hub_repo: Path) -> None:
+def test_submodule_ignore_dirty_toggle_supports_targeted_repo(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     remote_a = create_remote(
         tmp_path,
         "example-owner",
@@ -123,7 +133,10 @@ def test_submodule_ignore_dirty_toggle_supports_targeted_repo(tmp_path: Path, hu
         check=False,
     )
     assert on_proc.returncode == 0, on_proc.stderr
-    assert run(["git", "config", "--local", "--get", f"{section_a}.ignore"], cwd=hub_repo) == "dirty"
+    assert (
+        run(["git", "config", "--local", "--get", f"{section_a}.ignore"], cwd=hub_repo)
+        == "dirty"
+    )
 
     get_b_proc = subprocess.run(
         ["git", "config", "--local", "--get", f"{section_b}.ignore"],
@@ -135,7 +148,11 @@ def test_submodule_ignore_dirty_toggle_supports_targeted_repo(tmp_path: Path, hu
     assert get_b_proc.returncode != 0
 
     status_proc = subprocess.run(
-        [str(ACTION_SCRIPT), "submodule-ignore-dirty-status", "example-owner/ignore-me"],
+        [
+            str(ACTION_SCRIPT),
+            "submodule-ignore-dirty-status",
+            "example-owner/ignore-me",
+        ],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
@@ -185,7 +202,10 @@ def test_submodule_worktree_visibility_commands_use_hidden_visible_labels(
         check=False,
     )
     assert hide_proc.returncode == 0, hide_proc.stderr
-    assert run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo) == "all"
+    assert (
+        run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo)
+        == "all"
+    )
 
     status_proc = subprocess.run(
         [str(ACTION_SCRIPT), "submodule-worktree-changes-visibility"],
@@ -239,7 +259,10 @@ def test_submodule_root_status_visibility_commands_use_hidden_visible_labels(
         check=False,
     )
     assert hide_proc.returncode == 0, hide_proc.stderr
-    assert run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo) == "all"
+    assert (
+        run(["git", "config", "--local", "--get", f"{section}.ignore"], cwd=hub_repo)
+        == "all"
+    )
 
     status_proc = subprocess.run(
         [str(ACTION_SCRIPT), "submodule-root-status-visibility"],
@@ -271,14 +294,18 @@ def test_submodule_root_status_visibility_commands_use_hidden_visible_labels(
     assert status_after_proc.stdout.splitlines() == [f"{submodule_path}\tvisible"]
 
 
-def test_deprecated_root_status_action_emits_warning(tmp_path: Path, hub_repo: Path) -> None:
+def test_deprecated_root_status_action_emits_warning(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     remote = create_remote(
         tmp_path,
         "example-owner",
         "deprecated-hide-root-me",
         {"README.md": "hello\n"},
     )
-    add_submodule(hub_repo, remote, "repo/github.com/example-owner/deprecated-hide-root-me")
+    add_submodule(
+        hub_repo, remote, "repo/github.com/example-owner/deprecated-hide-root-me"
+    )
 
     hide_proc = subprocess.run(
         [str(ACTION_SCRIPT), "submodule-hide-root-status-changes"],
@@ -292,7 +319,9 @@ def test_deprecated_root_status_action_emits_warning(tmp_path: Path, hub_repo: P
     assert "submodule-root-status-hide" in hide_proc.stderr
 
 
-def test_submodule_ignore_all_toggle_supports_targeted_repo(tmp_path: Path, hub_repo: Path) -> None:
+def test_submodule_ignore_all_toggle_supports_targeted_repo(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     remote_a = create_remote(
         tmp_path,
         "example-owner",
@@ -321,7 +350,10 @@ def test_submodule_ignore_all_toggle_supports_targeted_repo(tmp_path: Path, hub_
         check=False,
     )
     assert on_proc.returncode == 0, on_proc.stderr
-    assert run(["git", "config", "--local", "--get", f"{section_a}.ignore"], cwd=hub_repo) == "all"
+    assert (
+        run(["git", "config", "--local", "--get", f"{section_a}.ignore"], cwd=hub_repo)
+        == "all"
+    )
 
     get_b_proc = subprocess.run(
         ["git", "config", "--local", "--get", f"{section_b}.ignore"],
@@ -333,7 +365,11 @@ def test_submodule_ignore_all_toggle_supports_targeted_repo(tmp_path: Path, hub_
     assert get_b_proc.returncode != 0
 
     status_proc = subprocess.run(
-        [str(ACTION_SCRIPT), "submodule-ignore-all-status", "example-owner/ignore-all-me"],
+        [
+            str(ACTION_SCRIPT),
+            "submodule-ignore-all-status",
+            "example-owner/ignore-all-me",
+        ],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,

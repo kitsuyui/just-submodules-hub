@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from just_submodules_hub.submodule_batch import positive_int, print_records, run_parallel, run_parallel_with_progress
+from just_submodules_hub.submodule_batch import (
+    positive_int,
+    print_records,
+    run_parallel,
+    run_parallel_with_progress,
+)
 
 
 @dataclass(frozen=True)
@@ -19,10 +24,14 @@ def test_run_parallel_collects_results_and_failures() -> None:
             raise RuntimeError("boom")
         return item.upper()
 
-    results, failures = run_parallel(["good", "bad"], worker, jobs=2, on_done=lambda: seen.append("done"))
+    results, failures = run_parallel(
+        ["good", "bad"], worker, jobs=2, on_done=lambda: seen.append("done")
+    )
 
     assert results == ["GOOD"]
-    assert [(failure.item, failure.message) for failure in failures] == [("bad", "boom")]
+    assert [(failure.item, failure.message) for failure in failures] == [
+        ("bad", "boom")
+    ]
     assert seen == ["done", "done"]
 
 
@@ -56,7 +65,10 @@ def test_print_records_supports_tsv_jsonl_and_table(capsys) -> None:
     assert capsys.readouterr().out == "repo\tstatus\nrepo/github.com/example/a\tnoop\n"
 
     print_records(rows, ("repo", "status"), "jsonl")
-    assert capsys.readouterr().out == '{"repo": "repo/github.com/example/a", "status": "noop"}\n'
+    assert (
+        capsys.readouterr().out
+        == '{"repo": "repo/github.com/example/a", "status": "noop"}\n'
+    )
 
     print_records(rows, ("repo", "status"), "table")
     out = capsys.readouterr().out
