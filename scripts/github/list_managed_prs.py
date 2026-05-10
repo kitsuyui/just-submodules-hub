@@ -20,13 +20,18 @@ from just_submodules_hub.gitmodules import managed_repo_owners, read_gitmodules_
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="List pull requests for managed submodules"
+        description="List pull requests for managed submodules",
     )
     parser.add_argument(
-        "state", nargs="?", default="open", help="open, closed, merged, or all"
+        "state",
+        nargs="?",
+        default="open",
+        help="open, closed, merged, or all",
     )
     parser.add_argument(
-        "--repo-root", default=".", help="repository root (default: current directory)"
+        "--repo-root",
+        default=".",
+        help="repository root (default: current directory)",
     )
     return parser
 
@@ -74,7 +79,7 @@ def main() -> int:
         records.extend(parse_pull_request_payload(proc.stdout))
 
     sys.stdout.write(
-        render_pull_requests_tsv(filter_managed_pull_requests(records, managed_paths))
+        render_pull_requests_tsv(filter_managed_pull_requests(records, managed_paths)),
     )
     return 0
 

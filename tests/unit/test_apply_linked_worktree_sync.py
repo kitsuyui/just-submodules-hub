@@ -37,14 +37,25 @@ def record(action: str, target: str = "origin/main") -> Any:
 
 
 def completed(
-    args: list[str], stdout: str = "", stderr: str = "", returncode: int = 0
+    args: list[str],
+    stdout: str = "",
+    stderr: str = "",
+    returncode: int = 0,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(args, returncode, stdout, stderr)
 
 
 def test_apply_plan_leaves_skipped_records_unchanged() -> None:
     skipped = apply_sync.PlanRecord(
-        "/repo", "feature/test", "dirty", "", "", "skipped", "skip-dirty", "", "dirty"
+        "/repo",
+        "feature/test",
+        "dirty",
+        "",
+        "",
+        "skipped",
+        "skip-dirty",
+        "",
+        "dirty",
     )
 
     assert apply_sync.apply_plan(skipped) == skipped
@@ -291,7 +302,8 @@ def test_main_without_from_plan_stdin_calls_plan_one(
     )
     monkeypatch.setattr(apply_sync, "apply_plan", lambda r: r)
     monkeypatch.setattr(
-        "sys.argv", ["apply_linked_worktree_sync.py", "--format", "jsonl"]
+        "sys.argv",
+        ["apply_linked_worktree_sync.py", "--format", "jsonl"],
     )
 
     exit_code = apply_sync.main()
@@ -377,7 +389,9 @@ def test_apply_plan_rebase_branch_failure_returns_failed(
     def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
         if args[:1] == ["rebase"]:
             return completed(
-                args, stderr="CONFLICT (content): Merge conflict", returncode=1
+                args,
+                stderr="CONFLICT (content): Merge conflict",
+                returncode=1,
             )
         return completed(args, stdout="abc123\n")
 
@@ -542,10 +556,15 @@ def test_main_exit_code_one_when_any_record_failed(
 ) -> None:
     """main() must return exit code 1 when at least one record has status='failed'."""
     applied_ok = _make_plan_record(
-        status="updated", action="pull-default", target="origin/main"
+        status="updated",
+        action="pull-default",
+        target="origin/main",
     )
     applied_fail = _make_plan_record(
-        status="failed", action="pull-default", target="origin/main", path="/repo2"
+        status="failed",
+        action="pull-default",
+        target="origin/main",
+        path="/repo2",
     )
     # apply_plan results: first=ok, second=failed — iterator drives the sequence
     apply_results = iter([applied_ok, applied_fail])
@@ -555,7 +574,8 @@ def test_main_exit_code_one_when_any_record_failed(
     monkeypatch.setattr(apply_sync, "default_branch", lambda root: "main")
     monkeypatch.setattr(apply_sync, "apply_plan", lambda r: next(apply_results))
     monkeypatch.setattr(
-        "sys.argv", ["apply_linked_worktree_sync.py", "--format", "jsonl"]
+        "sys.argv",
+        ["apply_linked_worktree_sync.py", "--format", "jsonl"],
     )
 
     exit_code = apply_sync.main()
@@ -569,25 +589,34 @@ def test_main_exit_code_zero_when_no_record_failed(
 ) -> None:
     """main() must return exit code 0 when no record has status='failed'."""
     applied_ok = _make_plan_record(
-        status="updated", action="pull-default", target="origin/main"
+        status="updated",
+        action="pull-default",
+        target="origin/main",
     )
     applied_noop = _make_plan_record(
-        status="noop", action="pull-default", target="origin/main"
+        status="noop",
+        action="pull-default",
+        target="origin/main",
     )
     applied_settled = _make_plan_record(
-        status="settled", action="retire-contained", target="origin/main"
+        status="settled",
+        action="retire-contained",
+        target="origin/main",
     )
 
     results = iter([applied_ok, applied_noop, applied_settled])
 
     monkeypatch.setattr(apply_sync, "plan_one", lambda wt, d: applied_ok)
     monkeypatch.setattr(
-        apply_sync, "list_worktrees", lambda root: [object(), object(), object()]
+        apply_sync,
+        "list_worktrees",
+        lambda root: [object(), object(), object()],
     )
     monkeypatch.setattr(apply_sync, "default_branch", lambda root: "main")
     monkeypatch.setattr(apply_sync, "apply_plan", lambda r: next(results))
     monkeypatch.setattr(
-        "sys.argv", ["apply_linked_worktree_sync.py", "--format", "jsonl"]
+        "sys.argv",
+        ["apply_linked_worktree_sync.py", "--format", "jsonl"],
     )
 
     exit_code = apply_sync.main()

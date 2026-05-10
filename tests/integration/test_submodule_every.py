@@ -110,7 +110,7 @@ def test_every_repo_reports_failed_commands(
             "status": "failed",
             "stderr": "",
             "stdout": "",
-        }
+        },
     ]
 
 

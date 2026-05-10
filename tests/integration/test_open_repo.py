@@ -11,7 +11,8 @@ ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
 def test_open_repo_dispatches_to_code_for_vscode(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     target_repo = hub_repo / "repo/github.com/example-owner/example"
     target_repo.mkdir(parents=True)

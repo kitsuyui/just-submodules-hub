@@ -41,7 +41,7 @@ def test_parse_and_filter_pull_requests() -> None:
             repo="kitsuyui/ts-playground",
             author="kitsuyui",
             url="https://example.com/pr/1",
-        )
+        ),
     ]
 
 
@@ -52,8 +52,8 @@ def test_render_pull_requests_tsv() -> None:
                 repo="kitsuyui/ts-playground",
                 author="kitsuyui",
                 url="https://example.com/pr/1",
-            )
-        ]
+            ),
+        ],
     )
     assert (
         output
@@ -64,7 +64,7 @@ def test_render_pull_requests_tsv() -> None:
 def test_build_pull_request_record_rejects_incomplete_payload() -> None:
     assert (
         build_pull_request_record(
-            {"repository": {"nameWithOwner": "kitsuyui/ts-playground"}}
+            {"repository": {"nameWithOwner": "kitsuyui/ts-playground"}},
         )
         is None
     )

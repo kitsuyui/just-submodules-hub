@@ -114,7 +114,10 @@ def record_to_dict(record: object) -> dict[str, str]:
 
 def print_tsv(records: Sequence[object], fields: Sequence[str]) -> None:
     writer = csv.DictWriter(
-        sys.stdout, fieldnames=list(fields), dialect="excel-tab", lineterminator="\n"
+        sys.stdout,
+        fieldnames=list(fields),
+        dialect="excel-tab",
+        lineterminator="\n",
     )
     writer.writeheader()
     for record in records:
@@ -139,7 +142,9 @@ def print_table(records: Sequence[object], fields: Sequence[str]) -> None:
 
 
 def print_records(
-    records: Sequence[object], fields: Sequence[str], output_format: str
+    records: Sequence[object],
+    fields: Sequence[str],
+    output_format: str,
 ) -> None:
     if output_format == "jsonl":
         print_jsonl(records)

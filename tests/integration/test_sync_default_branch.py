@@ -10,7 +10,8 @@ SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
 
 
 def test_sync_default_branch_updates_submodule_to_latest(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     remote = create_remote(
         tmp_path,
@@ -34,7 +35,8 @@ def test_sync_default_branch_updates_submodule_to_latest(
 
 
 def test_sync_default_branch_resolves_unique_short_name(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     remote = create_remote(
         tmp_path,

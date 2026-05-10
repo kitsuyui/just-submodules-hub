@@ -27,7 +27,9 @@ def write_gitmodules(hub_repo: Path) -> None:
 
 
 def run_action(
-    hub_repo: Path, args: list[str], env: dict[str, str] | None = None
+    hub_repo: Path,
+    args: list[str],
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [str(ACTION_SCRIPT), *args],
@@ -69,7 +71,8 @@ def test_list_managed_repos_filters_by_owner_without_github_lookup(
 
 
 def test_list_managed_repos_filters_by_github_visibility(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     write_gitmodules(hub_repo)
     bin_dir = tmp_path / "bin"

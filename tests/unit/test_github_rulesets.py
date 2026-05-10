@@ -55,11 +55,13 @@ def test_summarize_ruleset_status_marks_baseline_compliant() -> None:
                 },
                 {"type": "non_fast_forward"},
                 {"type": "deletion"},
-            ]
-        )
+            ],
+        ),
     )
     rulesets = parse_json_payload(
-        json.dumps([{"id": 7, "name": BASELINE_RULESET_NAME, "rules": effective_rules}])
+        json.dumps(
+            [{"id": 7, "name": BASELINE_RULESET_NAME, "rules": effective_rules}]
+        ),
     )
 
     summary = summarize_ruleset_status(metadata, effective_rules, rulesets)
@@ -85,8 +87,8 @@ def test_summarize_ruleset_status_reports_parameter_drift() -> None:
                 },
                 {"type": "non_fast_forward"},
                 {"type": "deletion"},
-            ]
-        )
+            ],
+        ),
     )
 
     summary = summarize_ruleset_status(metadata, effective_rules, [])
@@ -107,7 +109,7 @@ def test_summarize_legacy_rulesets_marks_extra_rule_as_manual_review() -> None:
                     "target": "branch",
                     "enforcement": "active",
                     "conditions": {
-                        "ref_name": {"include": ["refs/heads/main"], "exclude": []}
+                        "ref_name": {"include": ["refs/heads/main"], "exclude": []},
                     },
                     "rules": [
                         {
@@ -124,14 +126,14 @@ def test_summarize_legacy_rulesets_marks_extra_rule_as_manual_review() -> None:
                     "target": "branch",
                     "enforcement": "active",
                     "conditions": {
-                        "ref_name": {"include": ["refs/heads/main"], "exclude": []}
+                        "ref_name": {"include": ["refs/heads/main"], "exclude": []},
                     },
                     "rules": [
                         {"type": "required_linear_history"},
                     ],
                 },
-            ]
-        )
+            ],
+        ),
     )
 
     summary = summarize_legacy_rulesets(metadata, rulesets)
@@ -153,7 +155,7 @@ def test_candidate_legacy_rulesets_and_identifier_lookup() -> None:
                     "target": "branch",
                     "enforcement": "active",
                     "conditions": {
-                        "ref_name": {"include": ["refs/heads/main"], "exclude": []}
+                        "ref_name": {"include": ["refs/heads/main"], "exclude": []},
                     },
                     "rules": [{"type": "deletion"}],
                 },
@@ -163,12 +165,12 @@ def test_candidate_legacy_rulesets_and_identifier_lookup() -> None:
                     "target": "branch",
                     "enforcement": "active",
                     "conditions": {
-                        "ref_name": {"include": ["refs/heads/main"], "exclude": []}
+                        "ref_name": {"include": ["refs/heads/main"], "exclude": []},
                     },
                     "rules": [{"type": "deletion"}],
                 },
-            ]
-        )
+            ],
+        ),
     )
 
     legacy_rulesets = candidate_legacy_rulesets(metadata, rulesets)
@@ -206,8 +208,8 @@ def test_summarize_classic_branch_protection_marks_redundant_when_baseline_cover
                 },
                 {"type": "non_fast_forward"},
                 {"type": "deletion"},
-            ]
-        )
+            ],
+        ),
     )
 
     summary = summarize_classic_branch_protection(metadata, protection, effective_rules)
@@ -243,8 +245,8 @@ def test_summarize_classic_branch_protection_requires_manual_review_for_extra_se
                 },
                 {"type": "non_fast_forward"},
                 {"type": "deletion"},
-            ]
-        )
+            ],
+        ),
     )
 
     summary = summarize_classic_branch_protection(metadata, protection, effective_rules)

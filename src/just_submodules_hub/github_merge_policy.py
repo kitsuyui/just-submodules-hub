@@ -27,7 +27,10 @@ def merge_method_patch_payload(method: str, enabled: bool) -> dict[str, bool]:
 
 
 def summarize_merge_method(
-    repo: str, visibility: str, method: str, payload: dict
+    repo: str,
+    visibility: str,
+    method: str,
+    payload: dict,
 ) -> dict:
     return {
         "repo": repo,

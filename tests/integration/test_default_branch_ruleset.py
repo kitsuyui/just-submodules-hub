@@ -174,7 +174,7 @@ exit 1
     assert payload["legacy_rulesets"][0]["name"] == "protect-main"
     assert payload["legacy_rulesets"][0]["deletable"] is False
     assert payload["legacy_rulesets"][0]["uncovered_rule_types"] == [
-        "required_linear_history"
+        "required_linear_history",
     ]
 
 

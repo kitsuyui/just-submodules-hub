@@ -27,12 +27,15 @@ def test_run_parallel_collects_results_and_failures() -> None:
         return item.upper()
 
     results, failures = run_parallel(
-        ["good", "bad"], worker, jobs=2, on_done=lambda: seen.append("done")
+        ["good", "bad"],
+        worker,
+        jobs=2,
+        on_done=lambda: seen.append("done"),
     )
 
     assert results == ["GOOD"]
     assert [(failure.item, failure.message) for failure in failures] == [
-        ("bad", "boom")
+        ("bad", "boom"),
     ]
     assert seen == ["done", "done"]
 

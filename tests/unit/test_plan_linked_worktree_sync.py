@@ -20,13 +20,19 @@ spec.loader.exec_module(planner)
 
 
 def completed(
-    args: list[str], stdout: str = "", stderr: str = "", returncode: int = 0
+    args: list[str],
+    stdout: str = "",
+    stderr: str = "",
+    returncode: int = 0,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(args, returncode, stdout, stderr)
 
 
 def worktree(
-    branch: str = "feature/test", *, path: str = "/repo-feature", detached: str = "no"
+    branch: str = "feature/test",
+    *,
+    path: str = "/repo-feature",
+    detached: str = "no",
 ) -> object:
     return planner.WorktreeRecord(
         path=path,
@@ -60,7 +66,9 @@ def test_plan_one_retires_branch_without_unique_commits(
 ) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
     monkeypatch.setattr(
-        planner, "branch_has_unique_commits", lambda repo, branch, default: False
+        planner,
+        "branch_has_unique_commits",
+        lambda repo, branch, default: False,
     )
 
     assert planner.plan_one(worktree(), "main") == planner.PlanRecord(
@@ -81,7 +89,9 @@ def test_plan_one_skips_open_non_draft_pull_request(
 ) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
     monkeypatch.setattr(
-        planner, "branch_has_unique_commits", lambda repo, branch, default: True
+        planner,
+        "branch_has_unique_commits",
+        lambda repo, branch, default: True,
     )
     monkeypatch.setattr(
         planner,
@@ -107,7 +117,9 @@ def test_plan_one_rebases_draft_pr_to_remote_branch(
 ) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
     monkeypatch.setattr(
-        planner, "branch_has_unique_commits", lambda repo, branch, default: True
+        planner,
+        "branch_has_unique_commits",
+        lambda repo, branch, default: True,
     )
     monkeypatch.setattr(
         planner,
@@ -134,7 +146,9 @@ def test_plan_one_skips_when_pr_metadata_is_unavailable(
 ) -> None:
     monkeypatch.setattr(planner, "dirty_state", lambda repo: "clean")
     monkeypatch.setattr(
-        planner, "branch_has_unique_commits", lambda repo, branch, default: True
+        planner,
+        "branch_has_unique_commits",
+        lambda repo, branch, default: True,
     )
     monkeypatch.setattr(
         planner,
@@ -156,7 +170,8 @@ def test_plan_one_skips_when_pr_metadata_is_unavailable(
 
 
 def test_gh_pr_view_treats_missing_pr_as_none(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/gh")
 
@@ -166,5 +181,8 @@ def test_gh_pr_view_treats_missing_pr_as_none(
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     assert planner.gh_pr_view(tmp_path) == planner.PullRequestState(
-        "", "none", "", "no pull request metadata"
+        "",
+        "none",
+        "",
+        "no pull request metadata",
     )

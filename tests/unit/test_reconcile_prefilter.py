@@ -12,7 +12,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/reconcile_submodule_worktrees.py"
 
 spec = importlib.util.spec_from_file_location(
-    "reconcile_submodule_worktrees", SCRIPT_PATH
+    "reconcile_submodule_worktrees",
+    SCRIPT_PATH,
 )
 assert spec is not None
 reconcile = importlib.util.module_from_spec(spec)
@@ -30,7 +31,8 @@ class DummyBar:
 
 
 def test_build_reconcile_targets_prefilters_up_to_date_default_branch(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     bar = DummyBar()
     paths = [
@@ -57,7 +59,10 @@ def test_build_reconcile_targets_prefilters_up_to_date_default_branch(
     monkeypatch.setattr(reconcile, "dirty_state", lambda repo: "clean")
 
     targets, results = reconcile.build_reconcile_targets(
-        tmp_path, paths, prefilter=True, bar=bar
+        tmp_path,
+        paths,
+        prefilter=True,
+        bar=bar,
     )
 
     assert targets == ["repo/github.com/kitsuyui/needs-work"]
@@ -70,13 +75,14 @@ def test_build_reconcile_targets_prefilters_up_to_date_default_branch(
             "",
             "clean",
             "already up to date",
-        )
+        ),
     ]
     assert bar.updated == 1
 
 
 def test_build_reconcile_targets_keeps_root_repository(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     bar = DummyBar()
     monkeypatch.setattr(
@@ -86,7 +92,10 @@ def test_build_reconcile_targets_keeps_root_repository(
     )
 
     targets, results = reconcile.build_reconcile_targets(
-        tmp_path, ["."], prefilter=True, bar=bar
+        tmp_path,
+        ["."],
+        prefilter=True,
+        bar=bar,
     )
 
     assert targets == ["."]

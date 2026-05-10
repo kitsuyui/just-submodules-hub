@@ -45,7 +45,7 @@ def test_parse_and_filter_issues() -> None:
             repo="kitsuyui/ts-playground",
             author="kitsuyui",
             url="https://example.com/issues/1",
-        )
+        ),
     ]
 
 
@@ -56,8 +56,8 @@ def test_render_issues_tsv() -> None:
                 repo="kitsuyui/ts-playground",
                 author="kitsuyui",
                 url="https://example.com/issues/1",
-            )
-        ]
+            ),
+        ],
     )
     assert (
         output

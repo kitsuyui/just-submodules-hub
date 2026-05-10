@@ -42,10 +42,13 @@ def branch_state() -> object:
 
 
 def test_cleanup_repo_reports_dry_run_candidates(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(
-        cleanup, "inspect_state", lambda repo, remote, limit: branch_state()
+        cleanup,
+        "inspect_state",
+        lambda repo, remote, limit: branch_state(),
     )
 
     rows = cleanup.cleanup_repo(
@@ -75,11 +78,14 @@ def test_cleanup_repo_reports_dry_run_candidates(
 
 
 def test_cleanup_repo_deletes_only_merged_candidates_when_apply(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     calls: list[list[str]] = []
     monkeypatch.setattr(
-        cleanup, "inspect_state", lambda repo, remote, limit: branch_state()
+        cleanup,
+        "inspect_state",
+        lambda repo, remote, limit: branch_state(),
     )
 
     def fake_run_git(repo: Path, args: list[str]) -> object:
@@ -127,7 +133,8 @@ def test_target_paths_can_include_root_and_submodules(tmp_path: Path) -> None:
 
 
 def test_remote_branches_reads_actual_remote_heads(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     def fake_run_git(repo: Path, args: list[str]) -> object:
         assert args == ["ls-remote", "--heads", "origin"]
@@ -147,11 +154,12 @@ def test_remote_branches_reads_actual_remote_heads(
 
 
 def test_cleanup_repo_skips_repositories_without_pr_api(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     def fail_inspect(repo: Path, remote: str, limit: int) -> object:
         raise RuntimeError(
-            "GraphQL: Could not resolve to a Repository with the name 'owner/repo.wiki'."
+            "GraphQL: Could not resolve to a Repository with the name 'owner/repo.wiki'.",
         )
 
     monkeypatch.setattr(cleanup, "inspect_state", fail_inspect)
@@ -174,15 +182,18 @@ def test_cleanup_repo_skips_repositories_without_pr_api(
             "",
             "skipped",
             "GraphQL: Could not resolve to a Repository with the name 'owner/repo.wiki'.",
-        )
+        ),
     ]
 
 
 def test_cleanup_repo_skips_non_owner_remote_branches_by_default(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(
-        cleanup, "inspect_state", lambda repo, remote, limit: branch_state()
+        cleanup,
+        "inspect_state",
+        lambda repo, remote, limit: branch_state(),
     )
 
     rows = cleanup.cleanup_repo(

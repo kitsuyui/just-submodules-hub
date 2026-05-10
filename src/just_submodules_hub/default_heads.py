@@ -74,7 +74,8 @@ def extract_default_head(node: dict, owner: str) -> tuple[str, DefaultHead] | No
 
 
 def fetch_owner_default_heads(
-    owner: str, bar: tqdm[Any] | None
+    owner: str,
+    bar: tqdm[Any] | None,
 ) -> dict[str, DefaultHead]:
     cursor: str | None = None
     found: dict[str, DefaultHead] = {}
@@ -116,7 +117,8 @@ def owner_prefilter_total(paths: Iterable[str], prefilter: bool) -> int:
 
 
 def fetch_default_heads_for_paths(
-    paths: Iterable[str], bar: tqdm[Any] | None
+    paths: Iterable[str],
+    bar: tqdm[Any] | None,
 ) -> dict[str, DefaultHead]:
     path_list = list(paths)
     owners = sorted({repo_owner(path) for path in path_list})
@@ -138,7 +140,8 @@ def local_head(repo_path: str | Path) -> tuple[str, str]:
 
 
 def matching_default_head(
-    repo_path: str, remote_heads: dict[str, DefaultHead]
+    repo_path: str,
+    remote_heads: dict[str, DefaultHead],
 ) -> DefaultHead | None:
     remote = remote_heads.get(repo_display_name(repo_path))
     if remote is None:

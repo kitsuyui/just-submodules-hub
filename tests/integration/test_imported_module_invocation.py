@@ -12,7 +12,8 @@ SYNC_SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
 def write_consumer_justfile(hub_repo: Path) -> None:
     justfile = hub_repo / "justfile"
     justfile.write_text(
-        f'import "{PROJECT_ROOT / "just/index.just"}"\n', encoding="utf-8"
+        f'import "{PROJECT_ROOT / "just/index.just"}"\n',
+        encoding="utf-8",
     )
 
 
@@ -24,7 +25,10 @@ def test_imported_repo_submodule_list_managed_uses_consumer_invocation_directory
     write_consumer_justfile(hub_repo)
 
     remote = create_remote(
-        tmp_path, "example-owner", "managed", {"README.md": "hello\n"}
+        tmp_path,
+        "example-owner",
+        "managed",
+        {"README.md": "hello\n"},
     )
     add_submodule(hub_repo, remote, "repo/github.com/example-owner/managed")
 
@@ -48,7 +52,10 @@ def test_imported_repo_submodule_commit_pointers_uses_consumer_invocation_direct
     write_consumer_justfile(hub_repo)
 
     remote = create_remote(
-        tmp_path, "example-owner", "pointers", {"README.md": "before\n"}
+        tmp_path,
+        "example-owner",
+        "pointers",
+        {"README.md": "before\n"},
     )
     add_submodule(hub_repo, remote, "repo/github.com/example-owner/pointers")
     advance_remote(remote, "README.md", "after\n", "Update remote")

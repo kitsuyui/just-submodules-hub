@@ -11,7 +11,8 @@ SCRIPT = PROJECT_ROOT / "scripts/github/list-managed-issues.sh"
 
 
 def test_list_managed_issues_filters_to_managed_repositories(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     managed_remote = create_remote(
         tmp_path,

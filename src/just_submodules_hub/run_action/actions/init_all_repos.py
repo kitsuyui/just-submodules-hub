@@ -12,7 +12,7 @@ from just_submodules_hub.run_action.registry import action
 
 
 @action("init-all-repos")
-def init_all_repos(args: list[str]) -> int:
+def init_all_repos(args: list[str]) -> int:  # noqa: C901
     requested_jobs = ""
     no_fetch = False
     fetch_fallback = False

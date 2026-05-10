@@ -43,7 +43,7 @@ exit 1
 
     assert proc.returncode == 0, proc.stderr
     assert calls_file.read_text(encoding="utf-8").splitlines() == [
-        "worktree list --porcelain"
+        "worktree list --porcelain",
     ]
     assert [json.loads(line) for line in proc.stdout.splitlines()] == [
         {

@@ -17,7 +17,7 @@ _SAFETY_SCRIPT = _PROJECT_ROOT / "scripts" / "repo" / "linked_worktree_safety.py
 @contextlib.contextmanager
 def _chdir(path: str) -> Generator[None]:
     """Context manager: temporarily change the working directory."""
-    old = os.getcwd()
+    old = Path.cwd()
     os.chdir(path)
     try:
         yield
@@ -87,7 +87,7 @@ def remove_linked_worktree(args: list[str]) -> int:
 
 
 @action("add-linked-worktree")
-def add_linked_worktree(args: list[str]) -> int:
+def add_linked_worktree(args: list[str]) -> int:  # noqa: C901
     if not args or not args[0]:
         print("PATH is required", file=sys.stderr)
         return 2
@@ -141,7 +141,8 @@ def add_linked_worktree(args: list[str]) -> int:
         else:
             if start_point:
                 print(
-                    f"unexpected linked worktree add argument: {arg}", file=sys.stderr
+                    f"unexpected linked worktree add argument: {arg}",
+                    file=sys.stderr,
                 )
                 return 2
             start_point = arg

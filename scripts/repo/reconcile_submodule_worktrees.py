@@ -46,7 +46,10 @@ class Result:
 
 
 def run_git(
-    repo: Path, args: list[str], *, check: bool = False
+    repo: Path,
+    args: list[str],
+    *,
+    check: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", "-C", str(repo), *args],
@@ -79,7 +82,12 @@ def dirty_state(repo: Path) -> str:
 
 
 def pull_ff_only(
-    repo: Path, action: str, repo_label: str, branch: str, pr: str, dirty: str
+    repo: Path,
+    action: str,
+    repo_label: str,
+    branch: str,
+    pr: str,
+    dirty: str,
 ) -> Result:
     before = current_head(repo)
     proc = run_git(repo, ["pull", "--ff-only"])
@@ -88,7 +96,13 @@ def pull_ff_only(
         return Result(repo_label, "failed", action, branch, pr, dirty, summarize(proc))
     if before and after and before != after:
         return Result(
-            repo_label, "updated", action, branch, pr, dirty, "fast-forwarded"
+            repo_label,
+            "updated",
+            action,
+            branch,
+            pr,
+            dirty,
+            "fast-forwarded",
         )
     return Result(repo_label, "noop", action, branch, pr, dirty, "already up to date")
 
@@ -121,7 +135,12 @@ def gh_pr_view(repo: Path) -> tuple[str, str, str]:
 
 
 def switch_default_and_pull(
-    repo: Path, repo_label: str, branch: str, pr: str, dirty: str, default: str
+    repo: Path,
+    repo_label: str,
+    branch: str,
+    pr: str,
+    dirty: str,
+    default: str,
 ) -> Result:
     fetch_proc = run_git(repo, ["fetch", "origin", default])
     if fetch_proc.returncode != 0:
@@ -163,15 +182,28 @@ def detached_result(repo: Path, repo_label: str, dirty: str, default: str) -> Re
     head = current_head(repo)
     if not head:
         return Result(
-            repo_label, "failed", "detached", "", "", dirty, "cannot resolve HEAD"
+            repo_label,
+            "failed",
+            "detached",
+            "",
+            "",
+            dirty,
+            "cannot resolve HEAD",
         )
     fetch_proc = run_git(repo, ["fetch", "origin", default])
     if fetch_proc.returncode != 0:
         return Result(
-            repo_label, "failed", "fetch-default", "", "", dirty, summarize(fetch_proc)
+            repo_label,
+            "failed",
+            "fetch-default",
+            "",
+            "",
+            dirty,
+            summarize(fetch_proc),
         )
     merge_base = run_git(
-        repo, ["merge-base", "--is-ancestor", head, f"origin/{default}"]
+        repo,
+        ["merge-base", "--is-ancestor", head, f"origin/{default}"],
     )
     if merge_base.returncode != 0:
         return Result(
@@ -307,7 +339,7 @@ def build_reconcile_targets(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Reconcile managed submodule worktrees."
+        description="Reconcile managed submodule worktrees.",
     )
     parser.add_argument("mode", choices=("one", "all", "root-and-all"))
     parser.add_argument("repo", nargs="?")
@@ -359,7 +391,10 @@ def main() -> int:
             unit="repo",
         ) as bar:
             targets, results = build_reconcile_targets(
-                root, paths, prefilter=args.prefilter, bar=bar
+                root,
+                paths,
+                prefilter=args.prefilter,
+                bar=bar,
             )
             target_results, failures = run_parallel(
                 targets,
@@ -370,7 +405,13 @@ def main() -> int:
             results.extend(target_results)
             results.extend(
                 Result(
-                    failure.item, "failed", "batch", "", "", "unknown", failure.message
+                    failure.item,
+                    "failed",
+                    "batch",
+                    "",
+                    "",
+                    "unknown",
+                    failure.message,
                 )
                 for failure in failures
             )

@@ -11,11 +11,13 @@ from just_submodules_hub.gitmodules import find_submodules_with_marker
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="List submodules that contain a marker file"
+        description="List submodules that contain a marker file",
     )
     parser.add_argument("marker_file", help="marker file name such as pyproject.toml")
     parser.add_argument(
-        "--repo-root", default=".", help="repository root (default: current directory)"
+        "--repo-root",
+        default=".",
+        help="repository root (default: current directory)",
     )
     return parser
 

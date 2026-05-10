@@ -161,7 +161,7 @@ def test_all_parser_accepts_token_env_and_final_update() -> None:
             "SUBMODULES_TOKEN",
             "--final-submodule-update",
             "--no-prefilter",
-        ]
+        ],
     )
 
     assert args.action == "all"
@@ -182,7 +182,8 @@ def test_parse_repo_paths_reads_gitmodules(tmp_path: Path) -> None:
 
 
 def test_temporary_github_submodule_credentials_rewrites_and_restores(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     repo_path = tmp_path / "repo/github.com/kitsuyui/private-repo"
     (repo_path / ".git").mkdir(parents=True)
@@ -221,7 +222,8 @@ def test_temporary_github_submodule_credentials_rewrites_and_restores(
     monkeypatch.setattr(sync, "run", fake_run)
 
     with sync.temporary_github_submodule_credentials(
-        "SUBMODULE_TOKEN", tmp_path
+        "SUBMODULE_TOKEN",
+        tmp_path,
     ) as redactions:
         assert "secret-token" in redactions
         token_url = (
@@ -238,7 +240,9 @@ def test_temporary_github_submodule_credentials_rewrites_and_restores(
 
 
 def test_temporary_github_submodule_credentials_redacts_setup_errors(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     (tmp_path / ".gitmodules").write_text(
         """
@@ -275,7 +279,8 @@ def test_temporary_github_submodule_credentials_requires_env(
 
     with (
         pytest.raises(
-            RuntimeError, match="Environment variable SUBMODULE_TOKEN is not set"
+            RuntimeError,
+            match="Environment variable SUBMODULE_TOKEN is not set",
         ),
         sync.temporary_github_submodule_credentials("SUBMODULE_TOKEN"),
     ):
@@ -288,7 +293,7 @@ def test_print_failures_redacts_token(capsys: pytest.CaptureFixture[str]) -> Non
             BatchFailure(
                 "repo/github.com/kitsuyui/private-repo",
                 "fatal: could not read secret-token",
-            )
+            ),
         ],
         redactions=["secret-token"],
     )
@@ -330,7 +335,8 @@ def test_resolve_default_branch_falls_back_to_remote_show(
 
 
 def test_main_reports_when_no_submodules(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(sync, "parse_repo_paths", lambda: [])
     monkeypatch.setattr(
@@ -363,12 +369,12 @@ def test_fetch_owner_default_heads_handles_pagination(
                                         "name": "main",
                                         "target": {"oid": "aaa"},
                                     },
-                                }
+                                },
                             ],
                             "pageInfo": {"hasNextPage": True, "endCursor": "cursor-1"},
-                        }
-                    }
-                }
+                        },
+                    },
+                },
             },
             {
                 "data": {
@@ -381,17 +387,19 @@ def test_fetch_owner_default_heads_handles_pagination(
                                         "name": "trunk",
                                         "target": {"oid": "bbb"},
                                     },
-                                }
+                                },
                             ],
                             "pageInfo": {"hasNextPage": False, "endCursor": None},
-                        }
-                    }
-                }
+                        },
+                    },
+                },
             },
-        ]
+        ],
     )
     monkeypatch.setattr(
-        default_heads, "gh_graphql", lambda owner, cursor: next(responses)
+        default_heads,
+        "gh_graphql",
+        lambda owner, cursor: next(responses),
     )
     heads = default_heads.fetch_owner_default_heads("kitsuyui", bar)
     assert heads == {
@@ -419,7 +427,8 @@ def test_fetch_owner_default_heads_rejects_missing_owner(
 
 
 def test_sync_all_reports_failures(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     bar = DummyBar()
 
@@ -427,7 +436,10 @@ def test_sync_all_reports_failures(
         if path.endswith("bad"):
             raise RuntimeError("boom")
         return sync.SyncResult(
-            repo_path=path, default_branch="main", switched=True, updated=False
+            repo_path=path,
+            default_branch="main",
+            switched=True,
+            updated=False,
         )
 
     monkeypatch.setattr(sync, "sync_one", fake_sync_one)
@@ -444,7 +456,8 @@ def test_sync_all_reports_failures(
 
 
 def test_sync_all_reports_skipped_repositories(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     bar = DummyBar()
 
@@ -502,7 +515,8 @@ def test_sync_one_rejects_missing_repository(tmp_path: Path) -> None:
 
 
 def test_sync_one_skips_dirty_repository(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -522,7 +536,8 @@ def test_sync_one_skips_dirty_repository(
 
 
 def test_sync_one_switches_and_updates(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -562,7 +577,10 @@ def test_handle_one_action(monkeypatch: pytest.MonkeyPatch) -> None:
         sync,
         "sync_one",
         lambda repo_path: sync.SyncResult(
-            repo_path=repo_path, default_branch="main", switched=False, updated=False
+            repo_path=repo_path,
+            default_branch="main",
+            switched=False,
+            updated=False,
         ),
     )
 
@@ -612,10 +630,13 @@ def test_handle_one_action_returns_failure_for_skipped_repository(
 
 
 def test_handle_all_action_reports_all_up_to_date(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(
-        sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"]
+        sync,
+        "parse_repo_paths",
+        lambda: ["repo/github.com/kitsuyui/sample-repo"],
     )
     monkeypatch.setattr(sync, "build_sync_targets", lambda paths, prefilter, bar: [])
     monkeypatch.setattr(sync, "progress_bar", lambda **kwargs: DummyBar())
@@ -629,17 +650,25 @@ def test_handle_all_action_runs_final_update_after_success(
 ) -> None:
     calls: list[str] = []
     monkeypatch.setattr(
-        sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"]
+        sync,
+        "parse_repo_paths",
+        lambda: ["repo/github.com/kitsuyui/sample-repo"],
     )
     monkeypatch.setattr(
-        sync, "build_sync_targets", lambda paths, prefilter, bar: list(paths)
+        sync,
+        "build_sync_targets",
+        lambda paths, prefilter, bar: list(paths),
     )
     monkeypatch.setattr(
-        sync, "sync_all", lambda paths, jobs, verbose, bar, redactions=(): (0, 1)
+        sync,
+        "sync_all",
+        lambda paths, jobs, verbose, bar, redactions=(): (0, 1),
     )
     monkeypatch.setattr(sync, "progress_bar", lambda **kwargs: DummyBar())
     monkeypatch.setattr(
-        sync, "run_final_submodule_update", lambda: calls.append("final")
+        sync,
+        "run_final_submodule_update",
+        lambda: calls.append("final"),
     )
     args = type(
         "Args",
@@ -658,13 +687,19 @@ def test_handle_all_action_runs_final_update_after_success(
 
 def test_handle_all_action_runs_sync_all(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"]
+        sync,
+        "parse_repo_paths",
+        lambda: ["repo/github.com/kitsuyui/sample-repo"],
     )
     monkeypatch.setattr(
-        sync, "build_sync_targets", lambda paths, prefilter, bar: list(paths)
+        sync,
+        "build_sync_targets",
+        lambda paths, prefilter, bar: list(paths),
     )
     monkeypatch.setattr(
-        sync, "sync_all", lambda paths, jobs, verbose, bar, redactions=(): (0, 1)
+        sync,
+        "sync_all",
+        lambda paths, jobs, verbose, bar, redactions=(): (0, 1),
     )
     monkeypatch.setattr(sync, "progress_bar", lambda **kwargs: DummyBar())
     args = type("Args", (), {"prefilter": True, "jobs": 3, "verbose": False})()
@@ -672,16 +707,23 @@ def test_handle_all_action_runs_sync_all(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_handle_all_action_prints_when_sync_all_reports_no_changes(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(
-        sync, "parse_repo_paths", lambda: ["repo/github.com/kitsuyui/sample-repo"]
+        sync,
+        "parse_repo_paths",
+        lambda: ["repo/github.com/kitsuyui/sample-repo"],
     )
     monkeypatch.setattr(
-        sync, "build_sync_targets", lambda paths, prefilter, bar: list(paths)
+        sync,
+        "build_sync_targets",
+        lambda paths, prefilter, bar: list(paths),
     )
     monkeypatch.setattr(
-        sync, "sync_all", lambda paths, jobs, verbose, bar, redactions=(): (0, 0)
+        sync,
+        "sync_all",
+        lambda paths, jobs, verbose, bar, redactions=(): (0, 0),
     )
     monkeypatch.setattr(sync, "progress_bar", lambda **kwargs: DummyBar())
     args = type("Args", (), {"prefilter": True, "jobs": 1, "verbose": False})()
@@ -690,7 +732,8 @@ def test_handle_all_action_prints_when_sync_all_reports_no_changes(
 
 
 def test_main_handles_runtime_error(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(
         sync.argparse.ArgumentParser,

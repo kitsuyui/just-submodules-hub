@@ -60,7 +60,9 @@ def apply_plan(record: PlanRecord) -> PlanRecord:
         success_message = f"rebased onto {record.target}"
     else:
         return replace(
-            record, status="failed", message=f"unsupported action: {record.action}"
+            record,
+            status="failed",
+            message=f"unsupported action: {record.action}",
         )
 
     if proc.returncode != 0:
@@ -92,7 +94,7 @@ def read_plan_from_stdin() -> list[PlanRecord]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Apply safe synchronization decisions for Git linked worktrees."
+        description="Apply safe synchronization decisions for Git linked worktrees.",
     )
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
     parser.add_argument(

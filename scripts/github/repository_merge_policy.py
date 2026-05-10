@@ -22,7 +22,7 @@ TQDM_BAR_FORMAT = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Inspect or apply repository merge method policy."
+        description="Inspect or apply repository merge method policy.",
     )
     parser.add_argument(
         "action",
@@ -37,7 +37,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("method", choices=MERGE_METHODS)
     parser.add_argument(
-        "target", nargs="?", help="Repository slug or visibility for *-all actions"
+        "target",
+        nargs="?",
+        help="Repository slug or visibility for *-all actions",
     )
     return parser.parse_args()
 
@@ -53,7 +55,7 @@ def run_gh(*args: str) -> str:
         raise RuntimeError(
             proc.stderr.strip()
             or proc.stdout.strip()
-            or f"gh command failed: {' '.join(args)}"
+            or f"gh command failed: {' '.join(args)}",
         )
     return proc.stdout
 
@@ -70,7 +72,7 @@ def run_gh_with_json_input(args: list[str], payload: dict) -> dict:
         raise RuntimeError(
             proc.stderr.strip()
             or proc.stdout.strip()
-            or f"gh command failed: {' '.join(args)}"
+            or f"gh command failed: {' '.join(args)}",
         )
     parsed = json.loads(proc.stdout)
     if not isinstance(parsed, dict):
@@ -118,7 +120,10 @@ def repo_visibility(payload: dict) -> str:
 
 def summarize_method_payload(method: str, payload: dict) -> dict:
     return summarize_merge_method(
-        repo_name(payload), repo_visibility(payload), method, payload
+        repo_name(payload),
+        repo_visibility(payload),
+        method,
+        payload,
     )
 
 
@@ -143,7 +148,7 @@ def set_method(method: str, repo: str, enabled: bool) -> int:
             "method": method,
             "before": summarize_method_payload(method, before),
             "after": summarize_method_payload(method, after),
-        }
+        },
     )
     return 0
 
@@ -167,7 +172,8 @@ def build_progress_bar(action: str, total: int) -> tqdm:
 
 
 def managed_repositories(
-    visibility: str, bar: tqdm | None = None
+    visibility: str,
+    bar: tqdm | None = None,
 ) -> list[tuple[str, dict]]:
     selected: list[tuple[str, dict]] = []
     for repo in candidate_repositories():
@@ -194,7 +200,7 @@ def status_all(method: str, visibility: str) -> int:
             "method": method,
             "visibility": visibility,
             "repos": entries,
-        }
+        },
     )
     return 0
 
@@ -223,7 +229,7 @@ def set_method_all(method: str, visibility: str, enabled: bool) -> int:
                     "method": method,
                     "before": summarize_method_payload(method, metadata),
                     "after": summarize_method_payload(method, after),
-                }
+                },
             )
             bar.update(1)
 
@@ -233,7 +239,7 @@ def set_method_all(method: str, visibility: str, enabled: bool) -> int:
             "method": method,
             "visibility": visibility,
             "results": results,
-        }
+        },
     )
     return 0
 
