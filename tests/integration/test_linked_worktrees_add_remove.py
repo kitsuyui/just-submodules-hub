@@ -11,7 +11,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUN_ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
-def test_add_linked_worktree_initializes_submodules_with_requested_mode(tmp_path: Path) -> None:
+def test_add_linked_worktree_initializes_submodules_with_requested_mode(
+    tmp_path: Path,
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     linked = tmp_path / "repo-feature"

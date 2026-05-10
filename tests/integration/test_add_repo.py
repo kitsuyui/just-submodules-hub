@@ -28,7 +28,11 @@ exit 0
 
     env = {**os.environ, "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"}
     proc = subprocess.run(
-        [str(RUN_ACTION_SCRIPT), "add-repo", "https://github.com/example-owner/example-repo"],
+        [
+            str(RUN_ACTION_SCRIPT),
+            "add-repo",
+            "https://github.com/example-owner/example-repo",
+        ],
         cwd=str(hub_repo),
         env=env,
         text=True,

@@ -18,8 +18,12 @@ def test_default_branch_baseline_status_all_reports_filtered_managed_repositorie
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
 
-    public_remote = create_remote(tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"})
-    private_remote = create_remote(tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"})
+    public_remote = create_remote(
+        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+    )
+    private_remote = create_remote(
+        tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"}
+    )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, private_remote, "repo/github.com/kitsuyui/private-repo")
 
@@ -87,12 +91,18 @@ exit 1
     assert "status-all" in proc.stderr
 
 
-def test_default_branch_baseline_status_all_skips_wiki_submodules(tmp_path: Path) -> None:
+def test_default_branch_baseline_status_all_skips_wiki_submodules(
+    tmp_path: Path,
+) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
 
-    public_remote = create_remote(tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"})
-    wiki_remote = create_remote(tmp_path, "kitsuyui", "public-repo.wiki", {"Home.md": "ok\n"})
+    public_remote = create_remote(
+        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+    )
+    wiki_remote = create_remote(
+        tmp_path, "kitsuyui", "public-repo.wiki", {"Home.md": "ok\n"}
+    )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, wiki_remote, "repo/github.com/kitsuyui/public-repo.wiki")
 
@@ -156,11 +166,15 @@ exit 1
     assert "status-all" in proc.stderr
 
 
-def test_default_branch_baseline_cleanup_classic_all_skips_manual_review_cases(tmp_path: Path) -> None:
+def test_default_branch_baseline_cleanup_classic_all_skips_manual_review_cases(
+    tmp_path: Path,
+) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
 
-    repo_remote = create_remote(tmp_path, "kitsuyui", "classic-repo", {"README.md": "ok\n"})
+    repo_remote = create_remote(
+        tmp_path, "kitsuyui", "classic-repo", {"README.md": "ok\n"}
+    )
     add_submodule(hub_repo, repo_remote, "repo/github.com/kitsuyui/classic-repo")
 
     fake_bin = tmp_path / "fake-bin"

@@ -11,7 +11,9 @@ SYNC_SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
 ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
-def test_commit_submodule_pointers_creates_parent_commit(tmp_path: Path, hub_repo: Path) -> None:
+def test_commit_submodule_pointers_creates_parent_commit(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     remote = create_remote(
         tmp_path,
         "example-owner",
@@ -38,7 +40,10 @@ def test_commit_submodule_pointers_creates_parent_commit(tmp_path: Path, hub_rep
         check=False,
     )
     assert commit_proc.returncode == 0, commit_proc.stderr
-    assert run(["git", "log", "-1", "--pretty=%s"], cwd=hub_repo) == "Update submodule pointers"
+    assert (
+        run(["git", "log", "-1", "--pretty=%s"], cwd=hub_repo)
+        == "Update submodule pointers"
+    )
 
 
 def test_commit_submodule_pointers_works_when_submodules_are_ignored_all(
@@ -68,11 +73,18 @@ def test_commit_submodule_pointers_works_when_submodules_are_ignored_all(
     run(["git", "config", "--local", f"{section}.ignore", "all"], cwd=hub_repo)
 
     commit_proc = subprocess.run(
-        [str(ACTION_SCRIPT), "commit-submodule-pointers", "Update ignored submodule pointers"],
+        [
+            str(ACTION_SCRIPT),
+            "commit-submodule-pointers",
+            "Update ignored submodule pointers",
+        ],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
         check=False,
     )
     assert commit_proc.returncode == 0, commit_proc.stderr
-    assert run(["git", "log", "-1", "--pretty=%s"], cwd=hub_repo) == "Update ignored submodule pointers"
+    assert (
+        run(["git", "log", "-1", "--pretty=%s"], cwd=hub_repo)
+        == "Update ignored submodule pointers"
+    )

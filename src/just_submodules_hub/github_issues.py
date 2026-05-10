@@ -59,7 +59,9 @@ def build_issue_record(item: dict) -> IssueRecord | None:
     return IssueRecord(repo=repo, author=author, url=url)
 
 
-def filter_managed_issues(records: list[IssueRecord], managed_paths: list[str]) -> list[IssueRecord]:
+def filter_managed_issues(
+    records: list[IssueRecord], managed_paths: list[str]
+) -> list[IssueRecord]:
     managed = set(managed_repo_slugs(managed_paths))
     return sorted({record for record in records if record.repo in managed})
 

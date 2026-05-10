@@ -12,15 +12,21 @@ SYNC_SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
 
 def write_consumer_justfile(hub_repo: Path) -> None:
     justfile = hub_repo / "justfile"
-    justfile.write_text(f'import "{PROJECT_ROOT / "just/index.just"}"\n', encoding="utf-8")
+    justfile.write_text(
+        f'import "{PROJECT_ROOT / "just/index.just"}"\n', encoding="utf-8"
+    )
 
 
-def test_imported_repo_submodule_list_managed_uses_consumer_invocation_directory(tmp_path: Path) -> None:
+def test_imported_repo_submodule_list_managed_uses_consumer_invocation_directory(
+    tmp_path: Path,
+) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
     write_consumer_justfile(hub_repo)
 
-    remote = create_remote(tmp_path, "example-owner", "managed", {"README.md": "hello\n"})
+    remote = create_remote(
+        tmp_path, "example-owner", "managed", {"README.md": "hello\n"}
+    )
     add_submodule(hub_repo, remote, "repo/github.com/example-owner/managed")
 
     proc = subprocess.run(
@@ -35,12 +41,16 @@ def test_imported_repo_submodule_list_managed_uses_consumer_invocation_directory
     assert proc.stdout.splitlines() == ["example-owner/managed"]
 
 
-def test_imported_repo_submodule_commit_pointers_uses_consumer_invocation_directory(tmp_path: Path) -> None:
+def test_imported_repo_submodule_commit_pointers_uses_consumer_invocation_directory(
+    tmp_path: Path,
+) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
     write_consumer_justfile(hub_repo)
 
-    remote = create_remote(tmp_path, "example-owner", "pointers", {"README.md": "before\n"})
+    remote = create_remote(
+        tmp_path, "example-owner", "pointers", {"README.md": "before\n"}
+    )
     add_submodule(hub_repo, remote, "repo/github.com/example-owner/pointers")
     advance_remote(remote, "README.md", "after\n", "Update remote")
 
@@ -54,7 +64,14 @@ def test_imported_repo_submodule_commit_pointers_uses_consumer_invocation_direct
     assert sync_proc.returncode == 0, sync_proc.stderr
 
     commit_proc = subprocess.run(
-        ["just", "repo", "submodule", "pointers", "commit", "Update submodule pointers"],
+        [
+            "just",
+            "repo",
+            "submodule",
+            "pointers",
+            "commit",
+            "Update submodule pointers",
+        ],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
@@ -62,4 +79,7 @@ def test_imported_repo_submodule_commit_pointers_uses_consumer_invocation_direct
     )
 
     assert commit_proc.returncode == 0, commit_proc.stderr
-    assert run(["git", "log", "-1", "--pretty=%s"], cwd=hub_repo) == "Update submodule pointers"
+    assert (
+        run(["git", "log", "-1", "--pretty=%s"], cwd=hub_repo)
+        == "Update submodule pointers"
+    )

@@ -45,4 +45,6 @@ exit 1
         "path": str(repo / ".git" / "hooks" / "pre-push"),
         "status": "installed",
     }
-    assert "refs/heads/worktree/*" in (repo / ".git" / "hooks" / "pre-push").read_text(encoding="utf-8")
+    assert "refs/heads/worktree/*" in (repo / ".git" / "hooks" / "pre-push").read_text(
+        encoding="utf-8"
+    )

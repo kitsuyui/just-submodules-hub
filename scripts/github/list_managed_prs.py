@@ -18,9 +18,15 @@ from just_submodules_hub.gitmodules import managed_repo_owners, read_gitmodules_
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="List pull requests for managed submodules")
-    parser.add_argument("state", nargs="?", default="open", help="open, closed, merged, or all")
-    parser.add_argument("--repo-root", default=".", help="repository root (default: current directory)")
+    parser = argparse.ArgumentParser(
+        description="List pull requests for managed submodules"
+    )
+    parser.add_argument(
+        "state", nargs="?", default="open", help="open, closed, merged, or all"
+    )
+    parser.add_argument(
+        "--repo-root", default=".", help="repository root (default: current directory)"
+    )
     return parser
 
 
@@ -65,11 +71,16 @@ def main() -> int:
             capture_output=True,
         )
         if proc.returncode != 0:
-            print((proc.stderr or proc.stdout).strip() or "gh search prs failed", file=sys.stderr)
+            print(
+                (proc.stderr or proc.stdout).strip() or "gh search prs failed",
+                file=sys.stderr,
+            )
             return 1
         records.extend(parse_pull_request_payload(proc.stdout))
 
-    sys.stdout.write(render_pull_requests_tsv(filter_managed_pull_requests(records, managed_paths)))
+    sys.stdout.write(
+        render_pull_requests_tsv(filter_managed_pull_requests(records, managed_paths))
+    )
     return 0
 
 

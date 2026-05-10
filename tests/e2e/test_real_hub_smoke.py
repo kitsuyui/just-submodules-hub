@@ -20,7 +20,11 @@ def test_real_public_repositories_are_detected_as_js_projects(tmp_path: Path) ->
 
     hub = tmp_path / "hub"
     init_hub(hub)
-    add_submodule(hub, "https://github.com/kitsuyui/ts-playground.git", "repo/github.com/kitsuyui/ts-playground")
+    add_submodule(
+        hub,
+        "https://github.com/kitsuyui/ts-playground.git",
+        "repo/github.com/kitsuyui/ts-playground",
+    )
     add_submodule(
         hub,
         "https://github.com/kitsuyui/react-playground.git",

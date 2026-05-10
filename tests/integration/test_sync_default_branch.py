@@ -10,7 +10,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
 
 
-def test_sync_default_branch_updates_submodule_to_latest(tmp_path: Path, hub_repo: Path) -> None:
+def test_sync_default_branch_updates_submodule_to_latest(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     remote = create_remote(
         tmp_path,
         "example-owner",
@@ -32,7 +34,9 @@ def test_sync_default_branch_updates_submodule_to_latest(tmp_path: Path, hub_rep
     assert git_head(hub_repo / "repo/github.com/example-owner/sync-me") == latest_head
 
 
-def test_sync_default_branch_resolves_unique_short_name(tmp_path: Path, hub_repo: Path) -> None:
+def test_sync_default_branch_resolves_unique_short_name(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     remote = create_remote(
         tmp_path,
         "example-owner",

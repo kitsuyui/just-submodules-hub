@@ -15,11 +15,15 @@ from just_submodules_hub.github_merge_policy import (
     summarize_merge_method,
 )
 
-TQDM_BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+TQDM_BAR_FORMAT = (
+    "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Inspect or apply repository merge method policy.")
+    parser = argparse.ArgumentParser(
+        description="Inspect or apply repository merge method policy."
+    )
     parser.add_argument(
         "action",
         choices=(
@@ -32,7 +36,9 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("method", choices=MERGE_METHODS)
-    parser.add_argument("target", nargs="?", help="Repository slug or visibility for *-all actions")
+    parser.add_argument(
+        "target", nargs="?", help="Repository slug or visibility for *-all actions"
+    )
     return parser.parse_args()
 
 
@@ -44,7 +50,11 @@ def run_gh(*args: str) -> str:
         check=False,
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"gh command failed: {' '.join(args)}")
+        raise RuntimeError(
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or f"gh command failed: {' '.join(args)}"
+        )
     return proc.stdout
 
 
@@ -57,7 +67,11 @@ def run_gh_with_json_input(args: list[str], payload: dict) -> dict:
         check=False,
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"gh command failed: {' '.join(args)}")
+        raise RuntimeError(
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or f"gh command failed: {' '.join(args)}"
+        )
     parsed = json.loads(proc.stdout)
     if not isinstance(parsed, dict):
         raise RuntimeError("GitHub API response must be a JSON object")
@@ -81,7 +95,11 @@ def supports_merge_policy(repo: str) -> bool:
 
 
 def candidate_repositories() -> list[str]:
-    return [repo for repo in managed_repo_slugs(read_gitmodules_paths(".")) if supports_merge_policy(repo)]
+    return [
+        repo
+        for repo in managed_repo_slugs(read_gitmodules_paths("."))
+        if supports_merge_policy(repo)
+    ]
 
 
 def repo_name(payload: dict) -> str:
@@ -99,7 +117,9 @@ def repo_visibility(payload: dict) -> str:
 
 
 def summarize_method_payload(method: str, payload: dict) -> dict:
-    return summarize_merge_method(repo_name(payload), repo_visibility(payload), method, payload)
+    return summarize_merge_method(
+        repo_name(payload), repo_visibility(payload), method, payload
+    )
 
 
 def status(method: str, repo: str) -> int:
@@ -146,7 +166,9 @@ def build_progress_bar(action: str, total: int) -> tqdm:
     )
 
 
-def managed_repositories(visibility: str, bar: tqdm | None = None) -> list[tuple[str, dict]]:
+def managed_repositories(
+    visibility: str, bar: tqdm | None = None
+) -> list[tuple[str, dict]]:
     selected: list[tuple[str, dict]] = []
     for repo in candidate_repositories():
         metadata = load_repo_metadata(repo)
@@ -166,7 +188,14 @@ def status_all(method: str, visibility: str) -> int:
         for _repo, metadata in repos:
             entries.append(summarize_method_payload(method, metadata))
 
-    write_json({"action": "status-all", "method": method, "visibility": visibility, "repos": entries})
+    write_json(
+        {
+            "action": "status-all",
+            "method": method,
+            "visibility": visibility,
+            "repos": entries,
+        }
+    )
     return 0
 
 
@@ -184,7 +213,9 @@ def set_method_all(method: str, visibility: str, enabled: bool) -> int:
                 ["api", "--method", "PATCH", f"repos/{repo}"],
                 merge_method_patch_payload(method, enabled),
             )
-            after = result if "squashMergeAllowed" in result else load_repo_metadata(repo)
+            after = (
+                result if "squashMergeAllowed" in result else load_repo_metadata(repo)
+            )
             results.append(
                 {
                     "repo": repo_name(metadata),
@@ -196,7 +227,14 @@ def set_method_all(method: str, visibility: str, enabled: bool) -> int:
             )
             bar.update(1)
 
-    write_json({"action": action, "method": method, "visibility": visibility, "results": results})
+    write_json(
+        {
+            "action": action,
+            "method": method,
+            "visibility": visibility,
+            "results": results,
+        }
+    )
     return 0
 
 

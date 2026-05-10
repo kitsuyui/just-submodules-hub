@@ -11,7 +11,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / "scripts/github/list-managed-prs.sh"
 
 
-def test_list_managed_prs_filters_to_managed_repositories(tmp_path: Path, hub_repo: Path) -> None:
+def test_list_managed_prs_filters_to_managed_repositories(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     managed_remote = create_remote(
         tmp_path,
         "kitsuyui",

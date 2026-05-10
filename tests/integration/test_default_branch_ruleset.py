@@ -58,7 +58,9 @@ exit 1
     assert payload["baseline_compliant"] is False
 
 
-def test_default_branch_ruleset_apply_updates_existing_managed_ruleset(tmp_path: Path) -> None:
+def test_default_branch_ruleset_apply_updates_existing_managed_ruleset(
+    tmp_path: Path,
+) -> None:
     fake_bin = tmp_path / "fake-bin"
     payload_capture = tmp_path / "payload.json"
     write_executable(
@@ -112,10 +114,16 @@ exit 1
     assert payload["action"] == "updated"
     posted_payload = json.loads(payload_capture.read_text(encoding="utf-8"))
     assert posted_payload["conditions"]["ref_name"]["include"] == ["refs/heads/main"]
-    assert [rule["type"] for rule in posted_payload["rules"]] == ["pull_request", "non_fast_forward", "deletion"]
+    assert [rule["type"] for rule in posted_payload["rules"]] == [
+        "pull_request",
+        "non_fast_forward",
+        "deletion",
+    ]
 
 
-def test_default_branch_ruleset_legacy_status_reports_manual_review_for_uncovered_rules(tmp_path: Path) -> None:
+def test_default_branch_ruleset_legacy_status_reports_manual_review_for_uncovered_rules(
+    tmp_path: Path,
+) -> None:
     fake_bin = tmp_path / "fake-bin"
     write_executable(
         fake_bin / "gh",
@@ -166,10 +174,14 @@ exit 1
     payload = json.loads(proc.stdout)
     assert payload["legacy_rulesets"][0]["name"] == "protect-main"
     assert payload["legacy_rulesets"][0]["deletable"] is False
-    assert payload["legacy_rulesets"][0]["uncovered_rule_types"] == ["required_linear_history"]
+    assert payload["legacy_rulesets"][0]["uncovered_rule_types"] == [
+        "required_linear_history"
+    ]
 
 
-def test_default_branch_ruleset_delete_if_redundant_deletes_safe_legacy_ruleset(tmp_path: Path) -> None:
+def test_default_branch_ruleset_delete_if_redundant_deletes_safe_legacy_ruleset(
+    tmp_path: Path,
+) -> None:
     fake_bin = tmp_path / "fake-bin"
     write_executable(
         fake_bin / "gh",
@@ -225,7 +237,9 @@ exit 1
     assert payload["ruleset_name"] == "protect-main"
 
 
-def test_default_branch_classic_protection_status_reports_redundant_protection(tmp_path: Path) -> None:
+def test_default_branch_classic_protection_status_reports_redundant_protection(
+    tmp_path: Path,
+) -> None:
     fake_bin = tmp_path / "fake-bin"
     write_executable(
         fake_bin / "gh",
@@ -273,7 +287,9 @@ exit 1
     assert payload["uncovered_settings"] == []
 
 
-def test_default_branch_classic_protection_delete_if_redundant_deletes_safe_protection(tmp_path: Path) -> None:
+def test_default_branch_classic_protection_delete_if_redundant_deletes_safe_protection(
+    tmp_path: Path,
+) -> None:
     fake_bin = tmp_path / "fake-bin"
     write_executable(
         fake_bin / "gh",

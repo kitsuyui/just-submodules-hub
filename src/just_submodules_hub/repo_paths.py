@@ -52,7 +52,9 @@ def managed_repo_paths(hub_root: Path) -> list[str]:
 
     gitmodules_path = root / ".gitmodules"
     if gitmodules_path.exists():
-        paths.update(_parse_gitmodules_paths(gitmodules_path.read_text(encoding="utf-8")))
+        paths.update(
+            _parse_gitmodules_paths(gitmodules_path.read_text(encoding="utf-8"))
+        )
 
     repos_root = root / REPO_PREFIX
     if repos_root.exists():
@@ -71,7 +73,9 @@ def resolve_repo_input(value: str, hub_root: Path) -> str:
     if normalized.startswith(REPO_PREFIX) or "/" in normalized:
         return normalize_repo_input(normalized)
 
-    matches = [path for path in managed_repo_paths(hub_root) if Path(path).name == normalized]
+    matches = [
+        path for path in managed_repo_paths(hub_root) if Path(path).name == normalized
+    ]
     if not matches:
         raise FileNotFoundError(f"repository short name not found: {value}")
     if len(matches) > 1:

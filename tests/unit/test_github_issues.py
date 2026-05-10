@@ -35,7 +35,10 @@ def test_parse_and_filter_issues() -> None:
     records = parse_issue_payload(payload)
     filtered = filter_managed_issues(
         records,
-        ["repo/github.com/kitsuyui/ts-playground", "repo/github.com/kitsuyui/react-playground"],
+        [
+            "repo/github.com/kitsuyui/ts-playground",
+            "repo/github.com/kitsuyui/react-playground",
+        ],
     )
     assert filtered == [
         IssueRecord(
@@ -48,13 +51,25 @@ def test_parse_and_filter_issues() -> None:
 
 def test_render_issues_tsv() -> None:
     output = render_issues_tsv(
-        [IssueRecord(repo="kitsuyui/ts-playground", author="kitsuyui", url="https://example.com/issues/1")]
+        [
+            IssueRecord(
+                repo="kitsuyui/ts-playground",
+                author="kitsuyui",
+                url="https://example.com/issues/1",
+            )
+        ]
     )
-    assert output == "repo\tauthor\turl\nkitsuyui/ts-playground\tkitsuyui\thttps://example.com/issues/1\n"
+    assert (
+        output
+        == "repo\tauthor\turl\nkitsuyui/ts-playground\tkitsuyui\thttps://example.com/issues/1\n"
+    )
 
 
 def test_build_issue_record_rejects_incomplete_payload() -> None:
-    assert build_issue_record({"repository": {"nameWithOwner": "kitsuyui/ts-playground"}}) is None
+    assert (
+        build_issue_record({"repository": {"nameWithOwner": "kitsuyui/ts-playground"}})
+        is None
+    )
 
 
 def test_validate_state_rejects_unknown_state() -> None:

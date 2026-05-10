@@ -15,8 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from just_submodules_hub.submodule_batch import print_records
 from plan_linked_worktree_sync import (
-    PlanRecord,
-    WorktreeRecord,
+    PlanRecord,  # noqa: F401
+    WorktreeRecord,  # noqa: F401
     default_branch,
     dirty_state,
     list_worktrees,
@@ -99,7 +99,11 @@ def install_hooks(root: Path) -> HookRecord:
         if not sample_path.exists():
             sample_path.write_text(PRE_PUSH_HOOK, encoding="utf-8")
             sample_path.chmod(sample_path.stat().st_mode | stat.S_IXUSR)
-            return HookRecord("skipped", str(hook_path), f"existing hook kept; wrote sample to {sample_path}")
+            return HookRecord(
+                "skipped",
+                str(hook_path),
+                f"existing hook kept; wrote sample to {sample_path}",
+            )
         return HookRecord("skipped", str(hook_path), "existing hook kept")
     hook_path.write_text(PRE_PUSH_HOOK, encoding="utf-8")
     hook_path.chmod(hook_path.stat().st_mode | stat.S_IXUSR)
@@ -116,33 +120,97 @@ def current_head(repo: Path) -> str:
     return proc.stdout.strip() if proc.returncode == 0 else ""
 
 
-def reset_record(repo: Path, *, target: str, backup_prefix: str, apply: bool) -> ResetRecord:
+def reset_record(
+    repo: Path, *, target: str, backup_prefix: str, apply: bool
+) -> ResetRecord:
     branch = current_branch(repo)
     if not branch:
-        return ResetRecord(str(repo), "", "skipped", "skip-detached", "", target, "detached HEAD")
+        return ResetRecord(
+            str(repo), "", "skipped", "skip-detached", "", target, "detached HEAD"
+        )
     dirty = dirty_state(repo)
     if dirty == "dirty":
-        return ResetRecord(str(repo), branch, "skipped", "skip-dirty", "", target, "worktree has local changes")
+        return ResetRecord(
+            str(repo),
+            branch,
+            "skipped",
+            "skip-dirty",
+            "",
+            target,
+            "worktree has local changes",
+        )
     if dirty == "unknown":
-        return ResetRecord(str(repo), branch, "failed", "inspect", "", target, "cannot inspect worktree status")
+        return ResetRecord(
+            str(repo),
+            branch,
+            "failed",
+            "inspect",
+            "",
+            target,
+            "cannot inspect worktree status",
+        )
     resolved_target = target or f"origin/{default_branch(repo)}"
     backup = f"{backup_prefix}/{sanitize_ref_component(Path(repo).name)}/{timestamp()}"
     if not apply:
-        return ResetRecord(str(repo), branch, "planned", "reset", backup, resolved_target, "dry-run")
+        return ResetRecord(
+            str(repo), branch, "planned", "reset", backup, resolved_target, "dry-run"
+        )
     if resolved_target.startswith("origin/"):
-        fetched = run_git(repo, ["fetch", "origin", resolved_target.removeprefix("origin/")])
+        fetched = run_git(
+            repo, ["fetch", "origin", resolved_target.removeprefix("origin/")]
+        )
         if fetched.returncode != 0:
-            return ResetRecord(str(repo), branch, "failed", "fetch-target", backup, resolved_target, summarize(fetched))
+            return ResetRecord(
+                str(repo),
+                branch,
+                "failed",
+                "fetch-target",
+                backup,
+                resolved_target,
+                summarize(fetched),
+            )
     head = current_head(repo)
     if not head:
-        return ResetRecord(str(repo), branch, "failed", "inspect", backup, resolved_target, "cannot resolve HEAD")
+        return ResetRecord(
+            str(repo),
+            branch,
+            "failed",
+            "inspect",
+            backup,
+            resolved_target,
+            "cannot resolve HEAD",
+        )
     backup_proc = run_git(repo, ["branch", backup, head])
     if backup_proc.returncode != 0:
-        return ResetRecord(str(repo), branch, "failed", "backup", backup, resolved_target, summarize(backup_proc))
+        return ResetRecord(
+            str(repo),
+            branch,
+            "failed",
+            "backup",
+            backup,
+            resolved_target,
+            summarize(backup_proc),
+        )
     reset_proc = run_git(repo, ["switch", "-C", branch, resolved_target])
     if reset_proc.returncode != 0:
-        return ResetRecord(str(repo), branch, "failed", "reset", backup, resolved_target, summarize(reset_proc))
-    return ResetRecord(str(repo), branch, "settled", "reset", backup, resolved_target, "branch reset with backup")
+        return ResetRecord(
+            str(repo),
+            branch,
+            "failed",
+            "reset",
+            backup,
+            resolved_target,
+            summarize(reset_proc),
+        )
+    return ResetRecord(
+        str(repo),
+        branch,
+        "settled",
+        "reset",
+        backup,
+        resolved_target,
+        "branch reset with backup",
+    )
 
 
 def path_matches(path: str, pattern: str) -> bool:
@@ -165,26 +233,66 @@ def cleanup_records(
             continue
         if not path_matches(worktree.path, path_glob):
             if include_skipped:
-                rows.append(CleanupRecord(worktree.path, worktree.branch, "skipped", "skip-path", "path does not match glob"))
+                rows.append(
+                    CleanupRecord(
+                        worktree.path,
+                        worktree.branch,
+                        "skipped",
+                        "skip-path",
+                        "path does not match glob",
+                    )
+                )
             continue
         plan = plan_one(worktree, default)
         if plan.action not in ("retire-contained", "retire-merged-pr"):
             if include_skipped:
-                rows.append(CleanupRecord(worktree.path, worktree.branch, "skipped", plan.action, plan.message))
+                rows.append(
+                    CleanupRecord(
+                        worktree.path,
+                        worktree.branch,
+                        "skipped",
+                        plan.action,
+                        plan.message,
+                    )
+                )
             continue
         if not apply:
-            rows.append(CleanupRecord(worktree.path, worktree.branch, "planned", "remove", "dry-run"))
+            rows.append(
+                CleanupRecord(
+                    worktree.path, worktree.branch, "planned", "remove", "dry-run"
+                )
+            )
             continue
         remove_proc = run_git(root, ["worktree", "remove", worktree.path])
         if remove_proc.returncode != 0:
-            rows.append(CleanupRecord(worktree.path, worktree.branch, "failed", "remove", summarize(remove_proc)))
+            rows.append(
+                CleanupRecord(
+                    worktree.path,
+                    worktree.branch,
+                    "failed",
+                    "remove",
+                    summarize(remove_proc),
+                )
+            )
             continue
         if drop_branch and worktree.branch:
             drop_proc = run_git(root, ["branch", "-D", worktree.branch])
             if drop_proc.returncode != 0:
-                rows.append(CleanupRecord(worktree.path, worktree.branch, "failed", "drop-branch", summarize(drop_proc)))
+                rows.append(
+                    CleanupRecord(
+                        worktree.path,
+                        worktree.branch,
+                        "failed",
+                        "drop-branch",
+                        summarize(drop_proc),
+                    )
+                )
                 continue
-        rows.append(CleanupRecord(worktree.path, worktree.branch, "removed", "remove", "worktree removed"))
+        rows.append(
+            CleanupRecord(
+                worktree.path, worktree.branch, "removed", "remove", "worktree removed"
+            )
+        )
     return rows
 
 
@@ -192,17 +300,23 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Linked worktree safety helpers.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    hooks = subparsers.add_parser("install-hooks", help="install linked worktree safety hooks")
+    hooks = subparsers.add_parser(
+        "install-hooks", help="install linked worktree safety hooks"
+    )
     hooks.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
 
-    reset = subparsers.add_parser("reset", help="plan or apply a reset for one linked worktree")
+    reset = subparsers.add_parser(
+        "reset", help="plan or apply a reset for one linked worktree"
+    )
     reset.add_argument("path")
     reset.add_argument("--target", default="")
     reset.add_argument("--backup-prefix", default="stash")
     reset.add_argument("--apply", action="store_true")
     reset.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
 
-    cleanup = subparsers.add_parser("cleanup", help="plan or apply cleanup of safe linked worktree candidates")
+    cleanup = subparsers.add_parser(
+        "cleanup", help="plan or apply cleanup of safe linked worktree candidates"
+    )
     cleanup.add_argument("--path-glob", required=True)
     cleanup.add_argument("--apply", action="store_true")
     cleanup.add_argument("--drop-branch", action="store_true")

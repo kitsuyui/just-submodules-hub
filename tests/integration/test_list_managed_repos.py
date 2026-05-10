@@ -27,7 +27,9 @@ def write_gitmodules(hub_repo: Path) -> None:
     )
 
 
-def run_action(hub_repo: Path, args: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def run_action(
+    hub_repo: Path, args: list[str], env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [str(ACTION_SCRIPT), *args],
         cwd=str(hub_repo),
@@ -38,7 +40,9 @@ def run_action(hub_repo: Path, args: list[str], env: dict[str, str] | None = Non
     )
 
 
-def test_list_managed_repos_without_filter_preserves_existing_output(hub_repo: Path) -> None:
+def test_list_managed_repos_without_filter_preserves_existing_output(
+    hub_repo: Path,
+) -> None:
     write_gitmodules(hub_repo)
 
     proc = run_action(hub_repo, ["list-managed-repos"])
@@ -51,7 +55,9 @@ def test_list_managed_repos_without_filter_preserves_existing_output(hub_repo: P
     ]
 
 
-def test_list_managed_repos_filters_by_owner_without_github_lookup(hub_repo: Path) -> None:
+def test_list_managed_repos_filters_by_owner_without_github_lookup(
+    hub_repo: Path,
+) -> None:
     write_gitmodules(hub_repo)
 
     proc = run_action(hub_repo, ["list-managed-repos", "kitsuyui", "all"])
@@ -63,7 +69,9 @@ def test_list_managed_repos_filters_by_owner_without_github_lookup(hub_repo: Pat
     ]
 
 
-def test_list_managed_repos_filters_by_github_visibility(tmp_path: Path, hub_repo: Path) -> None:
+def test_list_managed_repos_filters_by_github_visibility(
+    tmp_path: Path, hub_repo: Path
+) -> None:
     write_gitmodules(hub_repo)
     bin_dir = tmp_path / "bin"
     calls_file = tmp_path / "just-calls.txt"
@@ -88,4 +96,6 @@ exit 64
 
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.splitlines() == ["kitsuyui/private-repo"]
-    assert calls_file.read_text(encoding="utf-8").splitlines() == ["github repos list kitsuyui private"]
+    assert calls_file.read_text(encoding="utf-8").splitlines() == [
+        "github repos list kitsuyui private"
+    ]

@@ -71,7 +71,11 @@ def print_raw(results: list[CommandResult]) -> None:
             print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
         if result.stderr:
             print(f"{result.repo} stderr:", file=sys.stderr)
-            print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
+            print(
+                result.stderr,
+                end="" if result.stderr.endswith("\n") else "\n",
+                file=sys.stderr,
+            )
 
 
 def compact_result(result: CommandResult) -> CommandResult:
@@ -85,9 +89,15 @@ def compact_result(result: CommandResult) -> CommandResult:
 
 
 def parse_args() -> tuple[argparse.Namespace, str]:
-    parser = argparse.ArgumentParser(description="Run a shell command for each managed submodule.")
-    parser.add_argument("--format", choices=("raw", "table", "tsv", "jsonl"), default="raw")
-    parser.add_argument("--jobs", type=positive_int, default=4, help="parallel workers (default: 4)")
+    parser = argparse.ArgumentParser(
+        description="Run a shell command for each managed submodule."
+    )
+    parser.add_argument(
+        "--format", choices=("raw", "table", "tsv", "jsonl"), default="raw"
+    )
+    parser.add_argument(
+        "--jobs", type=positive_int, default=4, help="parallel workers (default: 4)"
+    )
     parser.add_argument(
         "--marker-file",
         action="append",
@@ -103,9 +113,13 @@ def parse_args() -> tuple[argparse.Namespace, str]:
 def main() -> int:
     args, command = parse_args()
     root = Path.cwd()
-    paths = SubmoduleFilter(marker_files=tuple(args.marker_file)).apply(read_gitmodules_paths(root), root)
+    paths = SubmoduleFilter(marker_files=tuple(args.marker_file)).apply(
+        read_gitmodules_paths(root), root
+    )
     if args.format == "raw":
-        results, failures = run_parallel(paths, lambda path: run_one(root, path, command), jobs=args.jobs)
+        results, failures = run_parallel(
+            paths, lambda path: run_one(root, path, command), jobs=args.jobs
+        )
     else:
         results, failures = run_parallel_with_progress(
             paths,
@@ -122,7 +136,9 @@ def main() -> int:
     if args.format == "raw":
         print_raw(results)
     else:
-        print_records([compact_result(result) for result in results], FIELDS, args.format)
+        print_records(
+            [compact_result(result) for result in results], FIELDS, args.format
+        )
     return 1 if any(result.status == "failed" for result in results) else 0
 
 
