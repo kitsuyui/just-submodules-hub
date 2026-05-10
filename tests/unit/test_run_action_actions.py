@@ -591,3 +591,282 @@ def test_cleanup_worktree_branches_delegates_to_subprocess(
     rc = fn([])
     assert rc == 0
     assert "root-and-all" in calls[0]
+
+
+# ---------- add-repo ----------
+
+
+def test_add_repo_requires_repo_url(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["add-repo"]
+    rc = fn([])
+    assert rc == 2
+    assert "REPO_URL is required" in capsys.readouterr().err
+
+
+def test_add_repo_calls_git_submodule_add(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.add_repo as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["add-repo"]
+    rc = fn(["https://github.com/owner/myrepo"])
+    assert rc == 0
+    # First call: git submodule add
+    assert calls[0] == [
+        "git",
+        "submodule",
+        "add",
+        "--",
+        "git@github.com:owner/myrepo.git",
+        "repo/github.com/owner/myrepo",
+    ]
+    # Second call: git config shallow
+    assert "submodule.repo/github.com/owner/myrepo.shallow" in calls[1]
+    # Third call: git config ignore all
+    assert "submodule.repo/github.com/owner/myrepo.ignore" in calls[2]
+    assert "all" in calls[2]
+
+
+def test_add_repo_accepts_ssh_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.add_repo as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["add-repo"]
+    rc = fn(["git@github.com:owner/myrepo.git"])
+    assert rc == 0
+    assert calls[0][4] == "git@github.com:owner/myrepo.git"
+    assert calls[0][5] == "repo/github.com/owner/myrepo"
+
+
+# ---------- remove-repo ----------
+
+
+def test_remove_repo_requires_repo(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["remove-repo"]
+    rc = fn([])
+    assert rc == 2
+    assert "REPO is required" in capsys.readouterr().err
+
+
+def test_remove_repo_calls_deinit_rm_git_rm(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import just_submodules_hub.run_action.actions.remove_repo as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.chdir(tmp_path)
+    # Create a fake .gitmodules so resolve_repo_input can find "owner/myrepo"
+    (tmp_path / ".gitmodules").write_text(
+        '[submodule "repo/github.com/owner/myrepo"]\n'
+        "\tpath = repo/github.com/owner/myrepo\n"
+        "\turl = git@github.com:owner/myrepo.git\n",
+        encoding="utf-8",
+    )
+
+    fn = reg._REGISTRY["remove-repo"]
+    rc = fn(["owner/myrepo"])
+    assert rc == 0
+    assert [
+        "git",
+        "submodule",
+        "deinit",
+        "-f",
+        "--",
+        "repo/github.com/owner/myrepo",
+    ] in calls
+    assert ["git", "rm", "-f", "repo/github.com/owner/myrepo"] in calls
+
+
+# ---------- commit-submodule-pointers ----------
+
+
+def test_commit_submodule_pointers_no_changes(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import just_submodules_hub.run_action.actions.commit_submodule_pointers as _mod
+
+    monkeypatch.setattr(
+        _mod, "read_gitmodules_paths", lambda: ["repo/github.com/owner/repo"]
+    )
+    monkeypatch.setattr(_mod, "_submodule_pointer_changed", lambda p: False)
+
+    fn = reg._REGISTRY["commit-submodule-pointers"]
+    rc = fn([])
+    assert rc == 0
+    assert "No submodule pointer changes" in capsys.readouterr().out
+
+
+def test_commit_submodule_pointers_commits_changed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.commit_submodule_pointers as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        # diff --cached returns non-zero (changes staged)
+        if "--quiet" in cmd:
+            return CompletedProcess(cmd, 1)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(
+        _mod, "read_gitmodules_paths", lambda: ["repo/github.com/owner/repo"]
+    )
+    monkeypatch.setattr(_mod, "_submodule_pointer_changed", lambda p: True)
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["commit-submodule-pointers"]
+    rc = fn(["My commit message"])
+    assert rc == 0
+    # git add was called
+    assert any("add" in c for c in calls)
+    # git commit with correct message
+    commit_calls = [c for c in calls if "commit" in c]
+    assert commit_calls
+    assert "My commit message" in commit_calls[0]
+
+
+# ---------- list-linked-worktrees / plan-linked-worktree-sync / apply-linked-worktree-sync ----------
+
+
+def test_list_linked_worktrees_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktree_sync as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["list-linked-worktrees"]
+    rc = fn(["--format", "jsonl"])
+    assert rc == 0
+    # script is the 6th element (index 5) of the cmd list
+    assert "list_linked_worktrees.py" in calls[0][5]
+    assert "--format" in calls[0]
+    assert "jsonl" in calls[0]
+
+
+def test_plan_linked_worktree_sync_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktree_sync as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["plan-linked-worktree-sync"]
+    rc = fn([])
+    assert rc == 0
+    assert "plan_linked_worktree_sync.py" in calls[0][5]
+
+
+def test_apply_linked_worktree_sync_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktree_sync as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["apply-linked-worktree-sync"]
+    rc = fn(["--from-plan-stdin"])
+    assert rc == 0
+    assert "apply_linked_worktree_sync.py" in calls[0][5]
+    assert "--from-plan-stdin" in calls[0]
+
+
+# ---------- create-public-repo / create-private-repo ----------
+
+
+def test_create_public_repo_requires_repo(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["create-public-repo"]
+    rc = fn([])
+    assert rc == 2
+    assert "REPO is required" in capsys.readouterr().err
+
+
+def test_create_private_repo_requires_repo(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["create-private-repo"]
+    rc = fn([])
+    assert rc == 2
+    assert "REPO is required" in capsys.readouterr().err
+
+
+def test_create_public_repo_creates_and_adds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.create_repo as _mod
+
+    # _mod.subprocess is the same object as add_repo.subprocess (shared module),
+    # so we patch subprocess.run once and track all calls.
+    all_calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        all_calls.append(list(cmd))
+        # gh repo view returns non-zero (repo not found)
+        if len(cmd) > 2 and cmd[2] == "view":
+            return CompletedProcess(cmd, 1)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mod.shutil, "which", lambda name: "/usr/bin/gh")
+
+    fn = reg._REGISTRY["create-public-repo"]
+    rc = fn(["owner/newrepo"])
+    assert rc == 0
+    # gh repo create --public was called
+    create_calls = [c for c in all_calls if len(c) > 2 and c[2] == "create"]
+    assert create_calls, f"No create call found in: {all_calls}"
+    assert "--public" in create_calls[0]
+    # git submodule add was called (add-repo dispatched internally)
+    submodule_calls = [c for c in all_calls if "submodule" in c]
+    assert submodule_calls

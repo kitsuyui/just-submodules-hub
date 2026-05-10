@@ -112,3 +112,18 @@ def set_submodule_ignore_all() -> int:
         if set_proc.returncode != 0:
             return set_proc.returncode
     return 0
+
+
+def set_submodule_ignore_value(repo_dir: str, value: str) -> int:
+    """Set ``ignore = <value>`` for a single submodule in the local git config.
+
+    *repo_dir* is the submodule path as recorded in ``.gitmodules``
+    (e.g. ``repo/github.com/owner/name``).
+    Returns 0 on success, non-zero on failure.
+    """
+    section = f"submodule.{repo_dir}"
+    proc = subprocess.run(
+        ["git", "config", "--local", f"{section}.ignore", value],
+        check=False,
+    )
+    return proc.returncode
