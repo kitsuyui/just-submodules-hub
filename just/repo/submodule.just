@@ -28,23 +28,41 @@ init-all +ARGS="":
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" init-all-repos {{ARGS}}
 
 # Deprecated compatibility aliases. Prefer the canonical namespace/resource/verb commands.
+# Deprecated: use default-branch::sync
 alias sync-default-branch := default-branch::sync
+# Deprecated: use default-branch::sync-all
 alias sync-all-default-branch := default-branch::sync-all
+# Deprecated: use pointers::commit
 alias commit-pointers := pointers::commit
+# Deprecated: use root-status::hide
 alias hide-root-status-changes := root-status::hide
+# Deprecated: use root-status::show
 alias show-root-status-changes := root-status::show
+# Deprecated: use root-status::visibility
 alias root-status-changes-visibility := root-status::visibility
+# Deprecated: use root-status::hide
 alias hide-worktree-changes := root-status::hide
+# Deprecated: use root-status::show
 alias show-worktree-changes := root-status::show
+# Deprecated: use root-status::visibility
 alias worktree-changes-visibility := root-status::visibility
+# Deprecated: use root-status::hide
 alias ignore-dirty-on := root-status::hide
+# Deprecated: use root-status::show
 alias ignore-dirty-off := root-status::show
+# Deprecated: use root-status::visibility
 alias ignore-dirty-status := root-status::visibility
+# Deprecated: use root-status::hide
 alias hide-all-changes := root-status::hide
+# Deprecated: use root-status::show
 alias show-all-changes := root-status::show
+# Deprecated: use root-status::visibility
 alias all-changes-visibility := root-status::visibility
+# Deprecated: use root-status::hide
 alias ignore-all-on := root-status::hide
+# Deprecated: use root-status::show
 alias ignore-all-off := root-status::show
+# Deprecated: use root-status::visibility
 alias ignore-all-status := root-status::visibility
 
 # Run a command for each submodule.
