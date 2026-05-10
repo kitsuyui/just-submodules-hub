@@ -299,3 +299,298 @@ def test_main_without_from_plan_stdin_calls_plan_one(
 
     assert len(plan_one_calls) == 1, "plan_one must be called exactly once per worktree"
     assert exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# Tests for failure / state-transition scenarios (tracker #60 item 7)
+# ---------------------------------------------------------------------------
+
+
+def test_apply_plan_fetch_failure_does_not_call_merge(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """fetch failure must short-circuit: merge must not be called."""
+    git_calls: list[list[str]] = []
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        git_calls.append(args)
+        if args[:1] == ["fetch"]:
+            return completed(args, stderr="network error", returncode=1)
+        return completed(args, stdout="abc123\n")
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("pull-default"))
+
+    assert result.status == "failed"
+    assert result.message == "network error"
+    assert not any(a[:1] == ["merge"] for a in git_calls), (
+        "merge must not be called after fetch failure"
+    )
+
+
+def test_apply_plan_non_origin_target_skips_fetch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """target that does not start with 'origin/' must skip fetch entirely."""
+    git_calls: list[list[str]] = []
+    heads = iter(["before", "after"])
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        git_calls.append(args)
+        if args == ["rev-parse", "HEAD"]:
+            return completed(args, stdout=f"{next(heads)}\n")
+        return completed(args)
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("pull-default", target="refs/heads/main"))
+
+    assert not any(a[:1] == ["fetch"] for a in git_calls), (
+        "fetch must not be called for non-origin target"
+    )
+    assert result.status in ("updated", "noop")
+
+
+def test_apply_plan_pull_default_merge_failure_returns_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """merge --ff-only non-zero exit must set status='failed' with summarize message."""
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args[:1] == ["merge"]:
+            return completed(args, stderr="Not possible to fast-forward.", returncode=1)
+        return completed(args, stdout="abc123\n")
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("pull-default"))
+
+    assert result.status == "failed"
+    assert result.message == "Not possible to fast-forward."
+
+
+def test_apply_plan_rebase_branch_failure_returns_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """rebase non-zero exit (rebase-branch) must set status='failed'."""
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args[:1] == ["rebase"]:
+            return completed(
+                args, stderr="CONFLICT (content): Merge conflict", returncode=1
+            )
+        return completed(args, stdout="abc123\n")
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("rebase-branch", "origin/feature/x"))
+
+    assert result.status == "failed"
+    assert result.message == "CONFLICT (content): Merge conflict"
+
+
+def test_apply_plan_rebase_default_failure_returns_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """rebase non-zero exit (rebase-default) must set status='failed'."""
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args[:1] == ["rebase"]:
+            return completed(args, stderr="rebase: nothing to rebase", returncode=1)
+        return completed(args, stdout="abc123\n")
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("rebase-default"))
+
+    assert result.status == "failed"
+    assert result.message == "rebase: nothing to rebase"
+
+
+def test_apply_plan_retire_contained_switch_failure_returns_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """git switch -C non-zero exit (retire-contained) must set status='failed'."""
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args[:1] == ["switch"]:
+            return completed(args, stderr="fatal: not a valid branch", returncode=1)
+        return completed(args, stdout="abc123\n")
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("retire-contained"))
+
+    assert result.status == "failed"
+    assert result.message == "fatal: not a valid branch"
+
+
+def test_apply_plan_retire_merged_pr_switch_failure_returns_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """git switch -C non-zero exit (retire-merged-pr) must set status='failed'."""
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args[:1] == ["switch"]:
+            return completed(args, stderr="fatal: cannot switch", returncode=128)
+        return completed(args, stdout="abc123\n")
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("retire-merged-pr"))
+
+    assert result.status == "failed"
+    assert result.message == "fatal: cannot switch"
+
+
+def test_apply_plan_pull_default_noop_when_head_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """pull-default where HEAD does not advance must yield status='noop'."""
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args == ["rev-parse", "HEAD"]:
+            return completed(args, stdout="deadbeef\n")
+        return completed(args)
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("pull-default"))
+
+    assert result.status == "noop"
+    assert result.message == "already up to date"
+
+
+def test_apply_plan_unsupported_action_returns_failed_without_git_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unknown action must set status='failed' with 'unsupported action:' message.
+
+    fetch IS called (it runs before the action dispatch), but no git merge/rebase/switch
+    should be called, since we return early from the else branch.
+    """
+    git_calls: list[list[str]] = []
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        git_calls.append(args)
+        return completed(args, stdout="abc123\n")
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    unknown_rec = apply_sync.PlanRecord(
+        path="/repo",
+        branch="feature/test",
+        dirty="clean",
+        pr="",
+        draft="",
+        status="planned",
+        action="unknown",
+        target="origin/main",
+        message="planned",
+    )
+    result = apply_sync.apply_plan(unknown_rec)
+
+    assert result.status == "failed"
+    assert result.message == "unsupported action: unknown"
+    assert not any(a[:1] in (["merge"], ["rebase"], ["switch"]) for a in git_calls), (
+        "merge/rebase/switch must not be called for unsupported action"
+    )
+
+
+def test_apply_plan_non_planned_status_passthrough_dirty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Records with status other than 'planned' must be returned as-is (no git calls)."""
+    git_calls: list[list[str]] = []
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        git_calls.append(args)
+        return completed(args)
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    for non_planned_status in (
+        "dirty",
+        "failed",
+        "noop",
+        "updated",
+        "settled",
+        "skipped",
+    ):
+        dirty_rec = apply_sync.PlanRecord(
+            path="/repo",
+            branch="feature/test",
+            dirty="dirty",
+            pr="",
+            draft="",
+            status=non_planned_status,
+            action="pull-default",
+            target="origin/main",
+            message="some prior message",
+        )
+        result = apply_sync.apply_plan(dirty_rec)
+        assert result is dirty_rec, (
+            f"status={non_planned_status!r} must be passed through"
+        )
+
+    assert git_calls == [], "no git commands must be issued for non-planned records"
+
+
+def test_main_exit_code_one_when_any_record_failed(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """main() must return exit code 1 when at least one record has status='failed'."""
+    applied_ok = _make_plan_record(
+        status="updated", action="pull-default", target="origin/main"
+    )
+    applied_fail = _make_plan_record(
+        status="failed", action="pull-default", target="origin/main", path="/repo2"
+    )
+    # apply_plan results: first=ok, second=failed — iterator drives the sequence
+    apply_results = iter([applied_ok, applied_fail])
+
+    monkeypatch.setattr(apply_sync, "plan_one", lambda wt, d: applied_ok)
+    monkeypatch.setattr(apply_sync, "list_worktrees", lambda root: [object(), object()])
+    monkeypatch.setattr(apply_sync, "default_branch", lambda root: "main")
+    monkeypatch.setattr(apply_sync, "apply_plan", lambda r: next(apply_results))
+    monkeypatch.setattr(
+        "sys.argv", ["apply_linked_worktree_sync.py", "--format", "jsonl"]
+    )
+
+    exit_code = apply_sync.main()
+
+    assert exit_code == 1
+
+
+def test_main_exit_code_zero_when_no_record_failed(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """main() must return exit code 0 when no record has status='failed'."""
+    applied_ok = _make_plan_record(
+        status="updated", action="pull-default", target="origin/main"
+    )
+    applied_noop = _make_plan_record(
+        status="noop", action="pull-default", target="origin/main"
+    )
+    applied_settled = _make_plan_record(
+        status="settled", action="retire-contained", target="origin/main"
+    )
+
+    results = iter([applied_ok, applied_noop, applied_settled])
+
+    monkeypatch.setattr(apply_sync, "plan_one", lambda wt, d: applied_ok)
+    monkeypatch.setattr(
+        apply_sync, "list_worktrees", lambda root: [object(), object(), object()]
+    )
+    monkeypatch.setattr(apply_sync, "default_branch", lambda root: "main")
+    monkeypatch.setattr(apply_sync, "apply_plan", lambda r: next(results))
+    monkeypatch.setattr(
+        "sys.argv", ["apply_linked_worktree_sync.py", "--format", "jsonl"]
+    )
+
+    exit_code = apply_sync.main()
+
+    assert exit_code == 0
