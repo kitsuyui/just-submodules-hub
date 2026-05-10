@@ -505,6 +505,68 @@ def test_local_head_returns_detached_when_symbolic_ref_fails(
     )
 
 
+def test_local_head_returns_empty_oid_when_rev_parse_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Uninitialized submodule paths must not raise from local_head.
+
+    When the path exists but has no Git repository, both ``git symbolic-ref``
+    and ``git rev-parse HEAD`` fail. local_head must return a sentinel pair so
+    that build_sync_targets can pass the path through to sync_one for the
+    per-repo error path instead of aborting the whole batch.
+    """
+
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        raise RuntimeError("not a git repository")
+
+    monkeypatch.setattr(default_heads, "run", fake_run)
+    assert default_heads.local_head("repo/github.com/kitsuyui/uninit") == (
+        "DETACHED",
+        "",
+    )
+
+
+def test_build_sync_targets_includes_uninitialized_submodule(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An uninitialized submodule must not abort prefilter for the whole batch.
+
+    Before the fix, ``git rev-parse HEAD`` against a path with no Git repo
+    raised RuntimeError out of build_sync_targets, killing ``sync all``. With
+    local_head returning ("DETACHED", ""), the path is reported as needing
+    sync and is passed to sync_one which then surfaces the per-repo error.
+    """
+    bar = DummyBar()
+
+    monkeypatch.setattr(
+        sync,
+        "fetch_owner_default_heads",
+        lambda owner, _bar: {
+            "kitsuyui/initialized": ("main", "aaa"),
+            "kitsuyui/uninit": ("main", "bbb"),
+        },
+    )
+
+    def fake_local_head(repo_path: str) -> tuple[str, str]:
+        if repo_path.endswith("uninit"):
+            return ("DETACHED", "")
+        return ("main", "aaa")
+
+    monkeypatch.setattr(sync, "local_head", fake_local_head)
+
+    targets = sync.build_sync_targets(
+        [
+            "repo/github.com/kitsuyui/initialized",
+            "repo/github.com/kitsuyui/uninit",
+        ],
+        prefilter=True,
+        bar=bar,
+    )
+
+    assert targets == ["repo/github.com/kitsuyui/uninit"]
+    assert bar.updated == 1
+
+
 def test_sync_one_rejects_missing_repository(tmp_path: Path) -> None:
     try:
         sync.sync_one(str(tmp_path / "missing"))
