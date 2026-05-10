@@ -8,6 +8,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "mypy>=2.0.0",
   "pytest>=9.0.3",
   "pytest-cov>=7.0.0",
   "ruff>=0.7.0",
@@ -24,3 +25,36 @@ testpaths = [
 [tool.ruff]
 line-length = 88
 target-version = "py313"
+
+[tool.mypy]
+# https://mypy.readthedocs.io/en/latest/config_file.html
+ignore_missing_imports = true
+disallow_any_decorated = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_unused_ignores = true
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+# Tests are temporarily exempted from strict typing. The follow-up PR
+# will annotate test fixtures and remove this override.
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
+disallow_any_decorated = false
+check_untyped_defs = false
+disable_error_code = ["func-returns-value"]
+
+[[tool.mypy.overrides]]
+# tqdm has no py.typed marker; its contextmanager-decorated generator's type
+# contains Any from the untyped tqdm class. Suppress disallow_any_decorated
+# for this module until tqdm ships inline type stubs.
+module = "just_submodules_hub.submodule_batch"
+disallow_any_decorated = false

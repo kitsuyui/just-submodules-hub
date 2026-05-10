@@ -18,6 +18,10 @@ from just_submodules_hub.default_heads import (
 )
 from just_submodules_hub.gitmodules import read_gitmodules_paths
 from just_submodules_hub.repo_paths import resolve_repo_input
+from typing import Any
+
+from tqdm import tqdm
+
 from just_submodules_hub.submodule_batch import (
     positive_int,
     print_records,
@@ -277,7 +281,7 @@ def build_reconcile_targets(
     paths: list[str],
     *,
     prefilter: bool,
-    bar,
+    bar: tqdm[Any] | None,
 ) -> tuple[list[str], list[Result]]:
     if not prefilter:
         return paths, []

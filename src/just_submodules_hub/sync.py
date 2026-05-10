@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 import sys
-from typing import Iterable, Iterator, List
+from typing import Any, Iterable, Iterator, List
 from urllib.parse import quote, urlsplit
 
 from .default_heads import (
@@ -20,6 +20,8 @@ from .repo_paths import repo_display_name, repo_owner, resolve_repo_input
 from .default_branch import parse_head_branch_line  # noqa: F401
 from .default_branch import resolve_default_branch
 from .shell import run
+from tqdm import tqdm
+
 from .submodule_batch import (
     BatchFailure,
     positive_int as batch_positive_int,
@@ -203,14 +205,14 @@ def temporary_github_submodule_credentials(
     except RuntimeError as err:
         raise RuntimeError(redact_secrets(str(err), redactions)) from err
     finally:
-        for snapshot in reversed(remote_snapshots):
+        for remote_snapshot in reversed(remote_snapshots):
             try:
-                restore_remote(snapshot)
+                restore_remote(remote_snapshot)
             except RuntimeError as err:
                 restore_errors.append(redact_secrets(str(err), redactions))
-        for snapshot in reversed(parent_snapshots):
+        for parent_snapshot in reversed(parent_snapshots):
             try:
-                restore_parent_config(snapshot)
+                restore_parent_config(parent_snapshot)
             except RuntimeError as err:
                 restore_errors.append(redact_secrets(str(err), redactions))
         if restore_errors and sys.exc_info()[0] is None:
@@ -220,7 +222,9 @@ def temporary_github_submodule_credentials(
             )
 
 
-def build_sync_targets(paths: Iterable[str], prefilter: bool, bar) -> List[str]:
+def build_sync_targets(
+    paths: Iterable[str], prefilter: bool, bar: tqdm[Any] | None
+) -> List[str]:
     path_list = list(paths)
     if not prefilter:
         return path_list
@@ -316,7 +320,7 @@ def sync_all(
     paths: List[str],
     jobs: int,
     verbose: bool,
-    bar,
+    bar: tqdm[Any] | None,
     redactions: Iterable[str] = (),
 ) -> tuple[int, int]:
     results, failures = run_parallel(

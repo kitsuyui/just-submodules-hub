@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable, cast
 
 from .repo_paths import repo_display_name, repo_owner
 from .shell import run
+from tqdm import tqdm
+
 from .submodule_batch import tick
 
 
@@ -54,7 +56,7 @@ def gh_graphql(owner: str, cursor: str | None) -> dict:
     if cursor:
         cmd.extend(["-F", f"cursor={cursor}"])
     out = run(cmd)
-    return json.loads(out)
+    return cast(dict[Any, Any], json.loads(out))
 
 
 def extract_default_head(node: dict, owner: str) -> tuple[str, DefaultHead] | None:
@@ -70,7 +72,9 @@ def extract_default_head(node: dict, owner: str) -> tuple[str, DefaultHead] | No
     return f"{owner}/{repo_name}", DefaultHead(name, oid)
 
 
-def fetch_owner_default_heads(owner: str, bar) -> dict[str, DefaultHead]:
+def fetch_owner_default_heads(
+    owner: str, bar: tqdm[Any] | None
+) -> dict[str, DefaultHead]:
     cursor: str | None = None
     found: dict[str, DefaultHead] = {}
 
@@ -110,7 +114,9 @@ def owner_prefilter_total(paths: Iterable[str], prefilter: bool) -> int:
     return len({repo_owner(path) for path in paths})
 
 
-def fetch_default_heads_for_paths(paths: Iterable[str], bar) -> dict[str, DefaultHead]:
+def fetch_default_heads_for_paths(
+    paths: Iterable[str], bar: tqdm[Any] | None
+) -> dict[str, DefaultHead]:
     path_list = list(paths)
     owners = sorted({repo_owner(path) for path in path_list})
     heads: dict[str, DefaultHead] = {}
