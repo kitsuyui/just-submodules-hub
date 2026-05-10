@@ -252,11 +252,18 @@ def temporary_github_submodule_credentials(
                 restore_parent_config(parent_snapshot)
             except RuntimeError as err:
                 restore_errors.append(redact_secrets(str(err), redactions))
-        if restore_errors and sys.exc_info()[0] is None:
-            raise RuntimeError(
-                "Failed to restore tokenized submodule URLs: "
-                + "; ".join(restore_errors),
+        if restore_errors:
+            message = "Failed to restore tokenized submodule URLs: " + "; ".join(
+                restore_errors
             )
+            in_flight = sys.exc_info()[1]
+            if in_flight is None:
+                raise RuntimeError(message)
+            # The body is unwinding via another exception; attach the
+            # restore failures so tokenized URLs lingering in .git/config
+            # are not silently dropped from the caller's view.
+            in_flight.add_note(message)
+            print(f"warning: {message}", file=sys.stderr)
 
 
 def build_sync_targets(

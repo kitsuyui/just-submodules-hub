@@ -272,6 +272,83 @@ def test_temporary_github_submodule_credentials_redacts_setup_errors(
     assert "secret-token" not in capsys.readouterr().err
 
 
+def test_temporary_github_submodule_credentials_surfaces_restore_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Restore failures must be surfaced even when the body raises.
+
+    When the with-block body raises and the finally clause then fails to
+    restore tokenized URLs, the restore failure used to be silently
+    discarded because sys.exc_info() was non-None during unwinding. The
+    tokenized URL would remain in .git/config without the caller ever
+    learning about it. Restore failures must be attached to the in-flight
+    exception (PEP 678) and emitted as a redacted stderr warning.
+    """
+    repo_path = tmp_path / "repo/github.com/kitsuyui/private-repo"
+    (repo_path / ".git").mkdir(parents=True)
+    (tmp_path / ".gitmodules").write_text(
+        """
+[submodule "repo/github.com/kitsuyui/private-repo"]
+    path = repo/github.com/kitsuyui/private-repo
+    url = git@github.com:kitsuyui/private-repo.git
+""".strip(),
+        encoding="utf-8",
+    )
+    parent_config: dict[str, str] = {}
+    remotes = {repo_path: "git@github.com:kitsuyui/private-repo.git"}
+    set_url_calls = 0
+
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        nonlocal set_url_calls
+        cwd_path = Path(str(cwd)) if cwd is not None else tmp_path
+        if list(cmd)[:4] == ["git", "config", "--local", "--get"]:
+            key = list(cmd)[4]
+            if key not in parent_config:
+                raise RuntimeError("missing config")
+            return parent_config[key]
+        if list(cmd)[:3] == ["git", "config", "--local"] and list(cmd)[3] == "--unset":
+            parent_config.pop(list(cmd)[4], None)
+            return ""
+        if list(cmd)[:3] == ["git", "config", "--local"]:
+            parent_config[list(cmd)[3]] = list(cmd)[4]
+            return ""
+        if list(cmd) == ["git", "remote", "get-url", "origin"]:
+            return remotes[cwd_path]
+        if list(cmd)[:4] == ["git", "remote", "set-url", "origin"]:
+            set_url_calls += 1
+            # Second call is the restore step; make it fail to surface the
+            # restore-cleanup error path.
+            if set_url_calls >= 2:
+                raise RuntimeError("restore failed for secret-token")
+            remotes[cwd_path] = list(cmd)[4]
+            return ""
+        raise AssertionError(f"unexpected command: {list(cmd)}")
+
+    monkeypatch.setenv("SUBMODULE_TOKEN", "secret-token")
+    monkeypatch.setattr(sync, "run", fake_run)
+
+    body_error = RuntimeError("body failed")
+    with (
+        pytest.raises(RuntimeError) as excinfo,
+        sync.temporary_github_submodule_credentials("SUBMODULE_TOKEN", tmp_path),
+    ):
+        raise body_error
+
+    # The body's exception is preserved (re-raised after redaction with __cause__).
+    assert "body failed" in str(excinfo.value)
+    assert excinfo.value.__cause__ is body_error
+    # Restore failure is attached to the in-flight exception via PEP 678.
+    notes = getattr(excinfo.value, "__notes__", [])
+    assert any("Failed to restore tokenized submodule URLs" in note for note in notes)
+    assert all("secret-token" not in note for note in notes)
+    # Stderr also surfaces a redacted warning so cleanup failures are visible.
+    captured = capsys.readouterr()
+    assert "Failed to restore tokenized submodule URLs" in captured.err
+    assert "secret-token" not in captured.err
+
+
 def test_temporary_github_submodule_credentials_requires_env(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
