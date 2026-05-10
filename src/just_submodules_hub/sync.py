@@ -327,6 +327,13 @@ def sync_one(repo_path: str) -> SyncResult:
         )
 
     run(["git", "fetch", "origin", "--prune"], cwd=cwd)
+    # `git fetch` does not update `refs/remotes/origin/HEAD`, so when the
+    # upstream renames its default branch the local symbolic-ref keeps
+    # pointing at the stale name. Refresh it best-effort so that
+    # `resolve_default_branch` (which queries the symbolic-ref first)
+    # picks up the rename.
+    with suppress(Exception):
+        run(["git", "remote", "set-head", "origin", "-a"], cwd=cwd)
     default_branch = resolve_default_branch(repo_path, fallback=None)
 
     switched = current_branch != default_branch
