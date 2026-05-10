@@ -870,3 +870,378 @@ def test_create_public_repo_creates_and_adds(
     # git submodule add was called (add-repo dispatched internally)
     submodule_calls = [c for c in all_calls if "submodule" in c]
     assert submodule_calls
+
+
+# ---------- install-linked-worktree-hooks / reset-linked-worktree / cleanup-linked-worktrees ----------
+
+
+def test_install_linked_worktree_hooks_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["install-linked-worktree-hooks"]
+    rc = fn(["--format", "tsv"])
+    assert rc == 0
+    assert "linked_worktree_safety.py" in calls[0][5]
+    assert "install-hooks" in calls[0]
+    assert "--format" in calls[0]
+    assert "tsv" in calls[0]
+
+
+def test_reset_linked_worktree_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["reset-linked-worktree"]
+    rc = fn(["/some/path", "--apply"])
+    assert rc == 0
+    assert "linked_worktree_safety.py" in calls[0][5]
+    assert "reset" in calls[0]
+    assert "/some/path" in calls[0]
+    assert "--apply" in calls[0]
+
+
+def test_cleanup_linked_worktrees_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["cleanup-linked-worktrees"]
+    rc = fn(["--path-glob", "worktrees/*"])
+    assert rc == 0
+    assert "linked_worktree_safety.py" in calls[0][5]
+    assert "cleanup" in calls[0]
+    assert "--path-glob" in calls[0]
+    assert "worktrees/*" in calls[0]
+
+
+def test_cleanup_linked_worktrees_passes_through_exit_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    monkeypatch.setattr(
+        _mod.subprocess,
+        "run",
+        lambda cmd, **kw: CompletedProcess(cmd, 1),
+    )
+    fn = reg._REGISTRY["cleanup-linked-worktrees"]
+    rc = fn(["--path-glob", "*"])
+    assert rc == 1
+
+
+# ---------- remove-linked-worktree ----------
+
+
+def test_remove_linked_worktree_requires_path(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["remove-linked-worktree"]
+    rc = fn([])
+    assert rc == 2
+    assert "PATH is required" in capsys.readouterr().err
+
+
+def test_remove_linked_worktree_calls_git_worktree_remove(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["remove-linked-worktree"]
+    rc = fn(["/some/worktree"])
+    assert rc == 0
+    assert calls == [["git", "worktree", "remove", "/some/worktree"]]
+
+
+def test_remove_linked_worktree_with_force(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["remove-linked-worktree"]
+    rc = fn(["/some/worktree", "--force"])
+    assert rc == 0
+    assert calls == [["git", "worktree", "remove", "--force", "/some/worktree"]]
+
+
+def test_remove_linked_worktree_rejects_unknown_option(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    monkeypatch.setattr(
+        _mod.subprocess, "run", lambda cmd, **kw: CompletedProcess(cmd, 0)
+    )
+    fn = reg._REGISTRY["remove-linked-worktree"]
+    rc = fn(["/some/worktree", "--unknown"])
+    assert rc == 2
+    assert "unknown linked worktree remove option" in capsys.readouterr().err
+
+
+def test_remove_linked_worktree_rejects_extra_positional(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    monkeypatch.setattr(
+        _mod.subprocess, "run", lambda cmd, **kw: CompletedProcess(cmd, 0)
+    )
+    fn = reg._REGISTRY["remove-linked-worktree"]
+    rc = fn(["/some/worktree", "extra-arg"])
+    assert rc == 2
+    assert "unexpected linked worktree remove argument" in capsys.readouterr().err
+
+
+# ---------- add-linked-worktree ----------
+
+
+def test_add_linked_worktree_requires_path(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["add-linked-worktree"]
+    rc = fn([])
+    assert rc == 2
+    assert "PATH is required" in capsys.readouterr().err
+
+
+def test_add_linked_worktree_basic(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    git_calls: list[list[str]] = []
+    dispatch_calls: list[tuple[str, list[str]]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        git_calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    def fake_dispatch(name: str, args: list[str]) -> int:
+        dispatch_calls.append((name, args))
+        return 0
+
+    worktree_dir = tmp_path / "new-worktree"
+    worktree_dir.mkdir()
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+
+    fn = reg._REGISTRY["add-linked-worktree"]
+    rc = fn([str(worktree_dir)])
+    assert rc == 0
+    # git worktree add called without -b or start-point
+    assert git_calls == [["git", "worktree", "add", str(worktree_dir)]]
+    # init-all-repos dispatched with --force
+    assert dispatch_calls == [("init-all-repos", ["--force"])]
+
+
+def test_add_linked_worktree_with_branch_and_start_point(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    git_calls: list[list[str]] = []
+    dispatch_calls: list[tuple[str, list[str]]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        git_calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    def fake_dispatch(name: str, args: list[str]) -> int:
+        dispatch_calls.append((name, args))
+        return 0
+
+    worktree_dir = tmp_path / "wt"
+    worktree_dir.mkdir()
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+
+    fn = reg._REGISTRY["add-linked-worktree"]
+    rc = fn([str(worktree_dir), "--branch", "feature/x", "origin/main"])
+    assert rc == 0
+    assert git_calls == [
+        ["git", "worktree", "add", "-b", "feature/x", str(worktree_dir), "origin/main"]
+    ]
+    assert dispatch_calls[0][0] == "init-all-repos"
+    assert "--force" in dispatch_calls[0][1]
+
+
+def test_add_linked_worktree_no_submodules(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    dispatch_calls: list[tuple[str, list[str]]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        return CompletedProcess(cmd, 0)
+
+    def fake_dispatch(name: str, args: list[str]) -> int:
+        dispatch_calls.append((name, args))
+        return 0
+
+    worktree_dir = tmp_path / "wt2"
+    worktree_dir.mkdir()
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+
+    fn = reg._REGISTRY["add-linked-worktree"]
+    rc = fn([str(worktree_dir), "--no-submodules"])
+    assert rc == 0
+    # dispatch should NOT be called when --no-submodules is given
+    assert dispatch_calls == []
+
+
+def test_add_linked_worktree_fetch_fallback_passed_to_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    dispatch_calls: list[tuple[str, list[str]]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        return CompletedProcess(cmd, 0)
+
+    def fake_dispatch(name: str, args: list[str]) -> int:
+        dispatch_calls.append((name, args))
+        return 0
+
+    worktree_dir = tmp_path / "wt3"
+    worktree_dir.mkdir()
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+
+    fn = reg._REGISTRY["add-linked-worktree"]
+    rc = fn([str(worktree_dir), "--fetch-fallback", "--jobs=4"])
+    assert rc == 0
+    _, init_args = dispatch_calls[0]
+    assert "--force" in init_args
+    assert "--fetch-fallback" in init_args
+    assert "--jobs" in init_args
+    assert "4" in init_args
+
+
+def test_add_linked_worktree_git_failure_skips_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    dispatch_calls: list[tuple[str, list[str]]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        return CompletedProcess(cmd, 128)
+
+    def fake_dispatch(name: str, args: list[str]) -> int:
+        dispatch_calls.append((name, args))
+        return 0
+
+    worktree_dir = tmp_path / "wt4"
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+
+    fn = reg._REGISTRY["add-linked-worktree"]
+    rc = fn([str(worktree_dir)])
+    assert rc == 128
+    assert dispatch_calls == []
+
+
+def test_add_linked_worktree_rejects_unknown_option(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["add-linked-worktree"]
+    rc = fn(["/some/path", "--unknown-flag"])
+    assert rc == 2
+    assert "unknown linked worktree add option" in capsys.readouterr().err
+
+
+def test_add_linked_worktree_invalid_jobs(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["add-linked-worktree"]
+    rc = fn(["/some/path", "--jobs=abc"])
+    assert rc == 2
+    assert "JOBS must be a positive integer" in capsys.readouterr().err
+
+
+def test_add_linked_worktree_branch_short_form(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
+
+    git_calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        git_calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    worktree_dir = tmp_path / "wt5"
+    worktree_dir.mkdir()
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mod, "dispatch", lambda n, a: 0)
+
+    fn = reg._REGISTRY["add-linked-worktree"]
+    rc = fn([str(worktree_dir), "-b", "my-branch"])
+    assert rc == 0
+    assert git_calls[0] == [
+        "git",
+        "worktree",
+        "add",
+        "-b",
+        "my-branch",
+        str(worktree_dir),
+    ]
