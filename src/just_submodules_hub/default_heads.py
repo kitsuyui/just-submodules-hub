@@ -146,12 +146,16 @@ def local_head(repo_path: str | Path) -> tuple[str, str]:
     """Return the local (branch, OID) pair for *repo_path*.
 
     Returns ("DETACHED", <oid>) when HEAD is in detached state.
+    Returns ("DETACHED", "") when *repo_path* has no Git repository
+    (e.g., a submodule directory that has not been initialized yet).
     """
     cwd = Path(repo_path)
     branch = "DETACHED"
+    oid = ""
     with contextlib.suppress(Exception):
         branch = run(["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=cwd)
-    oid = run(["git", "rev-parse", "HEAD"], cwd=cwd)
+    with contextlib.suppress(Exception):
+        oid = run(["git", "rev-parse", "HEAD"], cwd=cwd)
     return branch, oid
 
 
