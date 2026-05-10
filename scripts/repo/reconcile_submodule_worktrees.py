@@ -355,7 +355,10 @@ def parse_args() -> argparse.Namespace:
         dest="prefilter",
         action="store_true",
         default=True,
-        help="skip default-branch submodules that already match the remote default HEAD (default)",
+        help=(
+            "skip default-branch submodules that already match the remote default HEAD"
+            " (default)"
+        ),
     )
     parser.add_argument(
         "--no-prefilter",

@@ -163,7 +163,7 @@ def print_records(
     fields: Sequence[str],
     output_format: str,
 ) -> None:
-    """Dispatch *records* to print_jsonl, print_tsv, or print_table based on *output_format*."""
+    """Dispatch *records* to the appropriate printer based on *output_format*."""
     if output_format == "jsonl":
         print_jsonl(records)
     elif output_format == "tsv":

@@ -68,6 +68,9 @@ prunable gitdir file points to non-existent location
             detached="no",
             locked="yes",
             prunable="yes",
-            message="locked: still in use; prunable: gitdir file points to non-existent location",
+            message=(
+                "locked: still in use;"
+                " prunable: gitdir file points to non-existent location"
+            ),
         ),
     ]

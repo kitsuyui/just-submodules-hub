@@ -19,7 +19,8 @@ def _url_to_repo_dir(repo_url_input: str) -> str:
 
     Mirrors the shell logic::
 
-        repo_path=$(echo "$repo_url_input" | sed -E 's#^(git@github.com:|https://github.com/)##; s#\\.git$##')
+        repo_path=$(echo "$repo_url_input" \\
+            | sed -E 's#^(git@github.com:|https://github.com/)##; s#\\.git$##')
         repo_dir="repo/github.com/${repo_path}"
 
     Examples::

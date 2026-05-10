@@ -95,7 +95,10 @@ def find_ruleset_by_name(
 
 
 def rules_by_type(rules: list[dict]) -> dict[str, dict]:
-    """Index *rules* by their ``type`` field, discarding entries without a string type."""
+    """Index *rules* by their ``type`` field.
+
+    Discards entries without a string type.
+    """
     typed: dict[str, dict] = {}
     for item in rules:
         rule_type = item.get("type")
@@ -105,7 +108,10 @@ def rules_by_type(rules: list[dict]) -> dict[str, dict]:
 
 
 def pull_request_parameters_match(rule: dict | None) -> bool:
-    """Return True when *rule* has parameters matching BASELINE_PULL_REQUEST_PARAMETERS."""
+    """Return True when *rule* has parameters matching BASELINE_PULL_REQUEST_PARAMETERS.
+
+    Returns False when *rule* is None or parameters do not match.
+    """
     if not rule:
         return False
     parameters = rule.get("parameters")
@@ -128,7 +134,10 @@ def extract_rules(ruleset: dict | None) -> list[dict]:
 
 
 def ref_includes_default_branch(ruleset: dict, default_branch: str) -> bool:
-    """Return True when *ruleset* is active and covers *default_branch* via its ref conditions."""
+    """Return True when *ruleset* is active and covers *default_branch*.
+
+    Checks the ruleset ref conditions for inclusion.
+    """
     if ruleset.get("target") != "branch":
         return False
     if ruleset.get("enforcement") != "active":
@@ -158,7 +167,10 @@ def normalize_ruleset_rules(ruleset: dict | None) -> dict[str, dict]:
 
 
 def rule_is_covered(rule: dict, covering_rules: dict[str, dict]) -> bool:
-    """Return True when *rule* is fully covered by a matching entry in *covering_rules*."""
+    """Return True when *rule* is fully covered by *covering_rules*.
+
+    A pull_request rule is only covered if parameters also match exactly.
+    """
     rule_type = rule.get("type")
     if not isinstance(rule_type, str):
         return False
@@ -181,7 +193,7 @@ def candidate_legacy_rulesets(
     metadata: RepoMetadata,
     rulesets: list[dict],
 ) -> list[dict]:
-    """Return rulesets that cover the default branch and are not the managed baseline."""
+    """Return rulesets covering the default branch, excluding the managed baseline."""
     return [
         item
         for item in rulesets
@@ -251,7 +263,87 @@ def summarize_legacy_rulesets(metadata: RepoMetadata, rulesets: list[dict]) -> d
     }
 
 
-def summarize_classic_branch_protection(  # noqa: C901
+def _collect_extra_settings(protection: dict) -> list[str]:
+    """Return non-baseline classic branch-protection setting names in *protection*.
+
+    These are settings outside the managed baseline ruleset.
+    """
+    extra: list[str] = []
+    if protection.get("required_status_checks") is not None:
+        extra.append("required_status_checks")
+    if protection.get("enforce_admins", {}).get("enabled") is True:
+        extra.append("enforce_admins")
+    if protection.get("restrictions") is not None:
+        extra.append("restrictions")
+    if protection.get("required_linear_history", {}).get("enabled") is True:
+        extra.append("required_linear_history")
+    if protection.get("required_conversation_resolution", {}).get("enabled") is True:
+        extra.append("required_conversation_resolution")
+    if protection.get("block_creations", {}).get("enabled") is True:
+        extra.append("block_creations")
+    if protection.get("lock_branch", {}).get("enabled") is True:
+        extra.append("lock_branch")
+    if protection.get("allow_fork_syncing", {}).get("enabled") is True:
+        extra.append("allow_fork_syncing")
+    return extra
+
+
+def _check_pr_coverage(
+    required_pull_request_reviews: object,
+    effective_rule_map: dict[str, dict],
+    covered_settings: list[str],
+    uncovered_settings: list[str],
+    coverage_reasons: list[str],
+) -> None:
+    """Classify pull-request review requirement as covered or uncovered."""
+    if required_pull_request_reviews is not None and pull_request_parameters_match(
+        effective_rule_map.get("pull_request"),
+    ):
+        covered_settings.append("required_pull_request_reviews")
+    elif required_pull_request_reviews is not None:
+        uncovered_settings.append("required_pull_request_reviews")
+        coverage_reasons.append(
+            "classic required_pull_request_reviews is not covered"
+            " by effective pull_request rule",
+        )
+
+
+def _check_force_push_coverage(
+    allow_force_pushes: object,
+    effective_rule_map: dict[str, dict],
+    covered_settings: list[str],
+    uncovered_settings: list[str],
+    coverage_reasons: list[str],
+) -> None:
+    """Classify force-push restriction as covered or uncovered."""
+    if allow_force_pushes is False and "non_fast_forward" in effective_rule_map:
+        covered_settings.append("allow_force_pushes=false")
+    elif allow_force_pushes is False:
+        uncovered_settings.append("allow_force_pushes=false")
+        coverage_reasons.append(
+            "classic force-push restriction is not covered"
+            " by effective non_fast_forward rule",
+        )
+
+
+def _check_deletion_coverage(
+    allow_deletions: object,
+    effective_rule_map: dict[str, dict],
+    covered_settings: list[str],
+    uncovered_settings: list[str],
+    coverage_reasons: list[str],
+) -> None:
+    """Classify deletion restriction as covered or uncovered."""
+    if allow_deletions is False and "deletion" in effective_rule_map:
+        covered_settings.append("allow_deletions=false")
+    elif allow_deletions is False:
+        uncovered_settings.append("allow_deletions=false")
+        coverage_reasons.append(
+            "classic deletion restriction is not covered by effective deletion rule",
+        )
+
+
+def summarize_classic_branch_protection(
     metadata: RepoMetadata,
     protection: dict | None,
     effective_rules: list[dict],
@@ -278,54 +370,34 @@ def summarize_classic_branch_protection(  # noqa: C901
     uncovered_settings: list[str] = []
     coverage_reasons: list[str] = []
 
-    if required_pull_request_reviews is not None and pull_request_parameters_match(
-        effective_rule_map.get("pull_request"),
-    ):
-        covered_settings.append("required_pull_request_reviews")
-    elif required_pull_request_reviews is not None:
-        uncovered_settings.append("required_pull_request_reviews")
-        coverage_reasons.append(
-            "classic required_pull_request_reviews is not covered by effective pull_request rule",
-        )
+    _check_pr_coverage(
+        required_pull_request_reviews,
+        effective_rule_map,
+        covered_settings,
+        uncovered_settings,
+        coverage_reasons,
+    )
+    _check_force_push_coverage(
+        allow_force_pushes,
+        effective_rule_map,
+        covered_settings,
+        uncovered_settings,
+        coverage_reasons,
+    )
+    _check_deletion_coverage(
+        allow_deletions,
+        effective_rule_map,
+        covered_settings,
+        uncovered_settings,
+        coverage_reasons,
+    )
 
-    if allow_force_pushes is False and "non_fast_forward" in effective_rule_map:
-        covered_settings.append("allow_force_pushes=false")
-    elif allow_force_pushes is False:
-        uncovered_settings.append("allow_force_pushes=false")
-        coverage_reasons.append(
-            "classic force-push restriction is not covered by effective non_fast_forward rule",
-        )
-
-    if allow_deletions is False and "deletion" in effective_rule_map:
-        covered_settings.append("allow_deletions=false")
-    elif allow_deletions is False:
-        uncovered_settings.append("allow_deletions=false")
-        coverage_reasons.append(
-            "classic deletion restriction is not covered by effective deletion rule",
-        )
-
-    extra_settings = []
-    if protection.get("required_status_checks") is not None:
-        extra_settings.append("required_status_checks")
-    if protection.get("enforce_admins", {}).get("enabled") is True:
-        extra_settings.append("enforce_admins")
-    if protection.get("restrictions") is not None:
-        extra_settings.append("restrictions")
-    if protection.get("required_linear_history", {}).get("enabled") is True:
-        extra_settings.append("required_linear_history")
-    if protection.get("required_conversation_resolution", {}).get("enabled") is True:
-        extra_settings.append("required_conversation_resolution")
-    if protection.get("block_creations", {}).get("enabled") is True:
-        extra_settings.append("block_creations")
-    if protection.get("lock_branch", {}).get("enabled") is True:
-        extra_settings.append("lock_branch")
-    if protection.get("allow_fork_syncing", {}).get("enabled") is True:
-        extra_settings.append("allow_fork_syncing")
-
+    extra_settings = _collect_extra_settings(protection)
     if extra_settings:
         uncovered_settings.extend(extra_settings)
         coverage_reasons.extend(
-            f"classic setting '{setting}' is outside the managed baseline and requires manual review"
+            f"classic setting '{setting}' is outside the managed baseline"
+            " and requires manual review"
             for setting in extra_settings
         )
 

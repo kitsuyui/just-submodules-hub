@@ -159,7 +159,8 @@ def test_cleanup_repo_skips_repositories_without_pr_api(
 ) -> None:
     def fail_inspect(repo: Path, remote: str, limit: int) -> object:
         raise RuntimeError(
-            "GraphQL: Could not resolve to a Repository with the name 'owner/repo.wiki'.",
+            "GraphQL: Could not resolve to a Repository"
+            " with the name 'owner/repo.wiki'.",
         )
 
     monkeypatch.setattr(cleanup, "inspect_state", fail_inspect)
@@ -181,7 +182,8 @@ def test_cleanup_repo_skips_repositories_without_pr_api(
             "repo",
             "",
             "skipped",
-            "GraphQL: Could not resolve to a Repository with the name 'owner/repo.wiki'.",
+            "GraphQL: Could not resolve to a Repository"
+            " with the name 'owner/repo.wiki'.",
         ),
     ]
 

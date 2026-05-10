@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import just_submodules_hub.run_action.actions.list_github_repos as list_github_repos_module
+import just_submodules_hub.run_action.actions.list_github_repos as list_github_repos_module  # noqa: E501
 from just_submodules_hub.gitmodules import managed_repo_slugs, read_gitmodules_paths
 from just_submodules_hub.run_action.registry import action
 

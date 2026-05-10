@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
+from dataclasses import dataclass
 
 from just_submodules_hub.run_action.actions._helpers import (
     resolve_submodule_jobs,
@@ -13,58 +15,91 @@ from just_submodules_hub.run_action.actions._helpers import (
 from just_submodules_hub.run_action.registry import action
 
 
-@action("init-all-repos")
-def init_all_repos(args: list[str]) -> int:  # noqa: C901
-    """Initialize all submodules and set ``ignore = all`` in the local git config."""
-    requested_jobs = ""
-    no_fetch = False
-    fetch_fallback = False
-    force = False
+@dataclass
+class _InitAllReposArgs:
+    """Parsed arguments for init-all-repos."""
 
-    i = 0
-    while i < len(args):
-        arg = args[i]
-        if arg == "--no-fetch":
-            no_fetch = True
-        elif arg == "--fetch-fallback":
-            fetch_fallback = True
-            no_fetch = True
-        elif arg == "--force":
-            force = True
-        elif arg == "--jobs":
-            i += 1
-            if i >= len(args) or not args[i]:
-                print("--jobs requires a value", file=sys.stderr)
-                return 2
-            requested_jobs = args[i]
-        elif arg.startswith("--jobs="):
-            requested_jobs = arg[len("--jobs=") :]
-        elif arg.startswith("--"):
-            print(f"unknown init-all option: {arg}", file=sys.stderr)
-            return 2
+    requested_jobs: str
+    no_fetch: bool
+    fetch_fallback: bool
+    force: bool
+
+
+def _build_init_all_repos_parser() -> argparse.ArgumentParser:
+    """Build the argument parser for the init-all-repos action."""
+    parser = argparse.ArgumentParser(
+        prog="init-all-repos",
+        add_help=False,
+        exit_on_error=False,
+    )
+    parser.add_argument("jobs_positional", nargs="?", default="", metavar="JOBS")
+    parser.add_argument("--no-fetch", dest="no_fetch", action="store_true")
+    parser.add_argument("--fetch-fallback", dest="fetch_fallback", action="store_true")
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--jobs", default="", metavar="JOBS")
+    return parser
+
+
+def _parse_init_all_repos_args(args: list[str]) -> _InitAllReposArgs | int:
+    """Parse args for init-all-repos.
+
+    Returns an _InitAllReposArgs on success or an integer exit code on error.
+    """
+    parser = _build_init_all_repos_parser()
+    try:
+        ns, unknown = parser.parse_known_args(args)
+    except argparse.ArgumentError as exc:
+        msg = str(exc)
+        # Normalize argparse message to "--FLAG requires a value" format
+        if ": expected one argument" in msg:
+            flag = msg.split(": expected one argument")[0].replace("argument ", "")
+            print(f"{flag} requires a value", file=sys.stderr)
         else:
-            if requested_jobs:
-                print(f"unexpected init-all argument: {arg}", file=sys.stderr)
-                return 2
-            requested_jobs = arg
-        i += 1
+            print(f"unknown init-all option: {msg}", file=sys.stderr)
+        return 2
+    except SystemExit:
+        print("unknown init-all option", file=sys.stderr)
+        return 2
+    if unknown:
+        print(f"unknown init-all option: {unknown[0]}", file=sys.stderr)
+        return 2
+    # --jobs flag takes precedence over positional JOBS argument
+    requested_jobs = ns.jobs or ns.jobs_positional
+    # --fetch-fallback implies --no-fetch for the initial attempt
+    no_fetch = ns.no_fetch or ns.fetch_fallback
+    return _InitAllReposArgs(
+        requested_jobs=requested_jobs,
+        no_fetch=no_fetch,
+        fetch_fallback=ns.fetch_fallback,
+        force=ns.force,
+    )
 
-    jobs = resolve_submodule_jobs(requested_jobs)
+
+@action("init-all-repos")
+def init_all_repos(args: list[str]) -> int:
+    """Initialize all submodules and set ``ignore = all`` in the local git config."""
+    parsed = _parse_init_all_repos_args(args)
+    if isinstance(parsed, int):
+        return parsed
+
+    jobs = resolve_submodule_jobs(parsed.requested_jobs)
     if jobs:
         rc = validate_positive_integer(jobs, "JOBS")
         if rc != 0:
             return rc
 
-    if no_fetch and fetch_fallback:
-        rc = run_submodule_update(no_fetch=True, jobs=jobs, force=force)
+    if parsed.no_fetch and parsed.fetch_fallback:
+        rc = run_submodule_update(no_fetch=True, jobs=jobs, force=parsed.force)
         if rc != 0:
             print(
                 "no-fetch submodule update failed; retrying with normal fetch",
                 file=sys.stderr,
             )
-            rc = run_submodule_update(no_fetch=False, jobs=jobs, force=force)
+            rc = run_submodule_update(no_fetch=False, jobs=jobs, force=parsed.force)
     else:
-        rc = run_submodule_update(no_fetch=no_fetch, jobs=jobs, force=force)
+        rc = run_submodule_update(
+            no_fetch=parsed.no_fetch, jobs=jobs, force=parsed.force
+        )
 
     if rc != 0:
         return rc
