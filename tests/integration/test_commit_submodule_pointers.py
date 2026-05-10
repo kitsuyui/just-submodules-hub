@@ -11,7 +11,8 @@ ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
 def test_commit_submodule_pointers_creates_parent_commit(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     remote = create_remote(
         tmp_path,

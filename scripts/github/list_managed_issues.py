@@ -22,7 +22,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="List issues for managed submodules")
     parser.add_argument("state", nargs="?", default="open", help="open, closed, or all")
     parser.add_argument(
-        "--repo-root", default=".", help="repository root (default: current directory)"
+        "--repo-root",
+        default=".",
+        help="repository root (default: current directory)",
     )
     return parser
 

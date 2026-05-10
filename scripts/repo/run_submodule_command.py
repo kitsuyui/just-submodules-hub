@@ -89,13 +89,18 @@ def compact_result(result: CommandResult) -> CommandResult:
 
 def parse_args() -> tuple[argparse.Namespace, str]:
     parser = argparse.ArgumentParser(
-        description="Run a shell command for each managed submodule."
+        description="Run a shell command for each managed submodule.",
     )
     parser.add_argument(
-        "--format", choices=("raw", "table", "tsv", "jsonl"), default="raw"
+        "--format",
+        choices=("raw", "table", "tsv", "jsonl"),
+        default="raw",
     )
     parser.add_argument(
-        "--jobs", type=positive_int, default=4, help="parallel workers (default: 4)"
+        "--jobs",
+        type=positive_int,
+        default=4,
+        help="parallel workers (default: 4)",
     )
     parser.add_argument(
         "--marker-file",
@@ -113,11 +118,14 @@ def main() -> int:
     args, command = parse_args()
     root = Path.cwd()
     paths = SubmoduleFilter(marker_files=tuple(args.marker_file)).apply(
-        read_gitmodules_paths(root), root
+        read_gitmodules_paths(root),
+        root,
     )
     if args.format == "raw":
         results, failures = run_parallel(
-            paths, lambda path: run_one(root, path, command), jobs=args.jobs
+            paths,
+            lambda path: run_one(root, path, command),
+            jobs=args.jobs,
         )
     else:
         results, failures = run_parallel_with_progress(
@@ -136,7 +144,9 @@ def main() -> int:
         print_raw(results)
     else:
         print_records(
-            [compact_result(result) for result in results], FIELDS, args.format
+            [compact_result(result) for result in results],
+            FIELDS,
+            args.format,
         )
     return 1 if any(result.status == "failed" for result in results) else 0
 

@@ -151,13 +151,22 @@ def test_repository_merge_policy_status_all_filters_managed_repositories(
     init_hub(hub_repo)
 
     public_remote = create_remote(
-        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "public-repo",
+        {"README.md": "ok\n"},
     )
     private_remote = create_remote(
-        tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "private-repo",
+        {"README.md": "ok\n"},
     )
     wiki_remote = create_remote(
-        tmp_path, "kitsuyui", "public-repo.wiki", {"Home.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "public-repo.wiki",
+        {"Home.md": "ok\n"},
     )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, private_remote, "repo/github.com/kitsuyui/private-repo")
@@ -218,10 +227,16 @@ def test_repository_merge_policy_disable_all_updates_filtered_repositories(
     init_hub(hub_repo)
 
     public_remote = create_remote(
-        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "public-repo",
+        {"README.md": "ok\n"},
     )
     private_remote = create_remote(
-        tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "private-repo",
+        {"README.md": "ok\n"},
     )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, private_remote, "repo/github.com/kitsuyui/private-repo")
@@ -275,7 +290,7 @@ exit 1
 
     assert proc.returncode == 0, proc.stderr
     assert calls.read_text(encoding="utf-8").splitlines() == [
-        "repos/kitsuyui/public-repo"
+        "repos/kitsuyui/public-repo",
     ]
     payload = json.loads(proc.stdout)
     assert payload["action"] == "disable-all"
@@ -290,10 +305,16 @@ def test_repository_merge_policy_all_actions_default_to_public(tmp_path: Path) -
     init_hub(hub_repo)
 
     public_remote = create_remote(
-        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "public-repo",
+        {"README.md": "ok\n"},
     )
     private_remote = create_remote(
-        tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "private-repo",
+        {"README.md": "ok\n"},
     )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, private_remote, "repo/github.com/kitsuyui/private-repo")

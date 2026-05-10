@@ -100,13 +100,15 @@ def authenticated_login(repo: Path) -> str:
         raise RuntimeError(
             proc.stderr.strip()
             or proc.stdout.strip()
-            or "failed to resolve authenticated GitHub user"
+            or "failed to resolve authenticated GitHub user",
         )
     return proc.stdout.strip()
 
 
 def pr_heads(
-    repo: Path, state: str, limit: int
+    repo: Path,
+    state: str,
+    limit: int,
 ) -> tuple[frozenset[str], frozenset[str]]:
     login = authenticated_login(repo) if state == "merged" else ""
     proc = run_gh(
@@ -124,7 +126,9 @@ def pr_heads(
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            proc.stderr.strip() or proc.stdout.strip() or "failed to list pull requests"
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or "failed to list pull requests",
         )
     payload = json.loads(proc.stdout)
     heads: set[str] = set()
@@ -182,7 +186,11 @@ def cleanup_branch(
         return BranchResult(repo_label, target, branch, "skipped", reason)
     if branch not in state.merged_pr_heads:
         return BranchResult(
-            repo_label, target, branch, "skipped", "no merged pull request"
+            repo_label,
+            target,
+            branch,
+            "skipped",
+            "no merged pull request",
         )
     if (
         target == "remote"
@@ -198,7 +206,11 @@ def cleanup_branch(
         )
     if not apply:
         return BranchResult(
-            repo_label, target, branch, "would-delete", "merged pull request"
+            repo_label,
+            target,
+            branch,
+            "would-delete",
+            "merged pull request",
         )
 
     if target == "local":
@@ -207,7 +219,11 @@ def cleanup_branch(
         proc = run_git(repo, ["push", remote, "--delete", branch])
     if proc.returncode != 0:
         return BranchResult(
-            repo_label, target, branch, "failed", (proc.stderr or proc.stdout).strip()
+            repo_label,
+            target,
+            branch,
+            "failed",
+            (proc.stderr or proc.stdout).strip(),
         )
     return BranchResult(repo_label, target, branch, "deleted", "merged pull request")
 
@@ -282,11 +298,13 @@ def target_paths(root: Path, mode: str) -> list[str]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Clean up branches whose pull requests are already merged."
+        description="Clean up branches whose pull requests are already merged.",
     )
     parser.add_argument("mode", choices=("one", "all", "root-and-all"))
     parser.add_argument(
-        "--apply", action="store_true", help="delete branches; default is dry-run"
+        "--apply",
+        action="store_true",
+        help="delete branches; default is dry-run",
     )
     parser.add_argument(
         "--local",

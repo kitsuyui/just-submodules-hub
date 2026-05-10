@@ -45,5 +45,5 @@ exit 1
         "status": "installed",
     }
     assert "refs/heads/worktree/*" in (repo / ".git" / "hooks" / "pre-push").read_text(
-        encoding="utf-8"
+        encoding="utf-8",
     )

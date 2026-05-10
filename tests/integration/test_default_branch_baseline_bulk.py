@@ -18,10 +18,16 @@ def test_default_branch_baseline_status_all_reports_filtered_managed_repositorie
     init_hub(hub_repo)
 
     public_remote = create_remote(
-        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "public-repo",
+        {"README.md": "ok\n"},
     )
     private_remote = create_remote(
-        tmp_path, "kitsuyui", "private-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "private-repo",
+        {"README.md": "ok\n"},
     )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, private_remote, "repo/github.com/kitsuyui/private-repo")
@@ -97,10 +103,16 @@ def test_default_branch_baseline_status_all_skips_wiki_submodules(
     init_hub(hub_repo)
 
     public_remote = create_remote(
-        tmp_path, "kitsuyui", "public-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "public-repo",
+        {"README.md": "ok\n"},
     )
     wiki_remote = create_remote(
-        tmp_path, "kitsuyui", "public-repo.wiki", {"Home.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "public-repo.wiki",
+        {"Home.md": "ok\n"},
     )
     add_submodule(hub_repo, public_remote, "repo/github.com/kitsuyui/public-repo")
     add_submodule(hub_repo, wiki_remote, "repo/github.com/kitsuyui/public-repo.wiki")
@@ -172,7 +184,10 @@ def test_default_branch_baseline_cleanup_classic_all_skips_manual_review_cases(
     init_hub(hub_repo)
 
     repo_remote = create_remote(
-        tmp_path, "kitsuyui", "classic-repo", {"README.md": "ok\n"}
+        tmp_path,
+        "kitsuyui",
+        "classic-repo",
+        {"README.md": "ok\n"},
     )
     add_submodule(hub_repo, repo_remote, "repo/github.com/kitsuyui/classic-repo")
 
@@ -224,5 +239,5 @@ exit 1
             "action": "skipped",
             "reason": "manual_action_required",
             "uncovered_settings": ["required_status_checks"],
-        }
+        },
     ]

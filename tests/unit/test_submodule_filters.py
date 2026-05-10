@@ -11,12 +11,13 @@ def test_filter_by_marker_selects_matching_paths(tmp_path: Path) -> None:
     (tmp_path / python_path).mkdir(parents=True)
     (tmp_path / js_path).mkdir(parents=True)
     (tmp_path / python_path / "pyproject.toml").write_text(
-        "[project]\n", encoding="utf-8"
+        "[project]\n",
+        encoding="utf-8",
     )
     (tmp_path / js_path / "package.json").write_text("{}\n", encoding="utf-8")
 
     assert filter_by_marker([python_path, js_path], "pyproject.toml", tmp_path) == [
-        python_path
+        python_path,
     ]
 
 
@@ -26,11 +27,13 @@ def test_submodule_filter_applies_multiple_markers(tmp_path: Path) -> None:
     (tmp_path / mixed_path).mkdir(parents=True)
     (tmp_path / python_path).mkdir(parents=True)
     (tmp_path / mixed_path / "pyproject.toml").write_text(
-        "[project]\n", encoding="utf-8"
+        "[project]\n",
+        encoding="utf-8",
     )
     (tmp_path / mixed_path / "package.json").write_text("{}\n", encoding="utf-8")
     (tmp_path / python_path / "pyproject.toml").write_text(
-        "[project]\n", encoding="utf-8"
+        "[project]\n",
+        encoding="utf-8",
     )
 
     selected = SubmoduleFilter(marker_files=("pyproject.toml", "package.json")).apply(

@@ -18,7 +18,9 @@ class SubmoduleFilter:
 
 
 def filter_by_marker(
-    paths: Iterable[str], marker_file: str, repo_root: Path | str = "."
+    paths: Iterable[str],
+    marker_file: str,
+    repo_root: Path | str = ".",
 ) -> list[str]:
     if not marker_file:
         raise ValueError("marker file is required")

@@ -10,7 +10,8 @@ ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
 def test_submodule_ignore_dirty_toggle_updates_local_config(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     remote = create_remote(
         tmp_path,
@@ -102,7 +103,8 @@ def test_init_all_repos_hides_root_status_for_registered_submodules(
 
 
 def test_submodule_ignore_dirty_toggle_supports_targeted_repo(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     remote_a = create_remote(
         tmp_path,
@@ -294,7 +296,8 @@ def test_submodule_root_status_visibility_commands_use_hidden_visible_labels(
 
 
 def test_deprecated_root_status_action_emits_warning(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     remote = create_remote(
         tmp_path,
@@ -303,7 +306,9 @@ def test_deprecated_root_status_action_emits_warning(
         {"README.md": "hello\n"},
     )
     add_submodule(
-        hub_repo, remote, "repo/github.com/example-owner/deprecated-hide-root-me"
+        hub_repo,
+        remote,
+        "repo/github.com/example-owner/deprecated-hide-root-me",
     )
 
     hide_proc = subprocess.run(
@@ -319,7 +324,8 @@ def test_deprecated_root_status_action_emits_warning(
 
 
 def test_submodule_ignore_all_toggle_supports_targeted_repo(
-    tmp_path: Path, hub_repo: Path
+    tmp_path: Path,
+    hub_repo: Path,
 ) -> None:
     remote_a = create_remote(
         tmp_path,

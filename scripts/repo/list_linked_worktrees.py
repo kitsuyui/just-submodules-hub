@@ -29,7 +29,7 @@ def short_ref(ref: str) -> str:
     return ref.removeprefix("refs/heads/")
 
 
-def parse_porcelain(text: str) -> list[WorktreeRecord]:
+def parse_porcelain(text: str) -> list[WorktreeRecord]:  # noqa: C901
     records: list[WorktreeRecord] = []
     current: dict[str, str] = {}
 
@@ -50,7 +50,7 @@ def parse_porcelain(text: str) -> list[WorktreeRecord]:
                 locked=current.get("locked", "no"),
                 prunable=current.get("prunable", "no"),
                 message="; ".join(messages),
-            )
+            ),
         )
 
     for raw_line in text.splitlines():
@@ -84,7 +84,7 @@ def parse_porcelain(text: str) -> list[WorktreeRecord]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="List Git linked worktrees for the current repository."
+        description="List Git linked worktrees for the current repository.",
     )
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
     return parser.parse_args()

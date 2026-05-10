@@ -19,7 +19,8 @@ spec.loader.exec_module(safety)
 
 
 def test_install_hooks_keeps_existing_hook_and_writes_sample(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     repo = tmp_path / "repo"
     hooks = repo / ".git" / "hooks"
@@ -36,7 +37,8 @@ def test_install_hooks_keeps_existing_hook_and_writes_sample(
 
 
 def test_reset_record_plans_backup_without_apply(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     repo = tmp_path / "repo-feature"
     repo.mkdir()
@@ -46,7 +48,10 @@ def test_reset_record_plans_backup_without_apply(
     monkeypatch.setattr(safety, "timestamp", lambda: "20260428000000")
 
     assert safety.reset_record(
-        repo, target="", backup_prefix="stash", apply=False
+        repo,
+        target="",
+        backup_prefix="stash",
+        apply=False,
     ) == safety.ResetRecord(
         path=str(repo),
         branch="feature/test",
@@ -59,7 +64,8 @@ def test_reset_record_plans_backup_without_apply(
 
 
 def test_reset_record_apply_creates_backup_before_reset(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     repo = tmp_path / "repo-feature"
     repo.mkdir()
@@ -76,7 +82,10 @@ def test_reset_record_apply_creates_backup_before_reset(
     monkeypatch.setattr(safety, "run_git", fake_run_git)
 
     record = safety.reset_record(
-        repo, target="origin/main", backup_prefix="stash", apply=True
+        repo,
+        target="origin/main",
+        backup_prefix="stash",
+        apply=True,
     )
 
     assert record.status == "settled"
@@ -88,7 +97,8 @@ def test_reset_record_apply_creates_backup_before_reset(
 
 
 def test_cleanup_records_plans_only_retire_candidates(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     root = tmp_path / "repo"
     root.mkdir()
@@ -117,9 +127,17 @@ def test_cleanup_records_plans_only_retire_candidates(
     )
 
     assert safety.cleanup_records(
-        root, path_glob="repo-*", apply=False, drop_branch=False, include_skipped=False
+        root,
+        path_glob="repo-*",
+        apply=False,
+        drop_branch=False,
+        include_skipped=False,
     ) == [
         safety.CleanupRecord(
-            str(feature), "feature/test", "planned", "remove", "dry-run"
-        )
+            str(feature),
+            "feature/test",
+            "planned",
+            "remove",
+            "dry-run",
+        ),
     ]

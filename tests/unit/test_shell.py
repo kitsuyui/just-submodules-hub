@@ -13,7 +13,10 @@ def test_run_returns_stdout(monkeypatch: pytest.MonkeyPatch) -> None:
         shell.subprocess,
         "run",
         lambda *args, **kwargs: CompletedProcess(
-            args[0], 0, stdout="hello\n", stderr=""
+            args[0],
+            0,
+            stdout="hello\n",
+            stderr="",
         ),
     )
     assert shell.run(["echo", "hello"]) == "hello"
@@ -35,13 +38,17 @@ def test_run_raises_runtime_error_on_failure(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_run_raises_runtime_error_with_cwd(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(
         shell.subprocess,
         "run",
         lambda *args, **kwargs: CompletedProcess(
-            args[0], 2, stdout="bad path", stderr=""
+            args[0],
+            2,
+            stdout="bad path",
+            stderr="",
         ),
     )
     with pytest.raises(RuntimeError) as excinfo:

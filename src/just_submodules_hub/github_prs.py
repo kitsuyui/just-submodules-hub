@@ -63,7 +63,8 @@ def build_pull_request_record(item: dict) -> PullRequestRecord | None:
 
 
 def filter_managed_pull_requests(
-    records: list[PullRequestRecord], managed_paths: list[str]
+    records: list[PullRequestRecord],
+    managed_paths: list[str],
 ) -> list[PullRequestRecord]:
     managed = set(managed_repo_slugs(managed_paths))
     return sorted({record for record in records if record.repo in managed})

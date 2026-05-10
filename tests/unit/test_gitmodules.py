@@ -43,11 +43,12 @@ def test_find_submodules_with_marker(tmp_path: Path) -> None:
     (tmp_path / "repo/github.com/example-owner/one").mkdir(parents=True)
     (tmp_path / "repo/github.com/example-owner/two").mkdir(parents=True)
     (tmp_path / "repo/github.com/example-owner/one/pyproject.toml").write_text(
-        "[project]\nname='one'\n", encoding="utf-8"
+        "[project]\nname='one'\n",
+        encoding="utf-8",
     )
 
     assert find_submodules_with_marker("pyproject.toml", repo_root=tmp_path) == [
-        "repo/github.com/example-owner/one"
+        "repo/github.com/example-owner/one",
     ]
 
 

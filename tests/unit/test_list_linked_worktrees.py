@@ -25,7 +25,7 @@ worktree /repo-feature
 HEAD 2222222222222222222222222222222222222222
 detached
 
-"""
+""",
     )
 
     assert records == [
@@ -57,7 +57,7 @@ HEAD 3333333333333333333333333333333333333333
 branch refs/heads/old
 locked still in use
 prunable gitdir file points to non-existent location
-"""
+""",
     )
 
     assert records == [
@@ -69,5 +69,5 @@ prunable gitdir file points to non-existent location
             locked="yes",
             prunable="yes",
             message="locked: still in use; prunable: gitdir file points to non-existent location",
-        )
+        ),
     ]

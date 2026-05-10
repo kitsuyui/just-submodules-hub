@@ -28,7 +28,7 @@ TQDM_BAR_FORMAT = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Bulk operations for default branch baseline protection."
+        description="Bulk operations for default branch baseline protection.",
     )
     parser.add_argument(
         "action",
@@ -40,7 +40,10 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "visibility", nargs="?", default="public", choices=("public", "private", "all")
+        "visibility",
+        nargs="?",
+        default="public",
+        choices=("public", "private", "all"),
     )
     return parser.parse_args()
 
@@ -56,7 +59,7 @@ def run_gh(*args: str) -> str:
         raise RuntimeError(
             proc.stderr.strip()
             or proc.stdout.strip()
-            or f"gh command failed: {' '.join(args)}"
+            or f"gh command failed: {' '.join(args)}",
         )
     return proc.stdout
 
@@ -73,7 +76,7 @@ def run_gh_with_json_input(args: list[str], payload: dict) -> dict:
         raise RuntimeError(
             proc.stderr.strip()
             or proc.stdout.strip()
-            or f"gh command failed: {' '.join(args)}"
+            or f"gh command failed: {' '.join(args)}",
         )
     parsed = json.loads(proc.stdout)
     if not isinstance(parsed, dict):
@@ -91,7 +94,7 @@ def load_repo_metadata(repo: str) -> dict[Any, Any]:
                 repo,
                 "--json",
                 "nameWithOwner,visibility,defaultBranchRef",
-            )
+            ),
         ),
     )
 
@@ -137,7 +140,7 @@ def load_classic_branch_protection(repo: str, branch: str) -> dict | None:
     raise RuntimeError(
         proc.stderr.strip()
         or proc.stdout.strip()
-        or "failed to load classic branch protection"
+        or "failed to load classic branch protection",
     )
 
 
@@ -159,7 +162,8 @@ def candidate_repositories() -> list[str]:
 
 
 def managed_repositories(
-    visibility: str, bar: tqdm | None = None
+    visibility: str,
+    bar: tqdm | None = None,
 ) -> list[tuple[str, dict]]:
     repos = managed_repo_slugs(read_gitmodules_paths("."))
     selected: list[tuple[str, dict]] = []
@@ -205,15 +209,19 @@ def status_all(visibility: str) -> int:
                     "repo": repo,
                     "visibility": metadata.visibility,
                     "ruleset_status": summarize_ruleset_status(
-                        metadata, effective_rules, rulesets
+                        metadata,
+                        effective_rules,
+                        rulesets,
                     ),
                     "legacy_rulesets": summarize_legacy_rulesets(metadata, rulesets)[
                         "legacy_rulesets"
                     ],
                     "classic_protection": summarize_classic_branch_protection(
-                        metadata, classic, effective_rules
+                        metadata,
+                        classic,
+                        effective_rules,
                     ),
-                }
+                },
             )
             bar.update(1)
 
@@ -222,7 +230,7 @@ def status_all(visibility: str) -> int:
             "action": "status-all",
             "visibility": visibility,
             "repos": entries,
-        }
+        },
     )
     return 0
 
@@ -254,7 +262,7 @@ def apply_all(visibility: str) -> int:
                         "repo": repo,
                         "action": "updated",
                         "ruleset_id": result.get("id", managed_ruleset["id"]),
-                    }
+                    },
                 )
                 bar.update(1)
                 continue
@@ -264,7 +272,7 @@ def apply_all(visibility: str) -> int:
                 payload,
             )
             results.append(
-                {"repo": repo, "action": "created", "ruleset_id": result.get("id")}
+                {"repo": repo, "action": "created", "ruleset_id": result.get("id")},
             )
             bar.update(1)
 
@@ -286,7 +294,8 @@ def cleanup_rulesets_all(visibility: str) -> int:
             for item in summary["legacy_rulesets"]:
                 if item["deletable"]:
                     target = find_ruleset_by_identifier(
-                        candidate_legacy_rulesets(metadata, rulesets), str(item["id"])
+                        candidate_legacy_rulesets(metadata, rulesets),
+                        str(item["id"]),
                     )
                     if not target:
                         continue
@@ -302,7 +311,7 @@ def cleanup_rulesets_all(visibility: str) -> int:
                             "action": "deleted",
                             "ruleset_id": target["id"],
                             "name": target["name"],
-                        }
+                        },
                     )
                 else:
                     results.append(
@@ -312,12 +321,16 @@ def cleanup_rulesets_all(visibility: str) -> int:
                             "name": item["name"],
                             "reason": "manual_action_required",
                             "uncovered_rule_types": item["uncovered_rule_types"],
-                        }
+                        },
                     )
             bar.update(1)
 
     write_json(
-        {"action": "cleanup-rulesets-all", "visibility": visibility, "results": results}
+        {
+            "action": "cleanup-rulesets-all",
+            "visibility": visibility,
+            "results": results,
+        },
     )
     return 0
 
@@ -334,7 +347,9 @@ def cleanup_classic_all(visibility: str) -> int:
             effective_rules = load_effective_rules(repo, metadata.default_branch)
             protection = load_classic_branch_protection(repo, metadata.default_branch)
             summary = summarize_classic_branch_protection(
-                metadata, protection, effective_rules
+                metadata,
+                protection,
+                effective_rules,
             )
             if not summary["classic_branch_protection_found"]:
                 bar.update(1)
@@ -351,7 +366,7 @@ def cleanup_classic_all(visibility: str) -> int:
                         "repo": repo,
                         "action": "deleted",
                         "deleted": "classic_branch_protection",
-                    }
+                    },
                 )
             else:
                 results.append(
@@ -360,12 +375,12 @@ def cleanup_classic_all(visibility: str) -> int:
                         "action": "skipped",
                         "reason": "manual_action_required",
                         "uncovered_settings": summary["uncovered_settings"],
-                    }
+                    },
                 )
             bar.update(1)
 
     write_json(
-        {"action": "cleanup-classic-all", "visibility": visibility, "results": results}
+        {"action": "cleanup-classic-all", "visibility": visibility, "results": results},
     )
     return 0
 

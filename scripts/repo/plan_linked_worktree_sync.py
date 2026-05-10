@@ -53,7 +53,10 @@ class PullRequestState:
 
 def run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["git", "-C", str(repo), *args], text=True, capture_output=True, check=False
+        ["git", "-C", str(repo), *args],
+        text=True,
+        capture_output=True,
+        check=False,
     )
 
 
@@ -78,7 +81,8 @@ def branch_has_unique_commits(repo: Path, branch: str, default: str) -> bool:
 
 def remote_branch_exists(repo: Path, branch: str) -> bool:
     proc = run_git(
-        repo, ["rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}"]
+        repo,
+        ["rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}"],
     )
     return proc.returncode == 0
 
@@ -119,7 +123,7 @@ def list_worktrees(root: Path) -> list[WorktreeRecord]:
     return parse_porcelain(proc.stdout)
 
 
-def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:
+def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:  # noqa: C901
     repo = Path(worktree.path)
     branch = worktree.branch
     dirty = dirty_state(repo)
@@ -286,7 +290,7 @@ def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plan safe synchronization decisions for Git linked worktrees."
+        description="Plan safe synchronization decisions for Git linked worktrees.",
     )
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
     return parser.parse_args()

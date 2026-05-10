@@ -52,7 +52,7 @@ def desired_ruleset_payload(default_branch: str) -> dict:
             "ref_name": {
                 "include": [f"refs/heads/{default_branch}"],
                 "exclude": [],
-            }
+            },
         },
         "rules": [
             {
@@ -71,12 +71,13 @@ def desired_ruleset_payload(default_branch: str) -> dict:
 
 def effective_rule_types(effective_rules: list[dict]) -> list[str]:
     return sorted(
-        {str(item.get("type")) for item in effective_rules if item.get("type")}
+        {str(item.get("type")) for item in effective_rules if item.get("type")},
     )
 
 
 def find_ruleset_by_name(
-    rulesets: list[dict], name: str = BASELINE_RULESET_NAME
+    rulesets: list[dict],
+    name: str = BASELINE_RULESET_NAME,
 ) -> dict | None:
     for item in rulesets:
         if item.get("name") == name:
@@ -162,7 +163,8 @@ def rule_is_covered(rule: dict, covering_rules: dict[str, dict]) -> bool:
 
 
 def candidate_legacy_rulesets(
-    metadata: RepoMetadata, rulesets: list[dict]
+    metadata: RepoMetadata,
+    rulesets: list[dict],
 ) -> list[dict]:
     return [
         item
@@ -204,7 +206,7 @@ def summarize_legacy_rulesets(metadata: RepoMetadata, rulesets: list[dict]) -> d
             if isinstance(rule_type, str):
                 uncovered_rule_types.append(rule_type)
                 coverage_reasons.append(
-                    f"rule '{rule_type}' is not covered by remaining active rulesets"
+                    f"rule '{rule_type}' is not covered by remaining active rulesets",
                 )
             else:
                 coverage_reasons.append("encountered a rule without a valid type")
@@ -221,7 +223,7 @@ def summarize_legacy_rulesets(metadata: RepoMetadata, rulesets: list[dict]) -> d
                 "covered_by_baseline_only": all(
                     rule_is_covered(rule, baseline_rule_map) for rule in candidate_rules
                 ),
-            }
+            },
         )
 
     return {
@@ -232,8 +234,10 @@ def summarize_legacy_rulesets(metadata: RepoMetadata, rulesets: list[dict]) -> d
     }
 
 
-def summarize_classic_branch_protection(
-    metadata: RepoMetadata, protection: dict | None, effective_rules: list[dict]
+def summarize_classic_branch_protection(  # noqa: C901
+    metadata: RepoMetadata,
+    protection: dict | None,
+    effective_rules: list[dict],
 ) -> dict:
     if not protection:
         return {
@@ -257,13 +261,13 @@ def summarize_classic_branch_protection(
     coverage_reasons: list[str] = []
 
     if required_pull_request_reviews is not None and pull_request_parameters_match(
-        effective_rule_map.get("pull_request")
+        effective_rule_map.get("pull_request"),
     ):
         covered_settings.append("required_pull_request_reviews")
     elif required_pull_request_reviews is not None:
         uncovered_settings.append("required_pull_request_reviews")
         coverage_reasons.append(
-            "classic required_pull_request_reviews is not covered by effective pull_request rule"
+            "classic required_pull_request_reviews is not covered by effective pull_request rule",
         )
 
     if allow_force_pushes is False and "non_fast_forward" in effective_rule_map:
@@ -271,7 +275,7 @@ def summarize_classic_branch_protection(
     elif allow_force_pushes is False:
         uncovered_settings.append("allow_force_pushes=false")
         coverage_reasons.append(
-            "classic force-push restriction is not covered by effective non_fast_forward rule"
+            "classic force-push restriction is not covered by effective non_fast_forward rule",
         )
 
     if allow_deletions is False and "deletion" in effective_rule_map:
@@ -279,7 +283,7 @@ def summarize_classic_branch_protection(
     elif allow_deletions is False:
         uncovered_settings.append("allow_deletions=false")
         coverage_reasons.append(
-            "classic deletion restriction is not covered by effective deletion rule"
+            "classic deletion restriction is not covered by effective deletion rule",
         )
 
     extra_settings = []
@@ -327,17 +331,19 @@ def find_ruleset_by_identifier(rulesets: list[dict], identifier: str) -> dict | 
 
 
 def summarize_ruleset_status(
-    metadata: RepoMetadata, effective_rules: list[dict], rulesets: list[dict]
+    metadata: RepoMetadata,
+    effective_rules: list[dict],
+    rulesets: list[dict],
 ) -> dict:
     effective_rule_map = rules_by_type(effective_rules)
     managed_ruleset = find_ruleset_by_name(rulesets)
     managed_rules = extract_rules(managed_ruleset)
 
     missing_rule_types = sorted(
-        set(BASELINE_RULE_TYPES) - set(effective_rule_types(effective_rules))
+        set(BASELINE_RULE_TYPES) - set(effective_rule_types(effective_rules)),
     )
     extra_effective_rule_types = sorted(
-        set(effective_rule_types(effective_rules)) - set(BASELINE_RULE_TYPES)
+        set(effective_rule_types(effective_rules)) - set(BASELINE_RULE_TYPES),
     )
 
     return {
@@ -351,10 +357,10 @@ def summarize_ruleset_status(
         "missing_rule_types": missing_rule_types,
         "extra_effective_rule_types": extra_effective_rule_types,
         "pull_request_parameters_match_baseline": pull_request_parameters_match(
-            effective_rule_map.get("pull_request")
+            effective_rule_map.get("pull_request"),
         ),
         "managed_pull_request_parameters_match_baseline": pull_request_parameters_match(
-            rules_by_type(managed_rules).get("pull_request")
+            rules_by_type(managed_rules).get("pull_request"),
         ),
         "baseline_rule_types_present": not missing_rule_types,
         "baseline_compliant": not missing_rule_types

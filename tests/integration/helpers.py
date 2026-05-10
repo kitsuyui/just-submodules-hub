@@ -17,7 +17,7 @@ def run(cmd: list[str], cwd: Path, env: Mapping[str, str] | None = None) -> str:
     )
     if proc.returncode != 0:
         raise AssertionError(
-            f"command failed: {' '.join(cmd)}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+            f"command failed: {' '.join(cmd)}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}",
         )
     return proc.stdout.strip()
 
@@ -82,7 +82,11 @@ def add_submodule(hub: Path, remote: Path | str, submodule_path: str) -> None:
 
 
 def advance_remote(
-    remote: Path, relative_path: str, content: str, message: str, branch: str = "main"
+    remote: Path,
+    relative_path: str,
+    content: str,
+    message: str,
+    branch: str = "main",
 ) -> str:
     with tempfile.TemporaryDirectory() as tmpdir:
         checkout = Path(tmpdir) / "checkout"

@@ -28,21 +28,63 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = [
-    "E",     # pycodestyle errors
-    "F",     # Pyflakes
-    "W",     # pycodestyle warnings
-    "I",     # isort (import order)
-    "UP",    # pyupgrade (modern Python idioms)
-    "B",     # flake8-bugbear
-    "C4",    # flake8-comprehensions
-    "SIM",   # flake8-simplify
-    "RUF",   # Ruff-specific
+    # Phase A1 (existing)
+    "E",        # pycodestyle errors
+    "F",        # Pyflakes
+    "W",        # pycodestyle warnings
+    "I",        # isort (import order)
+    "UP",       # pyupgrade (modern Python idioms)
+    "B",        # flake8-bugbear
+    "C4",       # flake8-comprehensions
+    "SIM",      # flake8-simplify
+    "RUF",      # Ruff-specific
     "PLC0415",  # import-outside-top-level
+    # Phase A2a (new)
+    "A",        # flake8-builtins
+    "ARG",      # flake8-unused-arguments
+    "C90",      # mccabe complexity
+    "COM",      # flake8-commas
+    "PERF",     # Perflint
+    "PLE",      # Pylint Errors
+    "PTH",      # flake8-use-pathlib
+    "RET",      # flake8-return
+    "S",        # flake8-bandit (security)
+    "SLOT",     # flake8-slots
+    "T20",      # flake8-print
 ]
 ignore = [
-    "E501",  # line-too-long: existing code has many long lines; fix separately
-    "UP047", # non-pep695-generic-function: PEP 695 syntax; defer to Phase A2
+    "COM812", # missing-trailing-comma: conflicts with ruff formatter; auto-fixed at Phase A2a
+    "E501",   # line-too-long: existing code has many long lines; fix separately
+    "UP047",  # non-pep695-generic-function: PEP 695 syntax; defer to Phase A2b
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests: assert is idiomatic (S101); pytest fixture args may be unused (ARG001);
+# subprocess in test setup is intentional (S603, S607); /tmp paths in test data
+# are not production code (S108); hardcoded token strings in tests are test
+# fixtures, not real secrets (S105); lambda stubs for monkeypatch have unused
+# args by design (ARG005); try-except-pass is used in negative test assertions
+# where pytest.raises is not applicable (S110).
+"tests/**" = ["S101", "ARG001", "ARG005", "S603", "S607", "S108", "S105", "S110"]
+
+# Scripts are CLI entrypoints; print() is intentional output (T201). subprocess
+# calls are argv-based by design (S603, S607). run_submodule_command.py uses
+# shell=True intentionally to support arbitrary user commands (S602).
+"scripts/**" = ["T201", "S603", "S607", "S602"]
+
+# Production action modules use stderr-print for diagnostics (T201) and
+# argv-based subprocess (S603, S607). These are CLI entrypoints.
+"src/just_submodules_hub/run_action/**" = ["T201", "S603", "S607"]
+
+# submodule_batch.py and sync.py are output libraries / CLI main modules;
+# print() is the canonical output mechanism for tabular/JSONL records and
+# progress messages. Suppressing T201 here is intentional.
+"src/just_submodules_hub/submodule_batch.py" = ["T201"]
+"src/just_submodules_hub/sync.py" = ["T201"]
+
+# shell.py is the core subprocess wrapper; S603 fires on every subprocess.run
+# call even though arguments are always passed as a list (no shell=True).
+"src/just_submodules_hub/shell.py" = ["S603"]
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html

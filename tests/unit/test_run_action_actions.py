@@ -418,7 +418,9 @@ def test_sync_repo_default_branch_delegates_to_sync(
         return 0
 
     monkeypatch.setattr(
-        sync_repo_default_branch_module, "handle_one_action", fake_handle_one
+        sync_repo_default_branch_module,
+        "handle_one_action",
+        fake_handle_one,
     )
 
     fn = reg._REGISTRY["sync-repo-default-branch"]
@@ -438,7 +440,9 @@ def test_sync_all_repo_default_branch_delegates_to_sync(
         return 0
 
     monkeypatch.setattr(
-        sync_repo_default_branch_module, "handle_all_action", fake_handle_all
+        sync_repo_default_branch_module,
+        "handle_all_action",
+        fake_handle_all,
     )
 
     fn = reg._REGISTRY["sync-all-repo-default-branch"]
@@ -686,7 +690,9 @@ def test_commit_submodule_pointers_no_changes(
         lambda: ["repo/github.com/owner/repo"],
     )
     monkeypatch.setattr(
-        commit_submodule_pointers_module, "_submodule_pointer_changed", lambda p: False
+        commit_submodule_pointers_module,
+        "_submodule_pointer_changed",
+        lambda p: False,
     )
 
     fn = reg._REGISTRY["commit-submodule-pointers"]
@@ -713,7 +719,9 @@ def test_commit_submodule_pointers_commits_changed(
         lambda: ["repo/github.com/owner/repo"],
     )
     monkeypatch.setattr(
-        commit_submodule_pointers_module, "_submodule_pointer_changed", lambda p: True
+        commit_submodule_pointers_module,
+        "_submodule_pointer_changed",
+        lambda p: True,
     )
     monkeypatch.setattr(commit_submodule_pointers_module.subprocess, "run", fake_run)
 
@@ -1055,7 +1063,7 @@ def test_add_linked_worktree_with_branch_and_start_point(
     rc = fn([str(worktree_dir), "--branch", "feature/x", "origin/main"])
     assert rc == 0
     assert git_calls == [
-        ["git", "worktree", "add", "-b", "feature/x", str(worktree_dir), "origin/main"]
+        ["git", "worktree", "add", "-b", "feature/x", str(worktree_dir), "origin/main"],
     ]
     assert dispatch_calls[0][0] == "init-all-repos"
     assert "--force" in dispatch_calls[0][1]

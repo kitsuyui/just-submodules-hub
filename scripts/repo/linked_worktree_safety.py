@@ -122,12 +122,22 @@ def current_head(repo: Path) -> str:
 
 
 def reset_record(
-    repo: Path, *, target: str, backup_prefix: str, apply: bool
+    repo: Path,
+    *,
+    target: str,
+    backup_prefix: str,
+    apply: bool,
 ) -> ResetRecord:
     branch = current_branch(repo)
     if not branch:
         return ResetRecord(
-            str(repo), "", "skipped", "skip-detached", "", target, "detached HEAD"
+            str(repo),
+            "",
+            "skipped",
+            "skip-detached",
+            "",
+            target,
+            "detached HEAD",
         )
     dirty = dirty_state(repo)
     if dirty == "dirty":
@@ -154,11 +164,18 @@ def reset_record(
     backup = f"{backup_prefix}/{sanitize_ref_component(Path(repo).name)}/{timestamp()}"
     if not apply:
         return ResetRecord(
-            str(repo), branch, "planned", "reset", backup, resolved_target, "dry-run"
+            str(repo),
+            branch,
+            "planned",
+            "reset",
+            backup,
+            resolved_target,
+            "dry-run",
         )
     if resolved_target.startswith("origin/"):
         fetched = run_git(
-            repo, ["fetch", "origin", resolved_target.removeprefix("origin/")]
+            repo,
+            ["fetch", "origin", resolved_target.removeprefix("origin/")],
         )
         if fetched.returncode != 0:
             return ResetRecord(
@@ -218,7 +235,7 @@ def path_matches(path: str, pattern: str) -> bool:
     return fnmatch.fnmatch(path, pattern) or fnmatch.fnmatch(Path(path).name, pattern)
 
 
-def cleanup_records(
+def cleanup_records(  # noqa: C901
     root: Path,
     *,
     path_glob: str,
@@ -241,7 +258,7 @@ def cleanup_records(
                         "skipped",
                         "skip-path",
                         "path does not match glob",
-                    )
+                    ),
                 )
             continue
         plan = plan_one(worktree, default)
@@ -254,14 +271,18 @@ def cleanup_records(
                         "skipped",
                         plan.action,
                         plan.message,
-                    )
+                    ),
                 )
             continue
         if not apply:
             rows.append(
                 CleanupRecord(
-                    worktree.path, worktree.branch, "planned", "remove", "dry-run"
-                )
+                    worktree.path,
+                    worktree.branch,
+                    "planned",
+                    "remove",
+                    "dry-run",
+                ),
             )
             continue
         remove_proc = run_git(root, ["worktree", "remove", worktree.path])
@@ -273,7 +294,7 @@ def cleanup_records(
                     "failed",
                     "remove",
                     summarize(remove_proc),
-                )
+                ),
             )
             continue
         if drop_branch and worktree.branch:
@@ -286,13 +307,17 @@ def cleanup_records(
                         "failed",
                         "drop-branch",
                         summarize(drop_proc),
-                    )
+                    ),
                 )
                 continue
         rows.append(
             CleanupRecord(
-                worktree.path, worktree.branch, "removed", "remove", "worktree removed"
-            )
+                worktree.path,
+                worktree.branch,
+                "removed",
+                "remove",
+                "worktree removed",
+            ),
         )
     return rows
 
@@ -302,12 +327,14 @@ def parse_args() -> argparse.Namespace:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     hooks = subparsers.add_parser(
-        "install-hooks", help="install linked worktree safety hooks"
+        "install-hooks",
+        help="install linked worktree safety hooks",
     )
     hooks.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
 
     reset = subparsers.add_parser(
-        "reset", help="plan or apply a reset for one linked worktree"
+        "reset",
+        help="plan or apply a reset for one linked worktree",
     )
     reset.add_argument("path")
     reset.add_argument("--target", default="")
@@ -316,7 +343,8 @@ def parse_args() -> argparse.Namespace:
     reset.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
 
     cleanup = subparsers.add_parser(
-        "cleanup", help="plan or apply cleanup of safe linked worktree candidates"
+        "cleanup",
+        help="plan or apply cleanup of safe linked worktree candidates",
     )
     cleanup.add_argument("--path-glob", required=True)
     cleanup.add_argument("--apply", action="store_true")
@@ -342,7 +370,7 @@ def main() -> int:
                 target=args.target,
                 backup_prefix=args.backup_prefix,
                 apply=args.apply,
-            )
+            ),
         ]
         fields = RESET_FIELDS
     else:

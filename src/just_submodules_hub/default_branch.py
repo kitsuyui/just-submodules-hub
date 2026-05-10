@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 
 from .shell import run
@@ -27,7 +28,7 @@ def resolve_default_branch(
     3. *fallback* - returned as-is when not None, otherwise RuntimeError is raised.
     """
     cwd = Path(repo)
-    try:
+    with suppress(Exception):
         out = run(
             ["git", "symbolic-ref", "--short", f"refs/remotes/{remote}/HEAD"],
             cwd=cwd,
@@ -37,16 +38,12 @@ def resolve_default_branch(
             return out[len(prefix) :]
         if out:
             return out
-    except Exception:
-        pass
 
-    try:
+    with suppress(Exception):
         show = run(["git", "remote", "show", remote], cwd=cwd)
         parsed = parse_head_branch_line(show)
         if parsed is not None:
             return parsed
-    except Exception:
-        pass
 
     if fallback is not None:
         return fallback
