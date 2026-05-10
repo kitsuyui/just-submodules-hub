@@ -127,3 +127,121 @@ def set_submodule_ignore_value(repo_dir: str, value: str) -> int:
         check=False,
     )
     return proc.returncode
+
+
+def clear_submodule_ignore_value(repo_dir: str) -> int:
+    """Unset ``ignore`` for a single submodule in the local git config.
+
+    *repo_dir* is the submodule path as recorded in ``.gitmodules``
+    (e.g. ``repo/github.com/owner/name``).
+    Silently succeeds if the key is not set, mirroring the shell behaviour
+    (``git config --unset-all ... || true``).
+    Returns 0 on success, non-zero on failure.
+    """
+    section = f"submodule.{repo_dir}"
+    proc = subprocess.run(
+        ["git", "config", "--local", "--unset-all", f"{section}.ignore"],
+        check=False,
+    )
+    # exit code 5 means the key was not set; treat as success (same as shell)
+    if proc.returncode in (0, 5):
+        return 0
+    return proc.returncode
+
+
+def _iter_submodule_sections(repo_dir: str) -> list[tuple[str, str]]:
+    """Return ``(section, path)`` pairs for submodules matching *repo_dir*.
+
+    If *repo_dir* is non-empty, returns only the entry whose path equals
+    *repo_dir*.  If empty, returns all submodule entries from ``.gitmodules``.
+    This mirrors the shell ``target_submodule_sections`` helper.
+    """
+    proc = subprocess.run(
+        [
+            "git",
+            "config",
+            "-f",
+            ".gitmodules",
+            "--name-only",
+            "--get-regexp",
+            r"^submodule\..*\.path$",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+
+    result: list[tuple[str, str]] = []
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        section = line.removesuffix(".path")
+        path_proc = subprocess.run(
+            ["git", "config", "-f", ".gitmodules", "--get", f"{section}.path"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if path_proc.returncode != 0:
+            continue
+        path = path_proc.stdout.strip()
+        if repo_dir and path != repo_dir:
+            continue
+        result.append((section, path))
+    return result
+
+
+def print_submodule_visibility_status(expected_value: str, repo_dir: str) -> int:
+    r"""Print ``<path>\t(hidden|visible)`` for each matching submodule.
+
+    For each submodule whose path matches *repo_dir* (or all submodules when
+    *repo_dir* is empty), prints whether the ``ignore`` config key equals
+    *expected_value*.  Mirrors ``print_submodule_visibility_status`` in the
+    shell script.
+    Returns 0 on success.
+    """
+    for section, path in _iter_submodule_sections(repo_dir):
+        ignore_proc = subprocess.run(
+            ["git", "config", "--local", "--get", f"{section}.ignore"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        ignore_value = ignore_proc.stdout.strip() if ignore_proc.returncode == 0 else ""
+        status = "hidden" if ignore_value == expected_value else "visible"
+        print(f"{path}\t{status}")
+    return 0
+
+
+def print_submodule_ignore_raw_status(expected_value: str, repo_dir: str) -> int:
+    r"""Print ``<path>\t(<value>|off)`` for each matching submodule.
+
+    For each submodule whose path matches *repo_dir* (or all submodules when
+    *repo_dir* is empty), prints the raw ignore value if it equals
+    *expected_value*, otherwise prints ``off``.  Mirrors
+    ``print_submodule_ignore_raw_status`` in the shell script.
+    Returns 0 on success.
+    """
+    for section, path in _iter_submodule_sections(repo_dir):
+        ignore_proc = subprocess.run(
+            ["git", "config", "--local", "--get", f"{section}.ignore"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        ignore_value = ignore_proc.stdout.strip() if ignore_proc.returncode == 0 else ""
+        display = ignore_value if ignore_value == expected_value else "off"
+        print(f"{path}\t{display}")
+    return 0
+
+
+def warn_deprecated_submodule_action(deprecated: str, canonical: str) -> None:
+    """Write a deprecation warning to stderr.
+
+    Mirrors ``warn_deprecated_submodule_action`` in the shell script:
+    ``warning: <deprecated> is deprecated; use <canonical> instead``
+    """
+    sys.stderr.write(f"warning: {deprecated} is deprecated; use {canonical} instead\n")

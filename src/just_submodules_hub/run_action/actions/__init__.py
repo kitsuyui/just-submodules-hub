@@ -16,5 +16,7 @@ from just_submodules_hub.run_action.actions import (  # noqa: F401
     open_repo,
     reconcile_worktrees,
     remove_repo,
+    submodule_deprecated_aliases,
+    submodule_root_status,
     sync_repo_default_branch,
 )
