@@ -1,18 +1,6 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/list_linked_worktrees.py"
-
-spec = importlib.util.spec_from_file_location("list_linked_worktrees", SCRIPT_PATH)
-assert spec is not None
-linked_worktrees = importlib.util.module_from_spec(spec)
-sys.modules["list_linked_worktrees"] = linked_worktrees
-assert spec.loader is not None
-spec.loader.exec_module(linked_worktrees)
+import just_submodules_hub.linked_worktree_inventory as linked_worktrees
 
 
 def test_parse_porcelain_reports_branch_and_detached_worktrees() -> None:

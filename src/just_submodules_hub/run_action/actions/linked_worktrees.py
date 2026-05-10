@@ -9,11 +9,9 @@ import sys
 from collections.abc import Generator
 from pathlib import Path
 
+from just_submodules_hub.linked_worktree_safety import main as _safety_main
 from just_submodules_hub.run_action.actions._helpers import validate_positive_integer
 from just_submodules_hub.run_action.registry import action, dispatch
-
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-_SAFETY_SCRIPT = _PROJECT_ROOT / "scripts" / "repo" / "linked_worktree_safety.py"
 
 
 @contextlib.contextmanager
@@ -27,38 +25,22 @@ def _chdir(path: str) -> Generator[None]:
         os.chdir(old)
 
 
-def _run_safety(subcommand: str, args: list[str]) -> int:
-    """Run linked_worktree_safety.py <subcommand> [args...] via uv."""
-    cmd = [
-        "uv",
-        "run",
-        "--project",
-        str(_PROJECT_ROOT),
-        "python",
-        str(_SAFETY_SCRIPT),
-        subcommand,
-        *args,
-    ]
-    proc = subprocess.run(cmd, check=False)
-    return proc.returncode
-
-
 @action("install-linked-worktree-hooks")
 def install_linked_worktree_hooks(args: list[str]) -> int:
     """Install git hooks needed by linked-worktree safety checks."""
-    return _run_safety("install-hooks", args)
+    return _safety_main(["install-hooks", *args])
 
 
 @action("reset-linked-worktree")
 def reset_linked_worktree(args: list[str]) -> int:
     """Reset a linked worktree to a clean state."""
-    return _run_safety("reset", args)
+    return _safety_main(["reset", *args])
 
 
 @action("cleanup-linked-worktrees")
 def cleanup_linked_worktrees(args: list[str]) -> int:
     """Remove stale linked worktrees that no longer have a corresponding branch."""
-    return _run_safety("cleanup", args)
+    return _safety_main(["cleanup", *args])
 
 
 @action("remove-linked-worktree")

@@ -1,25 +1,11 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
 
 import pytest
 
+import just_submodules_hub.submodule_worktree_reconcile as reconcile
 from just_submodules_hub.default_heads import DefaultHead
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/reconcile_submodule_worktrees.py"
-
-spec = importlib.util.spec_from_file_location(
-    "reconcile_submodule_worktrees",
-    SCRIPT_PATH,
-)
-assert spec is not None
-reconcile = importlib.util.module_from_spec(spec)
-sys.modules["reconcile_submodule_worktrees"] = reconcile
-assert spec.loader is not None
-spec.loader.exec_module(reconcile)
 
 
 class DummyBar:

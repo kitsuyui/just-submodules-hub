@@ -1,21 +1,11 @@
 from __future__ import annotations
 
-import importlib.util
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/linked_worktree_safety.py"
-
-spec = importlib.util.spec_from_file_location("linked_worktree_safety", SCRIPT_PATH)
-assert spec is not None
-safety = importlib.util.module_from_spec(spec)
-sys.modules["linked_worktree_safety"] = safety
-assert spec.loader is not None
-spec.loader.exec_module(safety)
+import just_submodules_hub.linked_worktree_safety as safety
 
 
 def test_install_hooks_keeps_existing_hook_and_writes_sample(
