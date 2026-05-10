@@ -42,6 +42,7 @@ class BranchState:
     merged_pr_heads: frozenset[str]
     owned_merged_pr_heads: frozenset[str]
     open_pr_heads: frozenset[str]
+    worktree_branches: frozenset[str] = frozenset()
 
 
 def run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -100,6 +101,27 @@ def remote_branches(repo: Path, remote: str) -> tuple[str, ...]:
         if ref.startswith(prefix):
             values.append(ref.removeprefix(prefix))
     return tuple(values)
+
+
+def linked_worktree_branches(repo: Path) -> frozenset[str]:
+    """Return branches checked out in any worktree of *repo*.
+
+    Includes the main worktree and all linked worktrees. ``git branch -d``
+    and ``-D`` both refuse to delete a branch that is checked out in any
+    worktree, so callers should treat these as protected to avoid noisy
+    failures.
+    """
+    proc = run_git(repo, ["worktree", "list", "--porcelain"])
+    if proc.returncode != 0:
+        return frozenset()
+    branches: set[str] = set()
+    prefix = "refs/heads/"
+    for line in proc.stdout.splitlines():
+        if line.startswith("branch "):
+            ref = line.removeprefix("branch ").strip()
+            if ref.startswith(prefix):
+                branches.add(ref.removeprefix(prefix))
+    return frozenset(branches)
 
 
 def authenticated_login(repo: Path) -> str:
@@ -168,6 +190,7 @@ def inspect_state(repo: Path, remote: str, limit: int) -> BranchState:
         merged_pr_heads=merged_pr_heads,
         owned_merged_pr_heads=owned_merged_pr_heads,
         open_pr_heads=open_pr_heads,
+        worktree_branches=linked_worktree_branches(repo),
     )
 
 
@@ -177,6 +200,8 @@ def protected_reason(branch: str, state: BranchState) -> str:
         return "default branch"
     if branch == state.current_branch:
         return "current branch"
+    if branch in state.worktree_branches:
+        return "checked out in another worktree"
     if branch in state.open_pr_heads:
         return "open pull request"
     return ""

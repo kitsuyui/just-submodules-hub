@@ -228,6 +228,85 @@ def test_target_paths_can_include_root_and_submodules(tmp_path: Path) -> None:
     ]
 
 
+def test_linked_worktree_branches_parses_porcelain_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """``linked_worktree_branches`` extracts branch names from worktree list output."""
+
+    def fake_run_git(repo: Path, args: list[str]) -> object:
+        assert args == ["worktree", "list", "--porcelain"]
+        return type(
+            "Proc",
+            (),
+            {
+                "returncode": 0,
+                "stdout": (
+                    "worktree /path/to/main\n"
+                    "HEAD abc\n"
+                    "branch refs/heads/main\n"
+                    "\n"
+                    "worktree /path/to/feature\n"
+                    "HEAD def\n"
+                    "branch refs/heads/feature/x\n"
+                    "\n"
+                    "worktree /path/to/detached\n"
+                    "HEAD 999\n"
+                    "detached\n"
+                ),
+                "stderr": "",
+            },
+        )()
+
+    monkeypatch.setattr(cleanup, "run_git", fake_run_git)
+
+    assert cleanup.linked_worktree_branches(tmp_path) == frozenset(
+        {"main", "feature/x"},
+    )
+
+
+def test_linked_worktree_branches_returns_empty_on_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Failures in ``git worktree list`` must not crash callers."""
+
+    def fake_run_git(repo: Path, args: list[str]) -> object:
+        return type(
+            "Proc",
+            (),
+            {"returncode": 128, "stdout": "", "stderr": "fatal: not a worktree"},
+        )()
+
+    monkeypatch.setattr(cleanup, "run_git", fake_run_git)
+
+    assert cleanup.linked_worktree_branches(tmp_path) == frozenset()
+
+
+def test_protected_reason_skips_branches_in_other_worktrees() -> None:
+    """A branch checked out in a linked worktree must be skipped, not deleted."""
+    state = cleanup.BranchState(
+        default_branch="main",
+        current_branch="main",
+        local_branches=("main", "feature/in-worktree", "feature/free"),
+        remote_branches=(),
+        merged_pr_heads=frozenset({"feature/in-worktree", "feature/free"}),
+        owned_merged_pr_heads=frozenset({"feature/in-worktree", "feature/free"}),
+        open_pr_heads=frozenset(),
+        worktree_branches=frozenset({"main", "feature/in-worktree"}),
+    )
+
+    # Current branch protection still wins for the main worktree's branch.
+    assert cleanup.protected_reason("main", state) == "default branch"
+    # A branch occupied by a linked worktree is reported with a clear reason.
+    assert (
+        cleanup.protected_reason("feature/in-worktree", state)
+        == "checked out in another worktree"
+    )
+    # Unprotected branch is unaffected.
+    assert cleanup.protected_reason("feature/free", state) == ""
+
+
 def test_remote_branches_reads_actual_remote_heads(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
