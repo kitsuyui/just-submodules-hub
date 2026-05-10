@@ -1,3 +1,5 @@
+"""Action handlers for managing git linked worktrees."""
+
 from __future__ import annotations
 
 import contextlib
@@ -43,21 +45,25 @@ def _run_safety(subcommand: str, args: list[str]) -> int:
 
 @action("install-linked-worktree-hooks")
 def install_linked_worktree_hooks(args: list[str]) -> int:
+    """Install git hooks needed by linked-worktree safety checks."""
     return _run_safety("install-hooks", args)
 
 
 @action("reset-linked-worktree")
 def reset_linked_worktree(args: list[str]) -> int:
+    """Reset a linked worktree to a clean state."""
     return _run_safety("reset", args)
 
 
 @action("cleanup-linked-worktrees")
 def cleanup_linked_worktrees(args: list[str]) -> int:
+    """Remove stale linked worktrees that no longer have a corresponding branch."""
     return _run_safety("cleanup", args)
 
 
 @action("remove-linked-worktree")
 def remove_linked_worktree(args: list[str]) -> int:
+    """Remove a specific linked worktree by path."""
     worktree_path = args[0] if args else ""
     if not worktree_path:
         print("PATH is required", file=sys.stderr)
@@ -88,6 +94,7 @@ def remove_linked_worktree(args: list[str]) -> int:
 
 @action("add-linked-worktree")
 def add_linked_worktree(args: list[str]) -> int:  # noqa: C901
+    """Create a new linked worktree with optional submodule initialization."""
     if not args or not args[0]:
         print("PATH is required", file=sys.stderr)
         return 2

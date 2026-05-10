@@ -1,3 +1,5 @@
+"""Path normalization and resolution helpers for submodule repositories."""
+
 from __future__ import annotations
 
 from configparser import ConfigParser
@@ -21,6 +23,7 @@ def _strip_repo_transport(value: str) -> str:
 
 
 def normalize_repo_input(value: str) -> str:
+    """Normalize *value* to the canonical ``repo/github.com/owner/repo`` form."""
     normalized = _strip_repo_transport(value)
     if normalized.startswith(REPO_PREFIX):
         return normalized
@@ -46,6 +49,7 @@ def _parse_gitmodules_paths(text: str) -> list[str]:
 
 
 def managed_repo_paths(hub_root: Path) -> list[str]:
+    """Return all managed repo paths under *hub_root* from .gitmodules and filesystem."""
     root = Path(hub_root)
     paths: set[str] = set()
 
@@ -68,6 +72,7 @@ def managed_repo_paths(hub_root: Path) -> list[str]:
 
 
 def resolve_repo_input(value: str, hub_root: Path) -> str:
+    """Resolve *value* to a repo path, supporting short names, slugs, and URLs."""
     normalized = _strip_repo_transport(value)
     if normalized.startswith(REPO_PREFIX) or "/" in normalized:
         return normalize_repo_input(normalized)
@@ -84,16 +89,19 @@ def resolve_repo_input(value: str, hub_root: Path) -> str:
 
 
 def repo_display_name(repo_path: str) -> str:
+    """Return the ``owner/repo`` slug for *repo_path*, stripping the REPO_PREFIX."""
     if repo_path.startswith(REPO_PREFIX):
         return repo_path[len(REPO_PREFIX) :]
     return repo_path
 
 
 def repo_owner(repo_path: str) -> str:
+    """Return the owner portion of *repo_path*."""
     return repo_display_name(repo_path).split("/", 1)[0]
 
 
 def repo_abspath(value: str, hub_root: Path) -> Path:
+    """Return the absolute filesystem path for *value* resolved under *hub_root*."""
     repo_path = hub_root / resolve_repo_input(value, hub_root)
     if not repo_path.exists():
         raise FileNotFoundError(f"repository path not found: {repo_path}")

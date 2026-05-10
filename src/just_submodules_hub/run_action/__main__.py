@@ -1,3 +1,5 @@
+"""Entry point for ``python -m just_submodules_hub.run_action``."""
+
 from __future__ import annotations
 
 import sys

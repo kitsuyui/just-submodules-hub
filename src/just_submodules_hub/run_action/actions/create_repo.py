@@ -1,3 +1,5 @@
+"""Action handlers: create a new GitHub repository and add it as a submodule."""
+
 from __future__ import annotations
 
 import shutil
@@ -41,9 +43,11 @@ def _create_repo(args: list[str], visibility: str) -> int:
 
 @action("create-public-repo")
 def create_public_repo(args: list[str]) -> int:
+    """Create a new public GitHub repository and register it as a submodule."""
     return _create_repo(args, "public")
 
 
 @action("create-private-repo")
 def create_private_repo(args: list[str]) -> int:
+    """Create a new private GitHub repository and register it as a submodule."""
     return _create_repo(args, "private")

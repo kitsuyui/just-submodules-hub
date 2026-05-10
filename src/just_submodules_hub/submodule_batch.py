@@ -1,3 +1,5 @@
+"""Parallel batch execution, progress bars, and record rendering utilities."""
+
 from __future__ import annotations
 
 import csv
@@ -22,11 +24,14 @@ TQDM_BAR_FORMAT = (
 
 @dataclass(frozen=True)
 class BatchFailure:
+    """Record of a single item that raised an exception during batch processing."""
+
     item: str
     message: str
 
 
 def positive_int(raw: str) -> int:
+    """Parse *raw* as a positive integer; raise ArgumentTypeError on failure."""
     try:
         value = int(raw)
     except ValueError as exc:
@@ -44,6 +49,7 @@ def progress_bar(
     unit: str = "task",
     enabled: bool = True,
 ) -> Iterator[tqdm[Any] | None]:
+    """Yield a tqdm progress bar, or None when *enabled* is False."""
     if not enabled:
         yield None
         return
@@ -60,6 +66,7 @@ def progress_bar(
 
 
 def tick(bar: tqdm[Any] | None, amount: int = 1) -> None:
+    """Advance *bar* by *amount* ticks, ignoring None."""
     if bar is not None:
         bar.update(amount)
 
@@ -71,6 +78,11 @@ def run_parallel(
     jobs: int,
     on_done: Callable[[], None] | None = None,
 ) -> tuple[list[R], list[BatchFailure]]:
+    """Run *worker* over *items* in parallel with up to *jobs* threads.
+
+    Returns a (results, failures) tuple; exceptions are captured as BatchFailure
+    entries rather than re-raised so all items are attempted.
+    """
     results: list[R] = []
     failures: list[BatchFailure] = []
 
@@ -98,11 +110,13 @@ def run_parallel_with_progress(
     unit: str = "task",
     enabled: bool = True,
 ) -> tuple[list[R], list[BatchFailure]]:
+    """Run *worker* in parallel over *items*, showing a labeled progress bar."""
     with progress_bar(total=len(items), desc=desc, unit=unit, enabled=enabled) as bar:
         return run_parallel(items, worker, jobs=jobs, on_done=lambda: tick(bar))
 
 
 def record_to_dict(record: object) -> dict[str, str]:
+    """Convert *record* (dataclass or Mapping) to a flat ``{str: str}`` dict."""
     if is_dataclass(record) and not isinstance(record, type):
         raw = asdict(record)
     elif isinstance(record, Mapping):
@@ -113,6 +127,7 @@ def record_to_dict(record: object) -> dict[str, str]:
 
 
 def print_tsv(records: Sequence[object], fields: Sequence[str]) -> None:
+    """Print *records* to stdout as a tab-separated file with *fields* as columns."""
     writer = csv.DictWriter(
         sys.stdout,
         fieldnames=list(fields),
@@ -125,11 +140,13 @@ def print_tsv(records: Sequence[object], fields: Sequence[str]) -> None:
 
 
 def print_jsonl(records: Sequence[object]) -> None:
+    """Print *records* to stdout, one JSON object per line (JSONL format)."""
     for record in records:
         print(json.dumps(record_to_dict(record), ensure_ascii=False, sort_keys=True))
 
 
 def print_table(records: Sequence[object], fields: Sequence[str]) -> None:
+    """Print *records* to stdout as a padded plain-text table with *fields* columns."""
     rows = [
         dict(zip(fields, fields, strict=True)),
         *(record_to_dict(record) for record in records),
@@ -146,6 +163,7 @@ def print_records(
     fields: Sequence[str],
     output_format: str,
 ) -> None:
+    """Dispatch *records* to print_jsonl, print_tsv, or print_table based on *output_format*."""
     if output_format == "jsonl":
         print_jsonl(records)
     elif output_format == "tsv":

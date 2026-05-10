@@ -1,3 +1,5 @@
+"""Action handler: remove a submodule repository from the hub."""
+
 from __future__ import annotations
 
 import shutil
@@ -11,6 +13,7 @@ from just_submodules_hub.run_action.registry import action
 
 @action("remove-repo")
 def remove_repo(args: list[str]) -> int:
+    """Deinit and remove a submodule repository from the hub."""
     repo_input = args[0] if args else ""
     if not repo_input:
         print("REPO is required", file=sys.stderr)

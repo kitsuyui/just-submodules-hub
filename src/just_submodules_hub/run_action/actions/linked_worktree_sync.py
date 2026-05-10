@@ -1,3 +1,5 @@
+"""Action handlers for listing, planning, and applying linked-worktree syncs."""
+
 from __future__ import annotations
 
 import subprocess
@@ -32,15 +34,18 @@ def _run_script(script: Path, args: list[str], pass_stdin: bool = False) -> int:
 
 @action("list-linked-worktrees")
 def list_linked_worktrees(args: list[str]) -> int:
+    """List all linked worktrees registered in the hub."""
     return _run_script(_LIST_SCRIPT, args)
 
 
 @action("plan-linked-worktree-sync")
 def plan_linked_worktree_sync(args: list[str]) -> int:
+    """Generate a sync plan for linked worktrees without applying it."""
     return _run_script(_PLAN_SCRIPT, args)
 
 
 @action("apply-linked-worktree-sync")
 def apply_linked_worktree_sync(args: list[str]) -> int:
+    """Apply a linked-worktree sync plan, reading from stdin when requested."""
     # Pass stdin through so --from-plan-stdin can read a plan from a pipe
     return _run_script(_APPLY_SCRIPT, args, pass_stdin=True)

@@ -1,3 +1,5 @@
+"""Low-level subprocess wrapper with credential redaction."""
+
 from __future__ import annotations
 
 import shlex
@@ -9,6 +11,7 @@ SENSITIVE_ENV_PARTS = ("TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH")
 
 
 def sensitive_values(env: Mapping[str, str] | None) -> list[str]:
+    """Return values from *env* whose keys contain a sensitive keyword."""
     if env is None:
         return []
     return [
@@ -19,6 +22,7 @@ def sensitive_values(env: Mapping[str, str] | None) -> list[str]:
 
 
 def redact(text: str, redactions: Sequence[str]) -> str:
+    """Replace each value in *redactions* inside *text* with ``<redacted>``."""
     redacted = text
     for value in redactions:
         redacted = redacted.replace(value, "<redacted>")
@@ -32,6 +36,7 @@ def command_failure_message(
     output: str,
     redactions: Sequence[str],
 ) -> str:
+    """Format a human-readable error message for a failed subprocess command."""
     display_cwd = cwd if cwd else Path.cwd()
     details = [
         f"command failed: {redact(shlex.join(cmd), redactions)}",
@@ -48,6 +53,7 @@ def run(
     cwd: Path | None = None,
     env: Mapping[str, str] | None = None,
 ) -> str:
+    """Run *cmd* and return stdout stripped; raise RuntimeError on non-zero exit."""
     redactions = sensitive_values(env)
     proc = subprocess.run(
         list(cmd),

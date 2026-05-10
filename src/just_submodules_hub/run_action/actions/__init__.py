@@ -1,3 +1,5 @@
+"""Side-effect imports that register all action handlers."""
+
 from just_submodules_hub.run_action.actions import (  # noqa: F401
     add_repo,
     cleanup_branches,

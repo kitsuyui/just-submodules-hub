@@ -1,3 +1,5 @@
+"""Action handler: initialize all submodule repositories."""
+
 from __future__ import annotations
 
 import sys
@@ -13,6 +15,7 @@ from just_submodules_hub.run_action.registry import action
 
 @action("init-all-repos")
 def init_all_repos(args: list[str]) -> int:  # noqa: C901
+    """Initialize all submodules and set ``ignore = all`` in the local git config."""
     requested_jobs = ""
     no_fetch = False
     fetch_fallback = False

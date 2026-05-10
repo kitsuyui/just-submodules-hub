@@ -1,3 +1,5 @@
+"""CLI and library for syncing submodule repositories to their default branches."""
+
 from __future__ import annotations
 
 import argparse
@@ -38,6 +40,8 @@ from .submodule_batch import (
 
 @dataclass
 class SyncResult:
+    """Outcome of syncing a single submodule repository."""
+
     repo_path: str
     default_branch: str
     switched: bool
@@ -48,6 +52,8 @@ class SyncResult:
 
 @dataclass
 class ConfigSnapshot:
+    """Saved git-config entry to restore after a temporary token override."""
+
     cwd: Path
     key: str
     had_value: bool
@@ -56,15 +62,19 @@ class ConfigSnapshot:
 
 @dataclass
 class RemoteSnapshot:
+    """Saved remote URL to restore after a temporary token-authenticated URL override."""
+
     cwd: Path
     url: str
 
 
 def positive_int(raw: str) -> int:
+    """Delegate to submodule_batch.positive_int for CLI argument validation."""
     return batch_positive_int(raw)
 
 
 def parse_repo_paths(repo_root: Path | str = ".") -> list[str]:
+    """Return submodule paths listed in *repo_root*/.gitmodules."""
     return read_gitmodules_paths(repo_root)
 
 
@@ -73,6 +83,7 @@ def should_sync_target(
     local_branch: str,
     local_oid: str,
 ) -> bool:
+    """Return True when the local repo differs from *remote_head* and needs syncing."""
     if remote_head is None:
         return True
     if isinstance(remote_head, DefaultHead):
@@ -83,6 +94,10 @@ def should_sync_target(
 
 
 def github_token_url(url: str, token: str) -> str | None:
+    """Rewrite *url* to embed *token* as HTTPS basic-auth credentials.
+
+    Returns None when *url* is empty or not a recognizable GitHub URL form.
+    """
     if not url:
         return None
 
@@ -104,11 +119,13 @@ def github_token_url(url: str, token: str) -> str | None:
 
 
 def redaction_values(secret: str) -> list[str]:
+    """Return the raw and URL-encoded forms of *secret* for use as redactions."""
     encoded = quote(secret, safe="")
     return [value for value in {secret, encoded} if value]
 
 
 def redact_secrets(text: str, redactions: Iterable[str]) -> str:
+    """Replace each non-empty string in *redactions* inside *text* with ``<redacted>``."""
     redacted = text
     for secret in redactions:
         if secret:
@@ -117,6 +134,7 @@ def redact_secrets(text: str, redactions: Iterable[str]) -> str:
 
 
 def git_config_get(cwd: Path, key: str) -> tuple[bool, str]:
+    """Return (found, value) from local git config for *key* in *cwd*."""
     try:
         return True, run(["git", "config", "--local", "--get", key], cwd=cwd)
     except RuntimeError:
@@ -124,15 +142,18 @@ def git_config_get(cwd: Path, key: str) -> tuple[bool, str]:
 
 
 def git_config_set(cwd: Path, key: str, value: str) -> None:
+    """Set local git config *key* to *value* in *cwd*."""
     run(["git", "config", "--local", key, value], cwd=cwd)
 
 
 def git_config_unset(cwd: Path, key: str) -> None:
+    """Unset local git config *key* in *cwd*, ignoring errors if the key is absent."""
     with suppress(RuntimeError):
         run(["git", "config", "--local", "--unset", key], cwd=cwd)
 
 
 def restore_parent_config(snapshot: ConfigSnapshot) -> None:
+    """Restore the git-config entry saved in *snapshot* to its previous state."""
     if snapshot.had_value:
         git_config_set(snapshot.cwd, snapshot.key, snapshot.value)
     else:
@@ -140,6 +161,7 @@ def restore_parent_config(snapshot: ConfigSnapshot) -> None:
 
 
 def restore_remote(snapshot: RemoteSnapshot) -> None:
+    """Restore the remote origin URL saved in *snapshot*."""
     run(["git", "remote", "set-url", "origin", snapshot.url], cwd=snapshot.cwd)
 
 
@@ -150,6 +172,7 @@ def apply_token_url_overrides(
     parent_snapshots: list[ConfigSnapshot],
     remote_snapshots: list[RemoteSnapshot],
 ) -> None:
+    """Temporarily embed *token* into git-config and remote URLs for each entry."""
     for entry in entries:
         key = f"submodule.{entry.name}.url"
         had_parent_url, parent_url = git_config_get(repo_root, key)
@@ -182,6 +205,11 @@ def temporary_github_submodule_credentials(
     token_env: str | None,
     repo_root: Path | str = ".",
 ) -> Iterator[list[str]]:
+    """Context manager that temporarily injects a GitHub token into submodule URLs.
+
+    Yields a list of redaction strings. On exit, all overrides are restored.
+    Raises RuntimeError if the named environment variable is unset.
+    """
     if token_env is None:
         yield []
         return
@@ -230,6 +258,11 @@ def build_sync_targets(
     prefilter: bool,
     bar: tqdm[Any] | None,
 ) -> list[str]:
+    """Return the subset of *paths* that need syncing.
+
+    When *prefilter* is True, queries remote default-branch OIDs and skips repos
+    that are already up to date.
+    """
     path_list = list(paths)
     if not prefilter:
         return path_list
@@ -254,6 +287,7 @@ def build_sync_targets(
 
 
 def sync_one(repo_path: str) -> SyncResult:
+    """Fetch, switch, and pull a single submodule repository."""
     cwd = Path(repo_path)
     if not (cwd / ".git").exists():
         raise RuntimeError(f"Repository path not found: {repo_path}")
@@ -295,6 +329,7 @@ def sync_one(repo_path: str) -> SyncResult:
 
 
 def print_result(result: SyncResult, verbose: bool) -> bool:
+    """Print the sync outcome to stdout and return True when the repo changed."""
     name = repo_display_name(result.repo_path)
     rendered = render_sync_result(name, result, verbose)
     if rendered is None:
@@ -304,6 +339,7 @@ def print_result(result: SyncResult, verbose: bool) -> bool:
 
 
 def render_sync_result(name: str, result: SyncResult, verbose: bool) -> str | None:
+    """Format a human-readable line for *result*, or None to suppress output."""
     if result.skipped:
         return f"{name}: skipped ({result.skip_reason})"
 
@@ -327,6 +363,7 @@ def sync_all(
     bar: tqdm[Any] | None,
     redactions: Iterable[str] = (),
 ) -> tuple[int, int]:
+    """Sync all *paths* in parallel and return (exit_code, changed_count)."""
     results, failures = run_parallel(
         paths,
         sync_one,
@@ -356,12 +393,14 @@ def print_failures(
     failures: list[BatchFailure],
     redactions: Iterable[str] = (),
 ) -> None:
+    """Print each BatchFailure to stderr with secrets redacted."""
     for failure in failures:
         message = redact_secrets(failure.message, redactions)
         print(f"{repo_display_name(failure.item)}: {message}", file=sys.stderr)
 
 
 def run_final_submodule_update() -> None:
+    """Run ``git submodule update --remote --rebase --recursive --recommend-shallow``."""
     print(
         "Running final submodule update (--remote --rebase --recursive --recommend-shallow)...",
     )
@@ -380,6 +419,7 @@ def run_final_submodule_update() -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build and return the argument parser for the sync CLI."""
     parser = argparse.ArgumentParser(description="Sync submodules to default branches")
     subparsers = parser.add_subparsers(dest="action", required=True)
 
@@ -436,6 +476,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def handle_one_action(args: argparse.Namespace) -> int:
+    """Handle the ``sync one`` sub-command."""
     result = sync_one(resolve_repo_input(args.repo_path, Path.cwd()))
     print_result(result, args.verbose)
     if result.skipped:
@@ -444,6 +485,7 @@ def handle_one_action(args: argparse.Namespace) -> int:
 
 
 def handle_all_action(args: argparse.Namespace) -> int:
+    """Handle the ``sync all`` sub-command."""
     with temporary_github_submodule_credentials(
         getattr(args, "token_env", None),
     ) as redactions:
@@ -481,6 +523,7 @@ def handle_all_action(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
+    """Entry point for the sync CLI; parse args and dispatch to the right handler."""
     parser = build_parser()
     args = parser.parse_args()
     action = args.action

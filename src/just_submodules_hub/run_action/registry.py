@@ -1,3 +1,5 @@
+"""Action registry: @action decorator, dispatch, and registry introspection."""
+
 from __future__ import annotations
 
 import sys
@@ -20,6 +22,7 @@ def action(name: str) -> Callable[[ActionFn], ActionFn]:
 
 
 def dispatch(name: str, args: list[str]) -> int:
+    """Look up *name* in the registry and invoke it with *args*."""
     if name not in _REGISTRY:
         print(f"unknown action: {name}", file=sys.stderr)
         return 2
@@ -27,4 +30,5 @@ def dispatch(name: str, args: list[str]) -> int:
 
 
 def registered_actions() -> list[str]:
+    """Return a sorted list of all registered action names."""
     return sorted(_REGISTRY.keys())

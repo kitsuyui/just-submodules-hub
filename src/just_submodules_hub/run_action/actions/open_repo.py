@@ -1,3 +1,5 @@
+"""Action handler: open a repository in a local developer tool."""
+
 from __future__ import annotations
 
 import sys
@@ -9,6 +11,7 @@ from just_submodules_hub.run_action.registry import action
 
 @action("open-repo")
 def open_repo(args: list[str]) -> int:
+    """Open a repository in the specified local developer tool."""
     if len(args) < 2 or not args[0] or not args[1]:
         print("TOOL and REPO are required", file=sys.stderr)
         return 2

@@ -1,3 +1,5 @@
+"""Action handler: add a GitHub repository as a submodule."""
+
 from __future__ import annotations
 
 import shutil
@@ -13,7 +15,7 @@ _GITHUB_COM_PREFIX = "repo/github.com/"
 
 
 def _url_to_repo_dir(repo_url_input: str) -> str:
-    """Convert a GitHub URL / slug to the local submodule directory path.
+    r"""Convert a GitHub URL / slug to the local submodule directory path.
 
     Mirrors the shell logic::
 
@@ -36,6 +38,7 @@ def _url_to_repo_dir(repo_url_input: str) -> str:
 
 @action("add-repo")
 def add_repo(args: list[str]) -> int:
+    """Register a GitHub repository as a shallow submodule with ``ignore = all``."""
     repo_url_input = args[0] if args else ""
     if not repo_url_input:
         print("REPO_URL is required", file=sys.stderr)

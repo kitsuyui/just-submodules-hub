@@ -1,3 +1,5 @@
+"""Action handlers for cleaning up merged branches."""
+
 from __future__ import annotations
 
 import subprocess
@@ -26,17 +28,20 @@ def _run(mode: str, extra_args: list[str]) -> int:
 
 @action("cleanup-branches")
 def cleanup_branches(args: list[str]) -> int:
+    """Clean up merged branches for a single repository."""
     # Equivalent to: cleanup_merged_branches.py one [args...]
     return _run("one", args)
 
 
 @action("cleanup-submodule-branches")
 def cleanup_submodule_branches(args: list[str]) -> int:
+    """Clean up merged branches across all submodule repositories."""
     # Equivalent to: cleanup_merged_branches.py all [args...]
     return _run("all", args)
 
 
 @action("cleanup-worktree-branches")
 def cleanup_worktree_branches(args: list[str]) -> int:
+    """Clean up merged branches in the root repo and all linked worktrees."""
     # Equivalent to: cleanup_merged_branches.py root-and-all [args...]
     return _run("root-and-all", args)

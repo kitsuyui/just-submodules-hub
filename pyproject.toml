@@ -53,6 +53,8 @@ select = [
     "T20",      # flake8-print
     # Phase A2b-ANN (new)
     "ANN",      # flake8-annotations
+    # Phase A2b-D (new)
+    "D",        # pydocstyle
 ]
 ignore = [
     "COM812", # missing-trailing-comma: conflicts with ruff formatter; auto-fixed at Phase A2a
@@ -60,6 +62,8 @@ ignore = [
     "UP047",  # non-pep695-generic-function: PEP 695 syntax; defer to Phase A2b
     "ANN401", # any-type: typing.Any is necessary for JSON payloads, **kwargs pass-through,
                # and test spy stubs; overly strict for this codebase
+    "D203",   # one-blank-line-before-class: incompatible with D211 (no-blank-line-before-class)
+    "D213",   # multi-line-summary-second-line: incompatible with D212 (multi-line-summary-first-line)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -69,12 +73,12 @@ ignore = [
 # fixtures, not real secrets (S105); lambda stubs for monkeypatch have unused
 # args by design (ARG005); try-except-pass is used in negative test assertions
 # where pytest.raises is not applicable (S110).
-"tests/**" = ["S101", "ARG001", "ARG005", "S603", "S607", "S108", "S105", "S110"]
+"tests/**" = ["S101", "ARG001", "ARG005", "S603", "S607", "S108", "S105", "S110", "D"]
 
 # Scripts are CLI entrypoints; print() is intentional output (T201). subprocess
 # calls are argv-based by design (S603, S607). run_submodule_command.py uses
 # shell=True intentionally to support arbitrary user commands (S602).
-"scripts/**" = ["T201", "S603", "S607", "S602"]
+"scripts/**" = ["T201", "S603", "S607", "S602", "D"]
 
 # Production action modules use stderr-print for diagnostics (T201) and
 # argv-based subprocess (S603, S607). These are CLI entrypoints.
@@ -89,6 +93,9 @@ ignore = [
 # shell.py is the core subprocess wrapper; S603 fires on every subprocess.run
 # call even though arguments are always passed as a list (no shell=True).
 "src/just_submodules_hub/shell.py" = ["S603"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html

@@ -1,3 +1,5 @@
+"""Bulk fetching of remote default-branch/OID pairs via GitHub GraphQL."""
+
 from __future__ import annotations
 
 import contextlib
@@ -40,11 +42,14 @@ query($owner: String!, $cursor: String) {
 
 @dataclass(frozen=True)
 class DefaultHead:
+    """Remote default branch and its HEAD commit OID."""
+
     branch: str
     oid: str
 
 
 def gh_graphql(owner: str, cursor: str | None) -> dict:
+    """Execute the GRAPHQL_QUERY for *owner* and return the parsed JSON response."""
     cmd = [
         "gh",
         "api",
@@ -61,6 +66,10 @@ def gh_graphql(owner: str, cursor: str | None) -> dict:
 
 
 def extract_default_head(node: dict, owner: str) -> tuple[str, DefaultHead] | None:
+    """Extract a (slug, DefaultHead) pair from a GraphQL repository node.
+
+    Returns None when the node lacks a valid defaultBranchRef or OID.
+    """
     default_ref = node.get("defaultBranchRef")
     if not default_ref:
         return None
@@ -77,6 +86,7 @@ def fetch_owner_default_heads(
     owner: str,
     bar: tqdm[Any] | None,
 ) -> dict[str, DefaultHead]:
+    """Fetch all default-branch HEAD OIDs for every repository owned by *owner*."""
     cursor: str | None = None
     found: dict[str, DefaultHead] = {}
 
@@ -111,6 +121,7 @@ def fetch_owner_default_heads(
 
 
 def owner_prefilter_total(paths: Iterable[str], prefilter: bool) -> int:
+    """Return the number of extra progress-bar ticks needed for the prefilter phase."""
     if not prefilter:
         return 0
     return len({repo_owner(path) for path in paths})
@@ -120,6 +131,7 @@ def fetch_default_heads_for_paths(
     paths: Iterable[str],
     bar: tqdm[Any] | None,
 ) -> dict[str, DefaultHead]:
+    """Fetch default-branch HEAD OIDs for every owner found in *paths*."""
     path_list = list(paths)
     owners = sorted({repo_owner(path) for path in path_list})
     heads: dict[str, DefaultHead] = {}
@@ -131,6 +143,10 @@ def fetch_default_heads_for_paths(
 
 
 def local_head(repo_path: str | Path) -> tuple[str, str]:
+    """Return the local (branch, OID) pair for *repo_path*.
+
+    Returns ("DETACHED", <oid>) when HEAD is in detached state.
+    """
     cwd = Path(repo_path)
     branch = "DETACHED"
     with contextlib.suppress(Exception):
@@ -143,6 +159,11 @@ def matching_default_head(
     repo_path: str,
     remote_heads: dict[str, DefaultHead],
 ) -> DefaultHead | None:
+    """Return the remote DefaultHead when the local repo is already up to date.
+
+    Returns None when *repo_path* is not in *remote_heads* or when the local
+    branch / OID differ from the remote default.
+    """
     remote = remote_heads.get(repo_display_name(repo_path))
     if remote is None:
         return None
