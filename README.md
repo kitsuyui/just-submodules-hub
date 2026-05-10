@@ -97,6 +97,7 @@ Detailed command guides live under [`docs/`](docs/README.md):
 - [`docs/repo/`](docs/repo/README.md)
 - [`docs/github/`](docs/github/README.md)
 - [`docs/command-naming.md`](docs/command-naming.md)
+- [`docs/repo/hooks.md`](docs/repo/hooks.md): `before-` / `after-` hook mechanism for repo recipes
 
 The recommended entrypoint is:
 
