@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -70,21 +71,48 @@ def apply_plan(record: PlanRecord) -> PlanRecord:
     return replace(record, status=success_status, message=success_message)
 
 
+def read_plan_from_stdin() -> list[PlanRecord]:
+    records: list[PlanRecord] = []
+    for lineno, raw in enumerate(sys.stdin, start=1):
+        line = raw.rstrip("\n")
+        if not line.strip():
+            continue
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError as exc:
+            print(
+                f"line {lineno}: invalid JSON ({exc}): {line!r}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from exc
+        records.append(PlanRecord(**{k: data.get(k, "") for k in FIELDS}))
+    return records
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Apply safe synchronization decisions for Git linked worktrees."
     )
     parser.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
+    parser.add_argument(
+        "--from-plan-stdin",
+        action="store_true",
+        help="Read plan records as JSONL from stdin instead of recomputing the plan.",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    root = Path.cwd()
-    default = default_branch(root)
-    records = [
-        apply_plan(plan_one(worktree, default)) for worktree in list_worktrees(root)
-    ]
+    if args.from_plan_stdin:
+        plan_records = read_plan_from_stdin()
+    else:
+        root = Path.cwd()
+        default = default_branch(root)
+        plan_records = [
+            plan_one(worktree, default) for worktree in list_worktrees(root)
+        ]
+    records = [apply_plan(record) for record in plan_records]
     print_records(records, FIELDS, args.format)
     return 1 if any(record.status == "failed" for record in records) else 0
 

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
+import io
+import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -19,7 +23,7 @@ assert spec.loader is not None
 spec.loader.exec_module(apply_sync)
 
 
-def record(action: str, target: str = "origin/main") -> object:
+def record(action: str, target: str = "origin/main") -> Any:
     return apply_sync.PlanRecord(
         path="/repo",
         branch="feature/test",
@@ -142,3 +146,156 @@ def test_apply_plan_reports_git_failures(monkeypatch: pytest.MonkeyPatch) -> Non
 
     assert result.status == "failed"
     assert result.message == "fetch failed"
+
+
+# ---------------------------------------------------------------------------
+# Tests for --from-plan-stdin / read_plan_from_stdin
+# ---------------------------------------------------------------------------
+
+
+def _make_plan_record(**overrides: str) -> Any:
+    """Return a PlanRecord with sensible defaults; fields can be overridden."""
+    defaults: dict[str, str] = dict(
+        path="/repo",
+        branch="feature/test",
+        dirty="clean",
+        pr="",
+        draft="",
+        status="skipped",
+        action="skip-dirty",
+        target="",
+        message="worktree has local changes",
+    )
+    defaults.update(overrides)
+    return apply_sync.PlanRecord(**defaults)
+
+
+def _record_to_json(rec: Any) -> str:
+    """Serialize a PlanRecord to a JSON string via dataclasses.asdict."""
+    return json.dumps(dataclasses.asdict(rec))
+
+
+def test_read_plan_from_stdin_does_not_call_plan_one(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """--from-plan-stdin must not invoke plan_one at all."""
+    plan_one_calls: list[Any] = []
+
+    def spy_plan_one(*args: Any, **kwargs: Any) -> Any:
+        plan_one_calls.append(args)
+        raise AssertionError("plan_one must not be called in --from-plan-stdin mode")
+
+    monkeypatch.setattr(apply_sync, "plan_one", spy_plan_one)
+
+    rec = _make_plan_record()
+    stdin_text = _record_to_json(rec) + "\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO(stdin_text))
+
+    result = apply_sync.read_plan_from_stdin()
+
+    assert plan_one_calls == [], "plan_one was called unexpectedly"
+    assert len(result) == 1
+
+
+def test_read_plan_from_stdin_deserializes_single_record(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A single JSONL line must deserialize to the matching PlanRecord."""
+    rec = apply_sync.PlanRecord(
+        path="/some/repo",
+        branch="fix/bug",
+        dirty="clean",
+        pr="42",
+        draft="no",
+        status="planned",
+        action="rebase-default",
+        target="origin/main",
+        message="draft PR or private branch without remote tracking branch",
+    )
+    stdin_text = _record_to_json(rec) + "\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO(stdin_text))
+
+    result = apply_sync.read_plan_from_stdin()
+
+    assert result == [rec]
+
+
+def test_read_plan_from_stdin_preserves_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Multiple JSONL lines must deserialize in input order."""
+    recs = [
+        _make_plan_record(path=f"/repo-{i}", branch=f"feature/{i}") for i in range(3)
+    ]
+    lines = "\n".join(_record_to_json(r) for r in recs) + "\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO(lines))
+
+    result = apply_sync.read_plan_from_stdin()
+
+    assert result == recs
+
+
+def test_read_plan_from_stdin_skips_empty_lines(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Blank lines (whitespace-only) must be silently skipped."""
+    rec = _make_plan_record()
+    payload = _record_to_json(rec)
+    stdin_text = f"\n  \n{payload}\n\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO(stdin_text))
+
+    result = apply_sync.read_plan_from_stdin()
+
+    assert len(result) == 1
+    assert result[0] == rec
+
+
+def test_read_plan_from_stdin_invalid_json_exits_2(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An invalid JSON line must print to stderr and raise SystemExit(2)."""
+    monkeypatch.setattr("sys.stdin", io.StringIO("not-valid-json\n"))
+
+    with pytest.raises(SystemExit) as exc_info:
+        apply_sync.read_plan_from_stdin()
+
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "line 1" in captured.err
+    assert "not-valid-json" in captured.err
+
+
+def test_main_without_from_plan_stdin_calls_plan_one(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Without --from-plan-stdin, main() must invoke plan_one (legacy path intact)."""
+    plan_one_calls: list[Any] = []
+    skipped_rec = _make_plan_record(status="skipped", action="skip-dirty")
+
+    def fake_plan_one(worktree: Any, default: str) -> Any:
+        plan_one_calls.append(worktree)
+        return skipped_rec
+
+    monkeypatch.setattr(apply_sync, "plan_one", fake_plan_one)
+    monkeypatch.setattr(
+        apply_sync,
+        "list_worktrees",
+        lambda root: [object()],
+    )
+    monkeypatch.setattr(
+        apply_sync,
+        "default_branch",
+        lambda root: "main",
+    )
+    monkeypatch.setattr(apply_sync, "apply_plan", lambda r: r)
+    monkeypatch.setattr(
+        "sys.argv", ["apply_linked_worktree_sync.py", "--format", "jsonl"]
+    )
+
+    exit_code = apply_sync.main()
+
+    assert len(plan_one_calls) == 1, "plan_one must be called exactly once per worktree"
+    assert exit_code == 0
