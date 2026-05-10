@@ -8,7 +8,6 @@ import pytest
 
 from just_submodules_hub.default_heads import DefaultHead
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/reconcile_submodule_worktrees.py"
 
@@ -40,7 +39,8 @@ def test_build_reconcile_targets_prefilters_up_to_date_default_branch(
     ]
 
     monkeypatch.setattr(
-        "just_submodules_hub.default_heads.fetch_default_heads_for_paths",
+        reconcile,
+        "fetch_default_heads_for_paths",
         lambda _paths, _bar: {
             "kitsuyui/up-to-date": DefaultHead("main", "aaa"),
             "kitsuyui/needs-work": DefaultHead("main", "bbb"),
@@ -80,7 +80,8 @@ def test_build_reconcile_targets_keeps_root_repository(
 ) -> None:
     bar = DummyBar()
     monkeypatch.setattr(
-        "just_submodules_hub.default_heads.fetch_default_heads_for_paths",
+        reconcile,
+        "fetch_default_heads_for_paths",
         lambda _paths, _bar: {},
     )
 

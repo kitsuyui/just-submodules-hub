@@ -5,7 +5,6 @@ from pathlib import Path
 
 from .helpers import add_submodule, create_remote
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / "scripts/submodules/list-by-file.sh"
 

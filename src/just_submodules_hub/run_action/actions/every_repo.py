@@ -23,6 +23,7 @@ def every_repo(args: list[str]) -> int:
         str(_PROJECT_ROOT),
         "python",
         str(_SCRIPT),
-    ] + args
+        *args,
+    ]
     proc = subprocess.run(cmd, check=False)
     return proc.returncode

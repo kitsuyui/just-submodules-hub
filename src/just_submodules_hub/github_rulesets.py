@@ -4,7 +4,6 @@ import json
 from dataclasses import dataclass
 from fnmatch import fnmatch
 
-
 BASELINE_RULESET_NAME = "default-branch-baseline"
 BASELINE_RULE_TYPES = ("pull_request", "non_fast_forward", "deletion")
 BASELINE_PULL_REQUEST_PARAMETERS = {

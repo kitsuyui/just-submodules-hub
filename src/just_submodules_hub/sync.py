@@ -1,14 +1,21 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
-from dataclasses import dataclass
 import os
-from pathlib import Path
 import sys
-from typing import Any, Iterable, Iterator, List
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 from urllib.parse import quote, urlsplit
 
+from tqdm import tqdm
+
+from .default_branch import (
+    parse_head_branch_line,  # noqa: F401
+    resolve_default_branch,
+)
 from .default_heads import (
     DefaultHead,
     fetch_owner_default_heads,
@@ -17,17 +24,15 @@ from .default_heads import (
 )
 from .gitmodules import SubmoduleEntry, read_gitmodules_entries, read_gitmodules_paths
 from .repo_paths import repo_display_name, repo_owner, resolve_repo_input
-from .default_branch import parse_head_branch_line  # noqa: F401
-from .default_branch import resolve_default_branch
 from .shell import run
-from tqdm import tqdm
-
 from .submodule_batch import (
     BatchFailure,
-    positive_int as batch_positive_int,
     progress_bar,
     run_parallel,
     tick,
+)
+from .submodule_batch import (
+    positive_int as batch_positive_int,
 )
 
 
@@ -59,7 +64,7 @@ def positive_int(raw: str) -> int:
     return batch_positive_int(raw)
 
 
-def parse_repo_paths(repo_root: Path | str = ".") -> List[str]:
+def parse_repo_paths(repo_root: Path | str = ".") -> list[str]:
     return read_gitmodules_paths(repo_root)
 
 
@@ -123,10 +128,8 @@ def git_config_set(cwd: Path, key: str, value: str) -> None:
 
 
 def git_config_unset(cwd: Path, key: str) -> None:
-    try:
+    with suppress(RuntimeError):
         run(["git", "config", "--local", "--unset", key], cwd=cwd)
-    except RuntimeError:
-        pass
 
 
 def restore_parent_config(snapshot: ConfigSnapshot) -> None:
@@ -224,7 +227,7 @@ def temporary_github_submodule_credentials(
 
 def build_sync_targets(
     paths: Iterable[str], prefilter: bool, bar: tqdm[Any] | None
-) -> List[str]:
+) -> list[str]:
     path_list = list(paths)
     if not prefilter:
         return path_list
@@ -234,7 +237,7 @@ def build_sync_targets(
     for owner in sorted({repo_owner(path) for path in path_list}):
         heads.update(fetch_owner_default_heads(owner, bar))
 
-    targets: List[str] = []
+    targets: list[str] = []
 
     for repo_path in path_list:
         slug = repo_display_name(repo_path)
@@ -254,12 +257,10 @@ def sync_one(repo_path: str) -> SyncResult:
         raise RuntimeError(f"Repository path not found: {repo_path}")
 
     current_branch = "DETACHED"
-    try:
+    with suppress(Exception):
         current_branch = run(
             ["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=cwd
         )
-    except Exception:
-        pass
 
     status_porcelain = run(["git", "status", "--porcelain"], cwd=cwd)
     if status_porcelain:
@@ -308,7 +309,7 @@ def render_sync_result(name: str, result: SyncResult, verbose: bool) -> str | No
             return f"{name}: up-to-date"
         return None
 
-    parts: List[str] = []
+    parts: list[str] = []
     if result.switched:
         parts.append(f"switched-to:{result.default_branch}")
     if result.updated:
@@ -317,7 +318,7 @@ def render_sync_result(name: str, result: SyncResult, verbose: bool) -> str | No
 
 
 def sync_all(
-    paths: List[str],
+    paths: list[str],
     jobs: int,
     verbose: bool,
     bar: tqdm[Any] | None,

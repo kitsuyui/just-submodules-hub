@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import pytest
 
 from just_submodules_hub import default_branch as db_module
-from just_submodules_hub import sync
-from just_submodules_hub import default_heads
+from just_submodules_hub import default_heads, sync
 from just_submodules_hub.submodule_batch import BatchFailure
 
 
@@ -260,9 +259,11 @@ def test_temporary_github_submodule_credentials_redacts_setup_errors(
     monkeypatch.setenv("SUBMODULE_TOKEN", "secret-token")
     monkeypatch.setattr(sync, "run", fake_run)
 
-    with pytest.raises(RuntimeError, match="<redacted>") as excinfo:
-        with sync.temporary_github_submodule_credentials("SUBMODULE_TOKEN", tmp_path):
-            pass
+    with (
+        pytest.raises(RuntimeError, match="<redacted>") as excinfo,
+        sync.temporary_github_submodule_credentials("SUBMODULE_TOKEN", tmp_path),
+    ):
+        pass
     assert "secret-token" not in str(excinfo.value)
     assert "secret-token" not in capsys.readouterr().err
 
@@ -272,11 +273,13 @@ def test_temporary_github_submodule_credentials_requires_env(
 ) -> None:
     monkeypatch.delenv("SUBMODULE_TOKEN", raising=False)
 
-    with pytest.raises(
-        RuntimeError, match="Environment variable SUBMODULE_TOKEN is not set"
+    with (
+        pytest.raises(
+            RuntimeError, match="Environment variable SUBMODULE_TOKEN is not set"
+        ),
+        sync.temporary_github_submodule_credentials("SUBMODULE_TOKEN"),
     ):
-        with sync.temporary_github_submodule_credentials("SUBMODULE_TOKEN"):
-            pass
+        pass
 
 
 def test_print_failures_redacts_token(capsys: pytest.CaptureFixture[str]) -> None:

@@ -4,7 +4,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/list_linked_worktrees.py"
 

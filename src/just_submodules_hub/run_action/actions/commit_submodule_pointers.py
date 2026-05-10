@@ -49,7 +49,7 @@ def commit_submodule_pointers(args: list[str]) -> int:
         return 0
 
     add_proc = subprocess.run(
-        ["git", "add", "--"] + changed,
+        ["git", "add", "--", *changed],
         check=False,
     )
     if add_proc.returncode != 0:

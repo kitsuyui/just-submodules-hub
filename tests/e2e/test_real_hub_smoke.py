@@ -8,7 +8,6 @@ import pytest
 
 from tests.integration.helpers import add_submodule, init_hub
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / "scripts/submodules/list-by-file.sh"
 

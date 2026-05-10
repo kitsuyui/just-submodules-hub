@@ -18,7 +18,8 @@ def _run(mode: str, extra_args: list[str]) -> int:
         "python",
         str(_SCRIPT),
         mode,
-    ] + extra_args
+        *extra_args,
+    ]
     proc = subprocess.run(cmd, check=False)
     return proc.returncode
 

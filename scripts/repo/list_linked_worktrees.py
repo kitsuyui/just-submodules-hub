@@ -11,7 +11,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from just_submodules_hub.submodule_batch import print_records
 
-
 FIELDS = ("path", "head", "branch", "detached", "locked", "prunable", "message")
 
 

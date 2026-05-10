@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import shlex
 import subprocess
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Mapping, Sequence
-
 
 SENSITIVE_ENV_PARTS = ("TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH")
 

@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import contextlib
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, cast
+from typing import Any, cast
+
+from tqdm import tqdm
 
 from .repo_paths import repo_display_name, repo_owner
 from .shell import run
-from tqdm import tqdm
-
 from .submodule_batch import tick
-
 
 GRAPHQL_QUERY = """
 query($owner: String!, $cursor: String) {
@@ -130,10 +131,8 @@ def fetch_default_heads_for_paths(
 def local_head(repo_path: str | Path) -> tuple[str, str]:
     cwd = Path(repo_path)
     branch = "DETACHED"
-    try:
+    with contextlib.suppress(Exception):
         branch = run(["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=cwd)
-    except Exception:
-        pass
     oid = run(["git", "rev-parse", "HEAD"], cwd=cwd)
     return branch, oid
 

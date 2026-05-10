@@ -4,8 +4,8 @@ import contextlib
 import os
 import subprocess
 import sys
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 from just_submodules_hub.run_action.actions._helpers import validate_positive_integer
 from just_submodules_hub.run_action.registry import action, dispatch
@@ -15,7 +15,7 @@ _SAFETY_SCRIPT = _PROJECT_ROOT / "scripts" / "repo" / "linked_worktree_safety.py
 
 
 @contextlib.contextmanager
-def _chdir(path: str) -> Generator[None, None, None]:
+def _chdir(path: str) -> Generator[None]:
     """Context manager: temporarily change the working directory."""
     old = os.getcwd()
     os.chdir(path)

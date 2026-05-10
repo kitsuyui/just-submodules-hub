@@ -11,18 +11,16 @@ _SCRIPT = _PROJECT_ROOT / "scripts" / "repo" / "reconcile_submodule_worktrees.py
 
 
 def _run(mode_args: list[str], extra_args: list[str]) -> int:
-    cmd = (
-        [
-            "uv",
-            "run",
-            "--project",
-            str(_PROJECT_ROOT),
-            "python",
-            str(_SCRIPT),
-        ]
-        + mode_args
-        + extra_args
-    )
+    cmd = [
+        "uv",
+        "run",
+        "--project",
+        str(_PROJECT_ROOT),
+        "python",
+        str(_SCRIPT),
+        *mode_args,
+        *extra_args,
+    ]
     proc = subprocess.run(cmd, check=False)
     return proc.returncode
 

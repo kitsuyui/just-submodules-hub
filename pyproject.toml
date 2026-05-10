@@ -26,6 +26,24 @@ testpaths = [
 line-length = 88
 target-version = "py313"
 
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # Pyflakes
+    "W",     # pycodestyle warnings
+    "I",     # isort (import order)
+    "UP",    # pyupgrade (modern Python idioms)
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "SIM",   # flake8-simplify
+    "RUF",   # Ruff-specific
+    "PLC0415",  # import-outside-top-level
+]
+ignore = [
+    "E501",  # line-too-long: existing code has many long lines; fix separately
+    "UP047", # non-pep695-generic-function: PEP 695 syntax; defer to Phase A2
+]
+
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html
 ignore_missing_imports = true

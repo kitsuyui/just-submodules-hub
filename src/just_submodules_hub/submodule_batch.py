@@ -4,13 +4,13 @@ import csv
 import json
 import sys
 from argparse import ArgumentTypeError
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, is_dataclass
-from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
+from typing import Any, TypeVar
 
 from tqdm import tqdm
-
 
 T = TypeVar("T")
 R = TypeVar("R")

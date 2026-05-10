@@ -3,7 +3,6 @@ from __future__ import annotations
 from configparser import ConfigParser
 from pathlib import Path
 
-
 REPO_PREFIX = "repo/github.com/"
 
 

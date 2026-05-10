@@ -19,7 +19,6 @@ from just_submodules_hub.submodule_batch import (
     run_parallel_with_progress,
 )
 
-
 FIELDS = ("repo", "target", "branch", "status", "reason")
 
 

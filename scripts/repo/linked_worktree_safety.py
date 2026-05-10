@@ -7,16 +7,13 @@ import fnmatch
 import re
 import stat
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from typing import Sequence
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-from just_submodules_hub.default_branch import resolve_default_branch as default_branch
-from just_submodules_hub.submodule_batch import print_records
 from plan_linked_worktree_sync import (
     PlanRecord,  # noqa: F401
     WorktreeRecord,  # noqa: F401
@@ -27,6 +24,8 @@ from plan_linked_worktree_sync import (
     summarize,
 )
 
+from just_submodules_hub.default_branch import resolve_default_branch as default_branch
+from just_submodules_hub.submodule_batch import print_records
 
 HOOK_FIELDS = ("status", "path", "message")
 RESET_FIELDS = ("path", "branch", "status", "action", "backup", "target", "message")

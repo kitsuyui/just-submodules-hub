@@ -11,17 +11,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+from typing import Any
+
+from tqdm import tqdm
+
 from just_submodules_hub.default_branch import resolve_default_branch as default_branch
 from just_submodules_hub.default_heads import (
+    fetch_default_heads_for_paths,
     matching_default_head,
     owner_prefilter_total,
 )
 from just_submodules_hub.gitmodules import read_gitmodules_paths
 from just_submodules_hub.repo_paths import resolve_repo_input
-from typing import Any
-
-from tqdm import tqdm
-
 from just_submodules_hub.submodule_batch import (
     positive_int,
     print_records,
@@ -29,7 +30,6 @@ from just_submodules_hub.submodule_batch import (
     run_parallel,
     tick,
 )
-
 
 FIELDS = ("repo", "status", "action", "branch", "pr", "dirty", "message")
 
@@ -285,8 +285,6 @@ def build_reconcile_targets(
 ) -> tuple[list[str], list[Result]]:
     if not prefilter:
         return paths, []
-
-    from just_submodules_hub.default_heads import fetch_default_heads_for_paths
 
     submodule_paths = [path for path in paths if path != "."]
     heads = fetch_default_heads_for_paths(submodule_paths, bar)
