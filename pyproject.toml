@@ -51,11 +51,15 @@ select = [
     "S",        # flake8-bandit (security)
     "SLOT",     # flake8-slots
     "T20",      # flake8-print
+    # Phase A2b-ANN (new)
+    "ANN",      # flake8-annotations
 ]
 ignore = [
     "COM812", # missing-trailing-comma: conflicts with ruff formatter; auto-fixed at Phase A2a
     "E501",   # line-too-long: existing code has many long lines; fix separately
     "UP047",  # non-pep695-generic-function: PEP 695 syntax; defer to Phase A2b
+    "ANN401", # any-type: typing.Any is necessary for JSON payloads, **kwargs pass-through,
+               # and test spy stubs; overly strict for this codebase
 ]
 
 [tool.ruff.lint.per-file-ignores]
