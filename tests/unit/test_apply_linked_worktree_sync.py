@@ -1,25 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
-import importlib.util
 import io
 import json
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/apply_linked_worktree_sync.py"
-
-spec = importlib.util.spec_from_file_location("apply_linked_worktree_sync", SCRIPT_PATH)
-assert spec is not None
-apply_sync = importlib.util.module_from_spec(spec)
-sys.modules["apply_linked_worktree_sync"] = apply_sync
-assert spec.loader is not None
-spec.loader.exec_module(apply_sync)
+import just_submodules_hub.linked_worktree_apply as apply_sync
 
 
 def record(action: str, target: str = "origin/main") -> Any:
@@ -569,7 +559,7 @@ def test_main_exit_code_one_when_any_record_failed(
         target="origin/main",
         path="/repo2",
     )
-    # apply_plan results: first=ok, second=failed — iterator drives the sequence
+    # apply_plan results: first=ok, second=failed - iterator drives the sequence
     apply_results = iter([applied_ok, applied_fail])
 
     monkeypatch.setattr(apply_sync, "plan_one", lambda wt, d: applied_ok)

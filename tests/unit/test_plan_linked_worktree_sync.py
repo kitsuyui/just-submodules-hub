@@ -1,22 +1,12 @@
 from __future__ import annotations
 
-import importlib.util
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/plan_linked_worktree_sync.py"
-
-spec = importlib.util.spec_from_file_location("plan_linked_worktree_sync", SCRIPT_PATH)
-assert spec is not None
-planner = importlib.util.module_from_spec(spec)
-sys.modules["plan_linked_worktree_sync"] = planner
-assert spec.loader is not None
-spec.loader.exec_module(planner)
+import just_submodules_hub.linked_worktree_planning as planner
 
 
 def completed(
@@ -33,7 +23,7 @@ def worktree(
     *,
     path: str = "/repo-feature",
     detached: str = "no",
-) -> object:
+) -> planner.WorktreeRecord:
     return planner.WorktreeRecord(
         path=path,
         head="1111111111111111111111111111111111111111",

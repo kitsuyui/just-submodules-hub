@@ -463,112 +463,110 @@ def test_reconcile_submodule_worktree_requires_repo(
     assert "REPO is required" in capsys.readouterr().err
 
 
-def test_reconcile_submodule_worktree_delegates_to_subprocess(
+def test_reconcile_submodule_worktree_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(reconcile_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(reconcile_worktrees_module, "reconcile_main", fake_main)
 
     fn = reg._REGISTRY["reconcile-submodule-worktree"]
     rc = fn(["owner/repo", "--format", "tsv"])
     assert rc == 0
-    # mode args: ["one", "owner/repo", "--format", "tsv"]
-    assert "one" in calls[0]
-    assert "owner/repo" in calls[0]
+    assert calls[0][:3] == ["one", "owner/repo", "--format"]
 
 
-def test_reconcile_submodule_worktrees_delegates_to_subprocess(
+def test_reconcile_submodule_worktrees_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(reconcile_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(reconcile_worktrees_module, "reconcile_main", fake_main)
 
     fn = reg._REGISTRY["reconcile-submodule-worktrees"]
     rc = fn([])
     assert rc == 0
-    assert "all" in calls[0]
+    assert calls[0][0] == "all"
 
 
-def test_reconcile_worktrees_delegates_to_subprocess(
+def test_reconcile_worktrees_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(reconcile_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(reconcile_worktrees_module, "reconcile_main", fake_main)
 
     fn = reg._REGISTRY["reconcile-worktrees"]
     rc = fn([])
     assert rc == 0
-    assert "root-and-all" in calls[0]
+    assert calls[0][0] == "root-and-all"
 
 
 # ---------- cleanup-* ----------
 
 
-def test_cleanup_branches_delegates_to_subprocess(
+def test_cleanup_branches_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(cleanup_branches_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(cleanup_branches_module, "cleanup_main", fake_main)
 
     fn = reg._REGISTRY["cleanup-branches"]
     rc = fn(["--apply"])
     assert rc == 0
-    assert "one" in calls[0]
+    assert calls[0][0] == "one"
     assert "--apply" in calls[0]
 
 
-def test_cleanup_submodule_branches_delegates_to_subprocess(
+def test_cleanup_submodule_branches_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(cleanup_branches_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(cleanup_branches_module, "cleanup_main", fake_main)
 
     fn = reg._REGISTRY["cleanup-submodule-branches"]
     rc = fn([])
     assert rc == 0
-    assert "all" in calls[0]
+    assert calls[0][0] == "all"
 
 
-def test_cleanup_worktree_branches_delegates_to_subprocess(
+def test_cleanup_worktree_branches_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(cleanup_branches_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(cleanup_branches_module, "cleanup_main", fake_main)
 
     fn = reg._REGISTRY["cleanup-worktree-branches"]
     rc = fn([])
     assert rc == 0
-    assert "root-and-all" in calls[0]
+    assert calls[0][0] == "root-and-all"
 
 
 # ---------- add-repo ----------
@@ -739,59 +737,55 @@ def test_commit_submodule_pointers_commits_changed(
 # ---------- list/plan/apply-linked-worktree-sync ----------
 
 
-def test_list_linked_worktrees_delegates_to_subprocess(
+def test_list_linked_worktrees_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(linked_worktree_sync_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktree_sync_module, "list_main", fake_main)
 
     fn = reg._REGISTRY["list-linked-worktrees"]
     rc = fn(["--format", "jsonl"])
     assert rc == 0
-    # script is the 6th element (index 5) of the cmd list
-    assert "list_linked_worktrees.py" in calls[0][5]
-    assert "--format" in calls[0]
-    assert "jsonl" in calls[0]
+    assert calls[0] == ["--format", "jsonl"]
 
 
-def test_plan_linked_worktree_sync_delegates_to_subprocess(
+def test_plan_linked_worktree_sync_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(linked_worktree_sync_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktree_sync_module, "plan_main", fake_main)
 
     fn = reg._REGISTRY["plan-linked-worktree-sync"]
     rc = fn([])
     assert rc == 0
-    assert "plan_linked_worktree_sync.py" in calls[0][5]
+    assert calls[0] == []
 
 
-def test_apply_linked_worktree_sync_delegates_to_subprocess(
+def test_apply_linked_worktree_sync_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(linked_worktree_sync_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktree_sync_module, "apply_main", fake_main)
 
     fn = reg._REGISTRY["apply-linked-worktree-sync"]
     rc = fn(["--from-plan-stdin"])
     assert rc == 0
-    assert "apply_linked_worktree_sync.py" in calls[0][5]
-    assert "--from-plan-stdin" in calls[0]
+    assert calls[0] == ["--from-plan-stdin"]
 
 
 # ---------- create-public-repo / create-private-repo ----------
@@ -847,62 +841,59 @@ def test_create_public_repo_creates_and_adds(
 # ---------- install/reset/cleanup-linked-worktrees ----------
 
 
-def test_install_linked_worktree_hooks_delegates_to_subprocess(
+def test_install_linked_worktree_hooks_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module, "_safety_main", fake_main)
 
     fn = reg._REGISTRY["install-linked-worktree-hooks"]
     rc = fn(["--format", "tsv"])
     assert rc == 0
-    assert "linked_worktree_safety.py" in calls[0][5]
-    assert "install-hooks" in calls[0]
+    assert calls[0][0] == "install-hooks"
     assert "--format" in calls[0]
     assert "tsv" in calls[0]
 
 
-def test_reset_linked_worktree_delegates_to_subprocess(
+def test_reset_linked_worktree_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module, "_safety_main", fake_main)
 
     fn = reg._REGISTRY["reset-linked-worktree"]
     rc = fn(["/some/path", "--apply"])
     assert rc == 0
-    assert "linked_worktree_safety.py" in calls[0][5]
-    assert "reset" in calls[0]
+    assert calls[0][0] == "reset"
     assert "/some/path" in calls[0]
     assert "--apply" in calls[0]
 
 
-def test_cleanup_linked_worktrees_delegates_to_subprocess(
+def test_cleanup_linked_worktrees_delegates_to_main(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
-        calls.append(cmd)
-        return CompletedProcess(cmd, 0)
+    def fake_main(argv: list[str] | None = None) -> int:
+        calls.append(argv or [])
+        return 0
 
-    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module, "_safety_main", fake_main)
 
     fn = reg._REGISTRY["cleanup-linked-worktrees"]
     rc = fn(["--path-glob", "worktrees/*"])
     assert rc == 0
-    assert "linked_worktree_safety.py" in calls[0][5]
-    assert "cleanup" in calls[0]
+    assert calls[0][0] == "cleanup"
     assert "--path-glob" in calls[0]
     assert "worktrees/*" in calls[0]
 
@@ -911,9 +902,9 @@ def test_cleanup_linked_worktrees_passes_through_exit_code(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        linked_worktrees_module.subprocess,
-        "run",
-        lambda cmd, **kw: CompletedProcess(cmd, 1),
+        linked_worktrees_module,
+        "_safety_main",
+        lambda argv=None: 1,
     )
     fn = reg._REGISTRY["cleanup-linked-worktrees"]
     rc = fn(["--path-glob", "*"])

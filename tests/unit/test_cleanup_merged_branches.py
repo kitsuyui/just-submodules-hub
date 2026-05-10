@@ -1,20 +1,10 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/cleanup_merged_branches.py"
-
-spec = importlib.util.spec_from_file_location("cleanup_merged_branches", SCRIPT_PATH)
-assert spec is not None
-cleanup = importlib.util.module_from_spec(spec)
-sys.modules["cleanup_merged_branches"] = cleanup
-assert spec.loader is not None
-spec.loader.exec_module(cleanup)
+import just_submodules_hub.branch_cleanup as cleanup
 
 
 def branch_state() -> object:
