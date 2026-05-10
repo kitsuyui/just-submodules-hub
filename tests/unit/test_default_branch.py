@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Sequence
+
 import pytest
 
 from just_submodules_hub import default_branch as db_module
@@ -33,21 +36,25 @@ def test_parse_head_branch_line_detects_non_main_branch() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_default_branch_prefers_symbolic_ref(monkeypatch) -> None:
-    def fake_run(cmd, cwd=None):
-        if cmd[:3] == ["git", "symbolic-ref", "--short"]:
+def test_resolve_default_branch_prefers_symbolic_ref(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
             return "origin/main"
-        raise AssertionError(f"unexpected: {cmd}")
+        raise AssertionError(f"unexpected: {list(cmd)}")
 
     monkeypatch.setattr(db_module, "run", fake_run)
     assert resolve_default_branch("/tmp/repo") == "main"
 
 
-def test_resolve_default_branch_supports_custom_remote(monkeypatch) -> None:
-    def fake_run(cmd, cwd=None):
-        if cmd[:3] == ["git", "symbolic-ref", "--short"]:
+def test_resolve_default_branch_supports_custom_remote(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
             return "upstream/develop"
-        raise AssertionError(f"unexpected: {cmd}")
+        raise AssertionError(f"unexpected: {list(cmd)}")
 
     monkeypatch.setattr(db_module, "run", fake_run)
     assert resolve_default_branch("/tmp/repo", remote="upstream") == "develop"
@@ -58,16 +65,18 @@ def test_resolve_default_branch_supports_custom_remote(monkeypatch) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_default_branch_falls_back_to_remote_show(monkeypatch) -> None:
+def test_resolve_default_branch_falls_back_to_remote_show(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[list[str]] = []
 
-    def fake_run(cmd, cwd=None):
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
         calls.append(list(cmd))
-        if cmd[:3] == ["git", "symbolic-ref", "--short"]:
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
             raise RuntimeError("no symbolic-ref")
-        if cmd[:3] == ["git", "remote", "show"]:
+        if list(cmd)[:3] == ["git", "remote", "show"]:
             return "  HEAD branch: trunk\n"
-        raise AssertionError(f"unexpected: {cmd}")
+        raise AssertionError(f"unexpected: {list(cmd)}")
 
     monkeypatch.setattr(db_module, "run", fake_run)
     assert resolve_default_branch("/tmp/repo") == "trunk"
@@ -78,8 +87,10 @@ def test_resolve_default_branch_falls_back_to_remote_show(monkeypatch) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_default_branch_returns_fallback_when_both_fail(monkeypatch) -> None:
-    def fake_run(cmd, cwd=None):
+def test_resolve_default_branch_returns_fallback_when_both_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
         raise RuntimeError("offline")
 
     monkeypatch.setattr(db_module, "run", fake_run)
@@ -87,16 +98,20 @@ def test_resolve_default_branch_returns_fallback_when_both_fail(monkeypatch) -> 
     assert resolve_default_branch("/tmp/repo") == "main"
 
 
-def test_resolve_default_branch_returns_custom_fallback(monkeypatch) -> None:
-    def fake_run(cmd, cwd=None):
+def test_resolve_default_branch_returns_custom_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
         raise RuntimeError("offline")
 
     monkeypatch.setattr(db_module, "run", fake_run)
     assert resolve_default_branch("/tmp/repo", fallback="master") == "master"
 
 
-def test_resolve_default_branch_raises_when_fallback_is_none(monkeypatch) -> None:
-    def fake_run(cmd, cwd=None):
+def test_resolve_default_branch_raises_when_fallback_is_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
         raise RuntimeError("offline")
 
     monkeypatch.setattr(db_module, "run", fake_run)

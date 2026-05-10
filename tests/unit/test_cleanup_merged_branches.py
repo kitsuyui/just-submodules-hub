@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/cleanup_merged_branches.py"
@@ -40,7 +42,9 @@ def branch_state() -> object:
     )
 
 
-def test_cleanup_repo_reports_dry_run_candidates(monkeypatch, tmp_path: Path) -> None:
+def test_cleanup_repo_reports_dry_run_candidates(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr(
         cleanup, "inspect_state", lambda repo, remote, limit: branch_state()
     )
@@ -72,14 +76,14 @@ def test_cleanup_repo_reports_dry_run_candidates(monkeypatch, tmp_path: Path) ->
 
 
 def test_cleanup_repo_deletes_only_merged_candidates_when_apply(
-    monkeypatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     calls: list[list[str]] = []
     monkeypatch.setattr(
         cleanup, "inspect_state", lambda repo, remote, limit: branch_state()
     )
 
-    def fake_run_git(repo: Path, args: list[str]):
+    def fake_run_git(repo: Path, args: list[str]) -> object:
         calls.append(args)
         return type("Proc", (), {"returncode": 0, "stdout": "", "stderr": ""})()
 
@@ -123,8 +127,10 @@ def test_target_paths_can_include_root_and_submodules(tmp_path: Path) -> None:
     ]
 
 
-def test_remote_branches_reads_actual_remote_heads(monkeypatch, tmp_path: Path) -> None:
-    def fake_run_git(repo: Path, args: list[str]):
+def test_remote_branches_reads_actual_remote_heads(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def fake_run_git(repo: Path, args: list[str]) -> object:
         assert args == ["ls-remote", "--heads", "origin"]
         return type(
             "Proc",
@@ -142,9 +148,9 @@ def test_remote_branches_reads_actual_remote_heads(monkeypatch, tmp_path: Path) 
 
 
 def test_cleanup_repo_skips_repositories_without_pr_api(
-    monkeypatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    def fail_inspect(repo: Path, remote: str, limit: int):
+    def fail_inspect(repo: Path, remote: str, limit: int) -> object:
         raise RuntimeError(
             "GraphQL: Could not resolve to a Repository with the name 'owner/repo.wiki'."
         )
@@ -174,7 +180,7 @@ def test_cleanup_repo_skips_repositories_without_pr_api(
 
 
 def test_cleanup_repo_skips_non_owner_remote_branches_by_default(
-    monkeypatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setattr(
         cleanup, "inspect_state", lambda repo, remote, limit: branch_state()

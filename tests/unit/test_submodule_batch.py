@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pytest
+
 from just_submodules_hub.submodule_batch import (
     positive_int,
     print_records,
@@ -17,7 +19,7 @@ class Row:
 
 
 def test_run_parallel_collects_results_and_failures() -> None:
-    seen = []
+    seen: list[str] = []
 
     def worker(item: str) -> str:
         if item == "bad":
@@ -58,7 +60,9 @@ def test_positive_int_rejects_invalid_values() -> None:
             raise AssertionError(f"positive_int should reject {value}")
 
 
-def test_print_records_supports_tsv_jsonl_and_table(capsys) -> None:
+def test_print_records_supports_tsv_jsonl_and_table(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     rows = [Row(repo="repo/github.com/example/a", status="noop")]
 
     print_records(rows, ("repo", "status"), "tsv")

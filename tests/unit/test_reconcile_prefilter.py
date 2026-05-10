@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 from just_submodules_hub.default_heads import DefaultHead
 
 
@@ -29,7 +31,7 @@ class DummyBar:
 
 
 def test_build_reconcile_targets_prefilters_up_to_date_default_branch(
-    monkeypatch, tmp_path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     bar = DummyBar()
     paths = [
@@ -73,7 +75,9 @@ def test_build_reconcile_targets_prefilters_up_to_date_default_branch(
     assert bar.updated == 1
 
 
-def test_build_reconcile_targets_keeps_root_repository(monkeypatch, tmp_path) -> None:
+def test_build_reconcile_targets_keeps_root_repository(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     bar = DummyBar()
     monkeypatch.setattr(
         "just_submodules_hub.default_heads.fetch_default_heads_for_paths",

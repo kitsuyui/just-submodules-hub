@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from subprocess import CompletedProcess
 
 import pytest
@@ -7,7 +8,7 @@ import pytest
 from just_submodules_hub import shell
 
 
-def test_run_returns_stdout(monkeypatch) -> None:
+def test_run_returns_stdout(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         shell.subprocess,
         "run",
@@ -18,7 +19,7 @@ def test_run_returns_stdout(monkeypatch) -> None:
     assert shell.run(["echo", "hello"]) == "hello"
 
 
-def test_run_raises_runtime_error_on_failure(monkeypatch) -> None:
+def test_run_raises_runtime_error_on_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         shell.subprocess,
         "run",
@@ -33,7 +34,9 @@ def test_run_raises_runtime_error_on_failure(monkeypatch) -> None:
     assert "output: boom" in message
 
 
-def test_run_raises_runtime_error_with_cwd(monkeypatch, tmp_path) -> None:
+def test_run_raises_runtime_error_with_cwd(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr(
         shell.subprocess,
         "run",
@@ -51,7 +54,7 @@ def test_run_raises_runtime_error_with_cwd(monkeypatch, tmp_path) -> None:
     assert "output: bad path" in message
 
 
-def test_run_redacts_sensitive_env_values(monkeypatch) -> None:
+def test_run_redacts_sensitive_env_values(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         shell.subprocess,
         "run",
