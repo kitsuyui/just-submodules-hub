@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+from just_submodules_hub.default_branch import resolve_default_branch as default_branch
 from just_submodules_hub.default_heads import (
     matching_default_head,
     owner_prefilter_total,
@@ -71,21 +72,6 @@ def dirty_state(repo: Path) -> str:
     if proc.returncode != 0:
         return "unknown"
     return "dirty" if proc.stdout.strip() else "clean"
-
-
-def default_branch(repo: Path) -> str:
-    proc = run_git(repo, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])
-    if proc.returncode == 0:
-        value = proc.stdout.strip()
-        if value.startswith("origin/"):
-            return value.removeprefix("origin/")
-    proc = run_git(repo, ["remote", "show", "origin"])
-    if proc.returncode == 0:
-        for line in proc.stdout.splitlines():
-            line = line.strip()
-            if line.startswith("HEAD branch:"):
-                return line.split(":", 1)[1].strip()
-    return "main"
 
 
 def pull_ff_only(

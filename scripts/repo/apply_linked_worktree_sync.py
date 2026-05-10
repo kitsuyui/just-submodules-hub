@@ -9,11 +9,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+from just_submodules_hub.default_branch import resolve_default_branch as default_branch
 from just_submodules_hub.submodule_batch import print_records
 from plan_linked_worktree_sync import (
     FIELDS,
     PlanRecord,
-    default_branch,
     list_worktrees,
     plan_one,
     run_git,

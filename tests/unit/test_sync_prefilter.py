@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from just_submodules_hub import default_branch as db_module
 from just_submodules_hub import sync
 from just_submodules_hub import default_heads
 from just_submodules_hub.submodule_batch import BatchFailure
@@ -295,7 +296,7 @@ def test_resolve_default_branch_prefers_symbolic_ref(monkeypatch) -> None:
             return "origin/main"
         raise AssertionError(f"unexpected command: {cmd}")
 
-    monkeypatch.setattr(sync, "run", fake_run)
+    monkeypatch.setattr(db_module, "run", fake_run)
     assert sync.resolve_default_branch("repo/github.com/kitsuyui/sample-repo") == "main"
 
 
@@ -310,7 +311,7 @@ def test_resolve_default_branch_falls_back_to_remote_show(monkeypatch) -> None:
             return "  HEAD branch: trunk\n"
         raise AssertionError(f"unexpected command: {cmd}")
 
-    monkeypatch.setattr(sync, "run", fake_run)
+    monkeypatch.setattr(db_module, "run", fake_run)
     assert (
         sync.resolve_default_branch("repo/github.com/kitsuyui/sample-repo") == "trunk"
     )
@@ -520,6 +521,7 @@ def test_sync_one_switches_and_updates(monkeypatch, tmp_path) -> None:
         raise AssertionError(f"unexpected command: {cmd}")
 
     monkeypatch.setattr(sync, "run", fake_run)
+    monkeypatch.setattr(db_module, "run", fake_run)
     result = sync.sync_one(str(repo))
     assert result.default_branch == "main"
     assert result.switched
