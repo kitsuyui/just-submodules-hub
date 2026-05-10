@@ -59,6 +59,17 @@ def apply_plan(record: PlanRecord) -> PlanRecord:
         success_message = f"branch reset to {record.target}"
     elif record.action in ("rebase-branch", "rebase-default"):
         proc = run_git(repo, ["rebase", record.target])
+        if proc.returncode != 0:
+            # Rebase failed (typically a conflict). Best-effort abort so the
+            # worktree is not left in REBASING state with conflict markers,
+            # which would block subsequent runs and confuse users.
+            abort_proc = run_git(repo, ["rebase", "--abort"])
+            suffix = "; rebase aborted" if abort_proc.returncode == 0 else ""
+            return replace(
+                record,
+                status="failed",
+                message=f"{summarize(proc)}{suffix}",
+            )
         success_status = "updated"
         success_message = f"rebased onto {record.target}"
     else:

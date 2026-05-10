@@ -134,6 +134,61 @@ def test_apply_plan_rebases_branch_without_force_push(
     ]
 
 
+def test_apply_plan_aborts_rebase_on_conflict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failing rebase must run ``git rebase --abort`` and note that.
+
+    Without the abort, the worktree is left in REBASING state with
+    conflict markers, blocking subsequent runs and surprising users
+    who only see a ``failed`` row in the report.
+    """
+    calls: list[list[str]] = []
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        if args == ["rev-parse", "HEAD"]:
+            return completed(args, stdout="before\n")
+        if args == ["rebase", "origin/main"]:
+            return completed(args, stderr="CONFLICT (content)", returncode=1)
+        return completed(args)
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("rebase-default", "origin/main"))
+
+    assert result.status == "failed"
+    assert "CONFLICT" in result.message
+    assert result.message.endswith("; rebase aborted")
+    assert ["rebase", "--abort"] in calls
+
+
+def test_apply_plan_omits_aborted_suffix_when_abort_also_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If ``git rebase --abort`` itself fails, do not claim it succeeded."""
+    calls: list[list[str]] = []
+
+    def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        if args == ["rev-parse", "HEAD"]:
+            return completed(args, stdout="before\n")
+        if args == ["rebase", "origin/main"]:
+            return completed(args, stderr="CONFLICT (content)", returncode=1)
+        if args == ["rebase", "--abort"]:
+            return completed(args, stderr="abort failed", returncode=1)
+        return completed(args)
+
+    monkeypatch.setattr(apply_sync, "run_git", fake_run_git)
+
+    result = apply_sync.apply_plan(record("rebase-default", "origin/main"))
+
+    assert result.status == "failed"
+    assert "CONFLICT" in result.message
+    assert "rebase aborted" not in result.message
+    assert ["rebase", "--abort"] in calls
+
+
 def test_apply_plan_reports_git_failures(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
         if args == ["fetch", "origin", "main"]:
