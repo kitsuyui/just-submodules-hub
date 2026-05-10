@@ -364,6 +364,36 @@ def test_temporary_github_submodule_credentials_requires_env(
         pass
 
 
+def test_temporary_github_submodule_credentials_rejects_whitespace_only_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A whitespace-only token must be rejected like an unset variable.
+
+    Without this guard a token like ``"   "`` would silently pass the
+    truthiness check, get URL-encoded into ``%20%20%20`` inside the
+    submodule URL, and then ``redaction_values`` would treat literal
+    whitespace as a redaction target — replacing every triple-space
+    sequence in error output with ``<redacted>``.
+    """
+    monkeypatch.setenv("SUBMODULE_TOKEN", "   ")
+
+    with (
+        pytest.raises(
+            RuntimeError,
+            match="Environment variable SUBMODULE_TOKEN is not set",
+        ),
+        sync.temporary_github_submodule_credentials("SUBMODULE_TOKEN"),
+    ):
+        pass
+
+
+def test_redaction_values_returns_empty_for_whitespace_only_secret() -> None:
+    """``redaction_values`` must not turn whitespace into a redaction target."""
+    assert sync.redaction_values("") == []
+    assert sync.redaction_values("   ") == []
+    assert sync.redaction_values("\n\t") == []
+
+
 def test_print_failures_redacts_token(capsys: pytest.CaptureFixture[str]) -> None:
     sync.print_failures(
         [

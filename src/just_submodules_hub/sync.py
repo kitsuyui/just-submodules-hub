@@ -123,6 +123,8 @@ def github_token_url(url: str, token: str) -> str | None:
 
 def redaction_values(secret: str) -> list[str]:
     """Return the raw and URL-encoded forms of *secret* for use as redactions."""
+    if not secret or not secret.strip():
+        return []
     encoded = quote(secret, safe="")
     return [value for value in {secret, encoded} if value]
 
@@ -220,7 +222,8 @@ def temporary_github_submodule_credentials(
         yield []
         return
 
-    token = os.environ.get(token_env)
+    raw_token = os.environ.get(token_env, "")
+    token = raw_token.strip()
     if not token:
         raise RuntimeError(f"Environment variable {token_env} is not set")
 
