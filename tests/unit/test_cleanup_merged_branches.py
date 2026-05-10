@@ -105,6 +105,112 @@ def test_cleanup_repo_deletes_only_merged_candidates_when_apply(
     )
 
 
+def test_cleanup_repo_force_deletes_squash_or_rebase_merged_branch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Squash/rebase-merged branches must be deleted via -D, not reported failed.
+
+    ``git branch -d`` refuses to delete a branch whose commits are not
+    reachable from HEAD as the same SHAs, which is the normal squash-merge
+    or rebase-merge case. When the branch is already in merged_pr_heads,
+    the work is preserved on the remote via the merged PR, so falling back
+    to ``-D`` is safe and is what users want. Without this fallback, the
+    most common cleanup case appears as ``failed`` and the CLI exits 1.
+    """
+    calls: list[list[str]] = []
+    monkeypatch.setattr(
+        cleanup,
+        "inspect_state",
+        lambda repo, remote, limit: branch_state(),
+    )
+
+    def fake_run_git(repo: Path, args: list[str]) -> object:
+        calls.append(args)
+        # Local ``-d`` for feature/merged simulates the squash-merge refusal.
+        if args == ["branch", "-d", "feature/merged"]:
+            return type(
+                "Proc",
+                (),
+                {
+                    "returncode": 1,
+                    "stdout": "",
+                    "stderr": (
+                        "error: The branch 'feature/merged' is not fully merged."
+                    ),
+                },
+            )()
+        return type("Proc", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    monkeypatch.setattr(cleanup, "run_git", fake_run_git)
+
+    rows = cleanup.cleanup_repo(
+        tmp_path,
+        ".",
+        include_local=True,
+        include_remote=True,
+        include_non_owner_remote=True,
+        remote="origin",
+        apply=True,
+        limit=200,
+    )
+
+    # ``-d`` was tried first and refused, so ``-D`` was used as fallback.
+    assert ["branch", "-d", "feature/merged"] in calls
+    assert ["branch", "-D", "feature/merged"] in calls
+
+    by_target_branch = {(row.target, row.branch): row for row in rows}
+    local_merged = by_target_branch[("local", "feature/merged")]
+    assert local_merged.status == "deleted"
+    assert "force-deleted" in local_merged.reason
+    assert "squash" in local_merged.reason
+
+
+def test_cleanup_repo_reports_failed_when_force_delete_also_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """If both -d and -D fail, report failed with the -D error message."""
+    monkeypatch.setattr(
+        cleanup,
+        "inspect_state",
+        lambda repo, remote, limit: branch_state(),
+    )
+
+    def fake_run_git(repo: Path, args: list[str]) -> object:
+        if args == ["branch", "-d", "feature/merged"]:
+            return type(
+                "Proc",
+                (),
+                {"returncode": 1, "stdout": "", "stderr": "not fully merged"},
+            )()
+        if args == ["branch", "-D", "feature/merged"]:
+            return type(
+                "Proc",
+                (),
+                {"returncode": 1, "stdout": "", "stderr": "permission denied"},
+            )()
+        return type("Proc", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    monkeypatch.setattr(cleanup, "run_git", fake_run_git)
+
+    rows = cleanup.cleanup_repo(
+        tmp_path,
+        ".",
+        include_local=True,
+        include_remote=False,
+        include_non_owner_remote=False,
+        remote="origin",
+        apply=True,
+        limit=200,
+    )
+
+    by_target_branch = {(row.target, row.branch): row for row in rows}
+    local_merged = by_target_branch[("local", "feature/merged")]
+    assert local_merged.status == "failed"
+    assert "permission denied" in local_merged.reason
+
+
 def test_target_paths_can_include_root_and_submodules(tmp_path: Path) -> None:
     (tmp_path / ".gitmodules").write_text(
         """

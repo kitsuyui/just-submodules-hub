@@ -228,6 +228,22 @@ def cleanup_branch(
 
     if target == "local":
         proc = run_git(repo, ["branch", "-d", branch])
+        if proc.returncode != 0:
+            # Squash-merge / rebase-merge case: ``git branch -d`` refuses
+            # because the merged PR appears on the default branch as a
+            # different commit. The branch was already verified to be in
+            # ``state.merged_pr_heads`` above, so the work is preserved on
+            # the remote and ``-D`` is safe.
+            force_proc = run_git(repo, ["branch", "-D", branch])
+            if force_proc.returncode == 0:
+                return BranchResult(
+                    repo_label,
+                    target,
+                    branch,
+                    "deleted",
+                    "merged pull request (force-deleted; squash/rebase)",
+                )
+            proc = force_proc
     else:
         proc = run_git(repo, ["push", remote, "--delete", branch])
     if proc.returncode != 0:
