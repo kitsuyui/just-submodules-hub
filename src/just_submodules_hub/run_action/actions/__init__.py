@@ -1,12 +1,17 @@
 from just_submodules_hub.run_action.actions import (  # noqa: F401
+    add_repo,
     cleanup_branches,
+    commit_submodule_pointers,
+    create_repo,
     every_repo,
     grep,
     init_all_repos,
+    linked_worktree_sync,
     list_github_repos,
     list_managed_repos,
     list_unmanaged_repos,
     open_repo,
     reconcile_worktrees,
+    remove_repo,
     sync_repo_default_branch,
 )

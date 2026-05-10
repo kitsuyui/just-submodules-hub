@@ -10,9 +10,6 @@ shift
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 project_root=$(CDPATH='' cd -- "$script_dir/../.." && pwd)
 resolve_repo_script="$script_dir/resolve_repo.py"
-linked_worktrees_script="$script_dir/list_linked_worktrees.py"
-linked_worktree_sync_plan_script="$script_dir/plan_linked_worktree_sync.py"
-linked_worktree_sync_apply_script="$script_dir/apply_linked_worktree_sync.py"
 linked_worktree_safety_script="$script_dir/linked_worktree_safety.py"
 
 repo_input_to_path() {
@@ -217,84 +214,13 @@ run_init_all_in_worktree() {
 # Actions migrated to the Python entrypoint (#60 item 3, phases 1-2).
 case "$action" in
   list-github-repos-owner|list-github-repos|list-managed-repos|list-unmanaged-repos|open-repo|every-repo|grep|\
-init-all-repos|sync-repo-default-branch|sync-all-repo-default-branch|reconcile-submodule-worktree|reconcile-submodule-worktrees|reconcile-worktrees|cleanup-branches|cleanup-submodule-branches|cleanup-worktree-branches)
+init-all-repos|sync-repo-default-branch|sync-all-repo-default-branch|reconcile-submodule-worktree|reconcile-submodule-worktrees|reconcile-worktrees|cleanup-branches|cleanup-submodule-branches|cleanup-worktree-branches|\
+add-repo|remove-repo|create-public-repo|create-private-repo|commit-submodule-pointers|list-linked-worktrees|plan-linked-worktree-sync|apply-linked-worktree-sync)
     exec uv run --project "$project_root" env PYTHONPATH="$project_root/src${PYTHONPATH:+:$PYTHONPATH}" python -m just_submodules_hub.run_action "$action" "$@"
     ;;
 esac
 
 case "$action" in
-  add-repo)
-    repo_url_input="${1:-}"
-    if [ -z "$repo_url_input" ]; then
-      echo "REPO_URL is required" >&2
-      exit 2
-    fi
-    repo_path=$(echo "$repo_url_input" | sed -E 's#^(git@github.com:|https://github.com/)##; s#\.git$##')
-    repo_url="git@github.com:${repo_path}.git"
-    repo_dir="repo/github.com/${repo_path}"
-    # Clean up leftovers from a previously failed add (only under .git/modules)
-    if [ -d ".git/modules/${repo_dir}" ] && [ ! -d "${repo_dir}" ]; then
-      rm -rf ".git/modules/${repo_dir}"
-    fi
-    git submodule add -- "${repo_url}" "${repo_dir}"
-    git config -f .gitmodules "submodule.${repo_dir}.shallow" true
-    git config --local "submodule.${repo_dir}.ignore" all
-    ;;
-
-
-  remove-repo)
-    repo_input="${1:-}"
-    repo_path=$(repo_input_to_path "$repo_input")
-    git submodule deinit -f -- "$repo_path"
-    rm -rf ".git/modules/$repo_path"
-    git rm -f "$repo_path"
-    ;;
-
-  create-public-repo)
-    repo="${1:-}"
-    if [ -z "$repo" ]; then
-      echo "REPO is required" >&2
-      exit 2
-    fi
-    command -v gh >/dev/null 2>&1 || { echo "gh command not found" >&2; exit 1; }
-    if gh repo view "$repo" >/dev/null 2>&1; then
-      echo "Repository $repo already exists. Skipping creation."
-    else
-      gh repo create "$repo" --public --add-readme
-    fi
-    just repo submodule add "https://github.com/$repo"
-    ;;
-
-  create-private-repo)
-    repo="${1:-}"
-    if [ -z "$repo" ]; then
-      echo "REPO is required" >&2
-      exit 2
-    fi
-    command -v gh >/dev/null 2>&1 || { echo "gh command not found" >&2; exit 1; }
-    if gh repo view "$repo" >/dev/null 2>&1; then
-      echo "Repository $repo already exists. Skipping creation."
-    else
-      gh repo create "$repo" --private --add-readme
-    fi
-    just repo submodule add "https://github.com/$repo"
-    ;;
-
-
-
-
-  list-linked-worktrees)
-    uv run --project "$project_root" python "$linked_worktrees_script" "$@"
-    ;;
-
-  plan-linked-worktree-sync)
-    uv run --project "$project_root" python "$linked_worktree_sync_plan_script" "$@"
-    ;;
-
-  apply-linked-worktree-sync)
-    uv run --project "$project_root" python "$linked_worktree_sync_apply_script" "$@"
-    ;;
-
   install-linked-worktree-hooks)
     uv run --project "$project_root" python "$linked_worktree_safety_script" install-hooks "$@"
     ;;
@@ -427,32 +353,6 @@ case "$action" in
     else
       git worktree remove "$worktree_path"
     fi
-    ;;
-
-  commit-submodule-pointers)
-    message="${1:-Update submodule pointers}"
-    changed=""
-    while IFS= read -r repo_path; do
-      [ -n "$repo_path" ] || continue
-      if submodule_pointer_changed "$repo_path"; then
-        changed="$changed $repo_path"
-      fi
-    done <<EOF_PATHS
-$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}')
-EOF_PATHS
-
-    if [ -z "$changed" ]; then
-      echo "No submodule pointer changes to commit"
-      exit 0
-    fi
-
-    # shellcheck disable=SC2086
-    git add -- $changed
-    if git diff --cached --ignore-submodules=none --quiet; then
-      echo "No staged changes after selecting submodule pointers"
-      exit 0
-    fi
-    git commit -m "$message"
     ;;
 
   submodule-root-status-hide)
