@@ -7,13 +7,13 @@ import sys
 
 from tqdm import tqdm
 
-from just_submodules_hub.gitmodules import managed_repo_slugs, read_gitmodules_paths
 from just_submodules_hub.github_merge_policy import (
-    MERGE_POLICY_FIELDS,
     MERGE_METHODS,
+    MERGE_POLICY_FIELDS,
     merge_method_patch_payload,
     summarize_merge_method,
 )
+from just_submodules_hub.gitmodules import managed_repo_slugs, read_gitmodules_paths
 
 TQDM_BAR_FORMAT = (
     "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"

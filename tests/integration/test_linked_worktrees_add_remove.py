@@ -6,7 +6,6 @@ from pathlib import Path
 
 from .helpers import write_executable
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUN_ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 

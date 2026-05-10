@@ -11,7 +11,6 @@ from typing import Any
 
 import pytest
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts/repo/apply_linked_worktree_sync.py"
 
@@ -155,17 +154,17 @@ def test_apply_plan_reports_git_failures(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def _make_plan_record(**overrides: str) -> Any:
     """Return a PlanRecord with sensible defaults; fields can be overridden."""
-    defaults: dict[str, str] = dict(
-        path="/repo",
-        branch="feature/test",
-        dirty="clean",
-        pr="",
-        draft="",
-        status="skipped",
-        action="skip-dirty",
-        target="",
-        message="worktree has local changes",
-    )
+    defaults: dict[str, str] = {
+        "path": "/repo",
+        "branch": "feature/test",
+        "dirty": "clean",
+        "pr": "",
+        "draft": "",
+        "status": "skipped",
+        "action": "skip-dirty",
+        "target": "",
+        "message": "worktree has local changes",
+    }
     defaults.update(overrides)
     return apply_sync.PlanRecord(**defaults)
 

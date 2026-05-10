@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import just_submodules_hub.run_action.actions.list_github_repos as list_github_repos_module
 from just_submodules_hub.gitmodules import managed_repo_slugs, read_gitmodules_paths
 from just_submodules_hub.run_action.registry import action
 
@@ -53,15 +54,12 @@ def list_managed_repos(args: list[str]) -> int:
         print("OWNERS is required when VISIBILITY is not all", file=sys.stderr)
         return 2
 
-    # Call list-github-repos (via run_action dispatch or direct subprocess)
-    # Use the Python entrypoint to avoid shell dependency
-    import just_submodules_hub.run_action.actions.list_github_repos as _lgh  # noqa: PLC0415
-
+    # Call list-github-repos via the Python entrypoint to avoid shell dependency
     github_lines: list[str] = []
     owners = [o for o in owners_str.replace(",", " ").split() if o]
     for owner in owners:
         try:
-            lines = _lgh._list_repos_for_owner(owner, visibility)
+            lines = list_github_repos_module._list_repos_for_owner(owner, visibility)
         except RuntimeError as exc:
             print(str(exc), file=sys.stderr)
             return 1

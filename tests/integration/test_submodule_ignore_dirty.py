@@ -5,7 +5,6 @@ from pathlib import Path
 
 from .helpers import add_submodule, create_remote, run
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 

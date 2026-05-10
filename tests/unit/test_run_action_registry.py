@@ -8,7 +8,7 @@ from just_submodules_hub.run_action import registry as reg
 
 
 @pytest.fixture
-def isolated_registry() -> Generator[None, None, None]:
+def isolated_registry() -> Generator[None]:
     """Provide an isolated empty registry, restoring original state after the test."""
     saved = dict(reg._REGISTRY)
     reg._REGISTRY.clear()

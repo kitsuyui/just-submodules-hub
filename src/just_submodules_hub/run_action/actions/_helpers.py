@@ -96,7 +96,7 @@ def set_submodule_ignore_all() -> int:
         check=False,
     )
     if proc.returncode != 0:
-        # No submodules – treat as success (same as shell behaviour)
+        # No submodules - treat as success (same as shell behaviour)
         return 0
 
     for line in proc.stdout.splitlines():

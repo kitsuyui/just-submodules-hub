@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from .gitmodules import managed_repo_slugs
 
-
 VALID_STATES = {"open", "closed", "all"}
 
 

@@ -9,7 +9,7 @@ from just_submodules_hub.run_action.cli import main
 
 
 @pytest.fixture
-def isolated_registry() -> Generator[None, None, None]:
+def isolated_registry() -> Generator[None]:
     """Provide a clean registry for tests that register fake actions."""
     saved = dict(reg._REGISTRY)
     reg._REGISTRY.clear()

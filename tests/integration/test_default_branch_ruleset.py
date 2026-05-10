@@ -7,7 +7,6 @@ from pathlib import Path
 
 from .helpers import write_executable
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / "scripts/github/default-branch-ruleset.sh"
 

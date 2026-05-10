@@ -24,7 +24,7 @@ def resolve_default_branch(
     Resolution order:
     1. ``git symbolic-ref --short refs/remotes/<remote>/HEAD``
     2. ``git remote show <remote>`` (parses "HEAD branch:" line)
-    3. *fallback* – returned as-is when not None, otherwise RuntimeError is raised.
+    3. *fallback* - returned as-is when not None, otherwise RuntimeError is raised.
     """
     cwd = Path(repo)
     try:

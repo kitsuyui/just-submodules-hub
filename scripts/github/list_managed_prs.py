@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -31,18 +32,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def check_gh_auth() -> tuple[bool, str]:
-    if not shutil_which("gh"):
+    if not shutil.which("gh"):
         return False, "gh command not found"
     proc = subprocess.run(["gh", "auth", "status"], text=True, capture_output=True)
     if proc.returncode != 0:
         return False, "gh authentication is invalid. Run: gh auth login -h github.com"
     return True, ""
-
-
-def shutil_which(cmd: str) -> str | None:
-    from shutil import which
-
-    return which(cmd)
 
 
 def main() -> int:

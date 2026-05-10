@@ -4,12 +4,10 @@ import argparse
 import json
 import subprocess
 import sys
-
 from typing import Any, cast
 
 from tqdm import tqdm
 
-from just_submodules_hub.gitmodules import managed_repo_slugs, read_gitmodules_paths
 from just_submodules_hub.github_rulesets import (
     candidate_legacy_rulesets,
     desired_ruleset_payload,
@@ -21,6 +19,7 @@ from just_submodules_hub.github_rulesets import (
     summarize_legacy_rulesets,
     summarize_ruleset_status,
 )
+from just_submodules_hub.gitmodules import managed_repo_slugs, read_gitmodules_paths
 
 TQDM_BAR_FORMAT = (
     "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"

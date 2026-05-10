@@ -7,7 +7,6 @@ from pathlib import Path
 
 from .helpers import add_submodule, create_remote, init_hub, write_executable
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / "scripts/github/repository-merge-policy.sh"
 

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import sys
 
-from just_submodules_hub.run_action import actions  # noqa: F401  (side-effect: register actions)
+from just_submodules_hub.run_action import (
+    actions,  # noqa: F401  (side-effect: register actions)
+)
 from just_submodules_hub.run_action.registry import dispatch
 
 

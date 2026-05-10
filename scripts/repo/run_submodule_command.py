@@ -11,14 +11,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from just_submodules_hub.gitmodules import read_gitmodules_paths
-from just_submodules_hub.submodule_filters import SubmoduleFilter
 from just_submodules_hub.submodule_batch import (
     positive_int,
     print_records,
     run_parallel,
     run_parallel_with_progress,
 )
-
+from just_submodules_hub.submodule_filters import SubmoduleFilter
 
 FIELDS = ("repo", "status", "exit_code", "stdout", "stderr")
 

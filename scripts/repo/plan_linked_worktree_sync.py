@@ -12,10 +12,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-from just_submodules_hub.default_branch import resolve_default_branch as default_branch
-from just_submodules_hub.submodule_batch import print_records
 from list_linked_worktrees import WorktreeRecord, parse_porcelain
 
+from just_submodules_hub.default_branch import resolve_default_branch as default_branch
+from just_submodules_hub.submodule_batch import print_records
 
 FIELDS = (
     "path",

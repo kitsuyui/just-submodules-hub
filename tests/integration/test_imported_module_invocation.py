@@ -5,7 +5,6 @@ from pathlib import Path
 
 from .helpers import add_submodule, advance_remote, create_remote, init_hub, run
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SYNC_SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
 

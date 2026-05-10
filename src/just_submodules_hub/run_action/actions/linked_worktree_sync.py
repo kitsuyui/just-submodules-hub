@@ -20,7 +20,8 @@ def _run_script(script: Path, args: list[str], pass_stdin: bool = False) -> int:
         str(_PROJECT_ROOT),
         "python",
         str(script),
-    ] + args
+        *args,
+    ]
     proc = subprocess.run(
         cmd,
         check=False,

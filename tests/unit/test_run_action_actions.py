@@ -8,8 +8,23 @@ import pytest
 
 # Import side-effect: register all actions into _REGISTRY
 import just_submodules_hub.run_action.actions  # noqa: F401
+import just_submodules_hub.run_action.actions.add_repo as add_repo_module
+import just_submodules_hub.run_action.actions.cleanup_branches as cleanup_branches_module
+import just_submodules_hub.run_action.actions.commit_submodule_pointers as commit_submodule_pointers_module
+import just_submodules_hub.run_action.actions.create_repo as create_repo_module
+import just_submodules_hub.run_action.actions.every_repo as every_repo_module
+import just_submodules_hub.run_action.actions.grep as grep_module
+import just_submodules_hub.run_action.actions.init_all_repos as init_all_repos_module
+import just_submodules_hub.run_action.actions.linked_worktree_sync as linked_worktree_sync_module
+import just_submodules_hub.run_action.actions.linked_worktrees as linked_worktrees_module
+import just_submodules_hub.run_action.actions.list_github_repos as list_github_repos_module
+import just_submodules_hub.run_action.actions.list_managed_repos as list_managed_repos_module
+import just_submodules_hub.run_action.actions.list_unmanaged_repos as list_unmanaged_repos_module
+import just_submodules_hub.run_action.actions.open_repo as open_repo_module
+import just_submodules_hub.run_action.actions.reconcile_worktrees as reconcile_worktrees_module
+import just_submodules_hub.run_action.actions.remove_repo as remove_repo_module
+import just_submodules_hub.run_action.actions.sync_repo_default_branch as sync_repo_default_branch_module
 from just_submodules_hub.run_action import registry as reg
-
 
 # ---------- open-repo ----------
 
@@ -27,14 +42,12 @@ def test_open_repo_calls_open_repo_in_tool(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import just_submodules_hub.run_action.actions.open_repo as _mod
-
     calls: list[tuple[str, str, Path]] = []
 
     def fake_open_repo_in_tool(tool: str, repo: str, hub_root: Path) -> None:
         calls.append((tool, repo, hub_root))
 
-    monkeypatch.setattr(_mod, "open_repo_in_tool", fake_open_repo_in_tool)
+    monkeypatch.setattr(open_repo_module, "open_repo_in_tool", fake_open_repo_in_tool)
     monkeypatch.chdir(tmp_path)
 
     fn = reg._REGISTRY["open-repo"]
@@ -48,12 +61,10 @@ def test_open_repo_returns_1_on_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.open_repo as _mod
-
     def raise_error(tool: str, repo: str, hub_root: Path) -> None:
         raise ValueError("unsupported tool: bad")
 
-    monkeypatch.setattr(_mod, "open_repo_in_tool", raise_error)
+    monkeypatch.setattr(open_repo_module, "open_repo_in_tool", raise_error)
     monkeypatch.chdir(tmp_path)
 
     fn = reg._REGISTRY["open-repo"]
@@ -77,15 +88,13 @@ def test_every_repo_requires_command(
 def test_every_repo_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.every_repo as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(every_repo_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["every-repo"]
     rc = fn(["ls", "--jobs", "2"])
@@ -99,15 +108,13 @@ def test_every_repo_delegates_to_subprocess(
 def test_grep_calls_git_grep(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.grep as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(grep_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["grep"]
     rc = fn(["hello"])
@@ -118,10 +125,8 @@ def test_grep_calls_git_grep(
 def test_grep_passes_through_exit_code(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.grep as _mod
-
     monkeypatch.setattr(
-        _mod.subprocess,
+        grep_module.subprocess,
         "run",
         lambda cmd, **kw: CompletedProcess(cmd, 1),
     )
@@ -156,10 +161,8 @@ def test_list_github_repos_owner_prints_repos(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.list_github_repos as _mod
-
     monkeypatch.setattr(
-        _mod,
+        list_github_repos_module,
         "_list_repos_for_owner",
         lambda owner, vis: ["owner/repo1\thttps://github.com/owner/repo1"],
     )
@@ -173,15 +176,13 @@ def test_list_github_repos_owner_all_visibility(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.list_github_repos as _mod
-
     calls: list[tuple[str, str]] = []
 
     def fake_list(owner: str, vis: str) -> list[str]:
         calls.append((owner, vis))
         return []
 
-    monkeypatch.setattr(_mod, "_list_repos_for_owner", fake_list)
+    monkeypatch.setattr(list_github_repos_module, "_list_repos_for_owner", fake_list)
     fn = reg._REGISTRY["list-github-repos-owner"]
     fn(["owner", "all"])
     assert calls == [("owner", "all")]
@@ -203,12 +204,10 @@ def test_list_github_repos_deduplicates_across_owners(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.list_github_repos as _mod
-
     def fake_list(owner: str, vis: str) -> list[str]:
         return [f"{owner}/shared\thttps://github.com/{owner}/shared"]
 
-    monkeypatch.setattr(_mod, "_list_repos_for_owner", fake_list)
+    monkeypatch.setattr(list_github_repos_module, "_list_repos_for_owner", fake_list)
 
     fn = reg._REGISTRY["list-github-repos"]
     rc = fn(["ownerA,ownerB", "public"])
@@ -223,15 +222,13 @@ def test_list_github_repos_comma_and_space_separated_owners(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.list_github_repos as _mod
-
     seen_owners: list[str] = []
 
     def fake_list(owner: str, vis: str) -> list[str]:
         seen_owners.append(owner)
         return []
 
-    monkeypatch.setattr(_mod, "_list_repos_for_owner", fake_list)
+    monkeypatch.setattr(list_github_repos_module, "_list_repos_for_owner", fake_list)
 
     fn = reg._REGISTRY["list-github-repos"]
     fn(["a,b,c", "all"])
@@ -246,10 +243,8 @@ def test_list_managed_repos_no_args_prints_all(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.list_managed_repos as _mod
-
     monkeypatch.setattr(
-        _mod,
+        list_managed_repos_module,
         "_get_managed_slugs",
         lambda cwd: ["owner/repo-b", "owner/repo-a"],
     )
@@ -266,10 +261,8 @@ def test_list_managed_repos_filters_by_owner(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.list_managed_repos as _mod
-
     monkeypatch.setattr(
-        _mod,
+        list_managed_repos_module,
         "_get_managed_slugs",
         lambda cwd: ["ownerA/repo1", "ownerB/repo2"],
     )
@@ -310,11 +303,8 @@ def test_list_unmanaged_repos_prints_difference(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.list_github_repos as _lgh
-    import just_submodules_hub.run_action.actions.list_unmanaged_repos as _mod
-
     monkeypatch.setattr(
-        _lgh,
+        list_github_repos_module,
         "_list_repos_for_owner",
         lambda owner, vis: [
             "owner/managed\thttps://github.com/owner/managed",
@@ -322,7 +312,7 @@ def test_list_unmanaged_repos_prints_difference(
         ],
     )
     monkeypatch.setattr(
-        _mod,
+        list_unmanaged_repos_module,
         "read_gitmodules_paths",
         lambda cwd: ["repo/github.com/owner/managed"],
     )
@@ -360,8 +350,6 @@ def test_init_all_repos_jobs_missing_value(
 def test_init_all_repos_delegates_to_helpers(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.init_all_repos as _mod
-
     calls: list[tuple[str, ...]] = []
 
     def fake_resolve(requested: str) -> str:
@@ -376,9 +364,9 @@ def test_init_all_repos_delegates_to_helpers(
         calls.append(("ignore",))
         return 0
 
-    monkeypatch.setattr(_mod, "resolve_submodule_jobs", fake_resolve)
-    monkeypatch.setattr(_mod, "run_submodule_update", fake_run)
-    monkeypatch.setattr(_mod, "set_submodule_ignore_all", fake_ignore)
+    monkeypatch.setattr(init_all_repos_module, "resolve_submodule_jobs", fake_resolve)
+    monkeypatch.setattr(init_all_repos_module, "run_submodule_update", fake_run)
+    monkeypatch.setattr(init_all_repos_module, "set_submodule_ignore_all", fake_ignore)
 
     fn = reg._REGISTRY["init-all-repos"]
     rc = fn(["--no-fetch", "--jobs=4"])
@@ -391,8 +379,6 @@ def test_init_all_repos_fetch_fallback_retries(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.init_all_repos as _mod
-
     run_calls: list[tuple[bool, str, bool]] = []
 
     def fake_resolve(requested: str) -> str:
@@ -406,9 +392,9 @@ def test_init_all_repos_fetch_fallback_retries(
     def fake_ignore() -> int:
         return 0
 
-    monkeypatch.setattr(_mod, "resolve_submodule_jobs", fake_resolve)
-    monkeypatch.setattr(_mod, "run_submodule_update", fake_run)
-    monkeypatch.setattr(_mod, "set_submodule_ignore_all", fake_ignore)
+    monkeypatch.setattr(init_all_repos_module, "resolve_submodule_jobs", fake_resolve)
+    monkeypatch.setattr(init_all_repos_module, "run_submodule_update", fake_run)
+    monkeypatch.setattr(init_all_repos_module, "set_submodule_ignore_all", fake_ignore)
 
     fn = reg._REGISTRY["init-all-repos"]
     rc = fn(["--fetch-fallback", "--jobs=2"])
@@ -425,15 +411,15 @@ def test_init_all_repos_fetch_fallback_retries(
 def test_sync_repo_default_branch_delegates_to_sync(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.sync_repo_default_branch as _mod
-
     calls: list[Any] = []
 
     def fake_handle_one(args: Any) -> int:
         calls.append(args)
         return 0
 
-    monkeypatch.setattr(_mod, "handle_one_action", fake_handle_one)
+    monkeypatch.setattr(
+        sync_repo_default_branch_module, "handle_one_action", fake_handle_one
+    )
 
     fn = reg._REGISTRY["sync-repo-default-branch"]
     rc = fn(["owner/repo"])
@@ -445,15 +431,15 @@ def test_sync_repo_default_branch_delegates_to_sync(
 def test_sync_all_repo_default_branch_delegates_to_sync(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.sync_repo_default_branch as _mod
-
     calls: list[Any] = []
 
     def fake_handle_all(args: Any) -> int:
         calls.append(args)
         return 0
 
-    monkeypatch.setattr(_mod, "handle_all_action", fake_handle_all)
+    monkeypatch.setattr(
+        sync_repo_default_branch_module, "handle_all_action", fake_handle_all
+    )
 
     fn = reg._REGISTRY["sync-all-repo-default-branch"]
     rc = fn([])
@@ -476,15 +462,13 @@ def test_reconcile_submodule_worktree_requires_repo(
 def test_reconcile_submodule_worktree_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.reconcile_worktrees as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(reconcile_worktrees_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["reconcile-submodule-worktree"]
     rc = fn(["owner/repo", "--format", "tsv"])
@@ -497,15 +481,13 @@ def test_reconcile_submodule_worktree_delegates_to_subprocess(
 def test_reconcile_submodule_worktrees_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.reconcile_worktrees as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(reconcile_worktrees_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["reconcile-submodule-worktrees"]
     rc = fn([])
@@ -516,15 +498,13 @@ def test_reconcile_submodule_worktrees_delegates_to_subprocess(
 def test_reconcile_worktrees_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.reconcile_worktrees as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(reconcile_worktrees_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["reconcile-worktrees"]
     rc = fn([])
@@ -538,15 +518,13 @@ def test_reconcile_worktrees_delegates_to_subprocess(
 def test_cleanup_branches_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.cleanup_branches as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(cleanup_branches_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["cleanup-branches"]
     rc = fn(["--apply"])
@@ -558,15 +536,13 @@ def test_cleanup_branches_delegates_to_subprocess(
 def test_cleanup_submodule_branches_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.cleanup_branches as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(cleanup_branches_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["cleanup-submodule-branches"]
     rc = fn([])
@@ -577,15 +553,13 @@ def test_cleanup_submodule_branches_delegates_to_subprocess(
 def test_cleanup_worktree_branches_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.cleanup_branches as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(cleanup_branches_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["cleanup-worktree-branches"]
     rc = fn([])
@@ -608,15 +582,13 @@ def test_add_repo_requires_repo_url(
 def test_add_repo_calls_git_submodule_add(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.add_repo as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(add_repo_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["add-repo"]
     rc = fn(["https://github.com/owner/myrepo"])
@@ -640,15 +612,13 @@ def test_add_repo_calls_git_submodule_add(
 def test_add_repo_accepts_ssh_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.add_repo as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(add_repo_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["add-repo"]
     rc = fn(["git@github.com:owner/myrepo.git"])
@@ -673,15 +643,13 @@ def test_remove_repo_calls_deinit_rm_git_rm(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import just_submodules_hub.run_action.actions.remove_repo as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(remove_repo_module.subprocess, "run", fake_run)
     monkeypatch.chdir(tmp_path)
     # Create a fake .gitmodules so resolve_repo_input can find "owner/myrepo"
     (tmp_path / ".gitmodules").write_text(
@@ -712,12 +680,14 @@ def test_commit_submodule_pointers_no_changes(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import just_submodules_hub.run_action.actions.commit_submodule_pointers as _mod
-
     monkeypatch.setattr(
-        _mod, "read_gitmodules_paths", lambda: ["repo/github.com/owner/repo"]
+        commit_submodule_pointers_module,
+        "read_gitmodules_paths",
+        lambda: ["repo/github.com/owner/repo"],
     )
-    monkeypatch.setattr(_mod, "_submodule_pointer_changed", lambda p: False)
+    monkeypatch.setattr(
+        commit_submodule_pointers_module, "_submodule_pointer_changed", lambda p: False
+    )
 
     fn = reg._REGISTRY["commit-submodule-pointers"]
     rc = fn([])
@@ -728,8 +698,6 @@ def test_commit_submodule_pointers_no_changes(
 def test_commit_submodule_pointers_commits_changed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.commit_submodule_pointers as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
@@ -740,10 +708,14 @@ def test_commit_submodule_pointers_commits_changed(
         return CompletedProcess(cmd, 0)
 
     monkeypatch.setattr(
-        _mod, "read_gitmodules_paths", lambda: ["repo/github.com/owner/repo"]
+        commit_submodule_pointers_module,
+        "read_gitmodules_paths",
+        lambda: ["repo/github.com/owner/repo"],
     )
-    monkeypatch.setattr(_mod, "_submodule_pointer_changed", lambda p: True)
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        commit_submodule_pointers_module, "_submodule_pointer_changed", lambda p: True
+    )
+    monkeypatch.setattr(commit_submodule_pointers_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["commit-submodule-pointers"]
     rc = fn(["My commit message"])
@@ -762,15 +734,13 @@ def test_commit_submodule_pointers_commits_changed(
 def test_list_linked_worktrees_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktree_sync as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktree_sync_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["list-linked-worktrees"]
     rc = fn(["--format", "jsonl"])
@@ -784,15 +754,13 @@ def test_list_linked_worktrees_delegates_to_subprocess(
 def test_plan_linked_worktree_sync_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktree_sync as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktree_sync_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["plan-linked-worktree-sync"]
     rc = fn([])
@@ -803,15 +771,13 @@ def test_plan_linked_worktree_sync_delegates_to_subprocess(
 def test_apply_linked_worktree_sync_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktree_sync as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktree_sync_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["apply-linked-worktree-sync"]
     rc = fn(["--from-plan-stdin"])
@@ -844,9 +810,7 @@ def test_create_private_repo_requires_repo(
 def test_create_public_repo_creates_and_adds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.create_repo as _mod
-
-    # _mod.subprocess is the same object as add_repo.subprocess (shared module),
+    # create_repo_module.subprocess is the same object as add_repo.subprocess (shared module),
     # so we patch subprocess.run once and track all calls.
     all_calls: list[list[str]] = []
 
@@ -857,8 +821,8 @@ def test_create_public_repo_creates_and_adds(
             return CompletedProcess(cmd, 1)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
-    monkeypatch.setattr(_mod.shutil, "which", lambda name: "/usr/bin/gh")
+    monkeypatch.setattr(create_repo_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(create_repo_module.shutil, "which", lambda name: "/usr/bin/gh")
 
     fn = reg._REGISTRY["create-public-repo"]
     rc = fn(["owner/newrepo"])
@@ -878,15 +842,13 @@ def test_create_public_repo_creates_and_adds(
 def test_install_linked_worktree_hooks_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["install-linked-worktree-hooks"]
     rc = fn(["--format", "tsv"])
@@ -900,15 +862,13 @@ def test_install_linked_worktree_hooks_delegates_to_subprocess(
 def test_reset_linked_worktree_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["reset-linked-worktree"]
     rc = fn(["/some/path", "--apply"])
@@ -922,15 +882,13 @@ def test_reset_linked_worktree_delegates_to_subprocess(
 def test_cleanup_linked_worktrees_delegates_to_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["cleanup-linked-worktrees"]
     rc = fn(["--path-glob", "worktrees/*"])
@@ -944,10 +902,8 @@ def test_cleanup_linked_worktrees_delegates_to_subprocess(
 def test_cleanup_linked_worktrees_passes_through_exit_code(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     monkeypatch.setattr(
-        _mod.subprocess,
+        linked_worktrees_module.subprocess,
         "run",
         lambda cmd, **kw: CompletedProcess(cmd, 1),
     )
@@ -971,15 +927,13 @@ def test_remove_linked_worktree_requires_path(
 def test_remove_linked_worktree_calls_git_worktree_remove(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["remove-linked-worktree"]
     rc = fn(["/some/worktree"])
@@ -990,15 +944,13 @@ def test_remove_linked_worktree_calls_git_worktree_remove(
 def test_remove_linked_worktree_with_force(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
         calls.append(cmd)
         return CompletedProcess(cmd, 0)
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
 
     fn = reg._REGISTRY["remove-linked-worktree"]
     rc = fn(["/some/worktree", "--force"])
@@ -1010,10 +962,10 @@ def test_remove_linked_worktree_rejects_unknown_option(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     monkeypatch.setattr(
-        _mod.subprocess, "run", lambda cmd, **kw: CompletedProcess(cmd, 0)
+        linked_worktrees_module.subprocess,
+        "run",
+        lambda cmd, **kw: CompletedProcess(cmd, 0),
     )
     fn = reg._REGISTRY["remove-linked-worktree"]
     rc = fn(["/some/worktree", "--unknown"])
@@ -1025,10 +977,10 @@ def test_remove_linked_worktree_rejects_extra_positional(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     monkeypatch.setattr(
-        _mod.subprocess, "run", lambda cmd, **kw: CompletedProcess(cmd, 0)
+        linked_worktrees_module.subprocess,
+        "run",
+        lambda cmd, **kw: CompletedProcess(cmd, 0),
     )
     fn = reg._REGISTRY["remove-linked-worktree"]
     rc = fn(["/some/worktree", "extra-arg"])
@@ -1052,8 +1004,6 @@ def test_add_linked_worktree_basic(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     git_calls: list[list[str]] = []
     dispatch_calls: list[tuple[str, list[str]]] = []
 
@@ -1068,8 +1018,8 @@ def test_add_linked_worktree_basic(
     worktree_dir = tmp_path / "new-worktree"
     worktree_dir.mkdir()
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
-    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module, "dispatch", fake_dispatch)
 
     fn = reg._REGISTRY["add-linked-worktree"]
     rc = fn([str(worktree_dir)])
@@ -1084,8 +1034,6 @@ def test_add_linked_worktree_with_branch_and_start_point(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     git_calls: list[list[str]] = []
     dispatch_calls: list[tuple[str, list[str]]] = []
 
@@ -1100,8 +1048,8 @@ def test_add_linked_worktree_with_branch_and_start_point(
     worktree_dir = tmp_path / "wt"
     worktree_dir.mkdir()
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
-    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module, "dispatch", fake_dispatch)
 
     fn = reg._REGISTRY["add-linked-worktree"]
     rc = fn([str(worktree_dir), "--branch", "feature/x", "origin/main"])
@@ -1117,8 +1065,6 @@ def test_add_linked_worktree_no_submodules(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     dispatch_calls: list[tuple[str, list[str]]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
@@ -1131,8 +1077,8 @@ def test_add_linked_worktree_no_submodules(
     worktree_dir = tmp_path / "wt2"
     worktree_dir.mkdir()
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
-    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module, "dispatch", fake_dispatch)
 
     fn = reg._REGISTRY["add-linked-worktree"]
     rc = fn([str(worktree_dir), "--no-submodules"])
@@ -1145,8 +1091,6 @@ def test_add_linked_worktree_fetch_fallback_passed_to_dispatch(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     dispatch_calls: list[tuple[str, list[str]]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
@@ -1159,8 +1103,8 @@ def test_add_linked_worktree_fetch_fallback_passed_to_dispatch(
     worktree_dir = tmp_path / "wt3"
     worktree_dir.mkdir()
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
-    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module, "dispatch", fake_dispatch)
 
     fn = reg._REGISTRY["add-linked-worktree"]
     rc = fn([str(worktree_dir), "--fetch-fallback", "--jobs=4"])
@@ -1176,8 +1120,6 @@ def test_add_linked_worktree_git_failure_skips_dispatch(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     dispatch_calls: list[tuple[str, list[str]]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
@@ -1189,8 +1131,8 @@ def test_add_linked_worktree_git_failure_skips_dispatch(
 
     worktree_dir = tmp_path / "wt4"
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
-    monkeypatch.setattr(_mod, "dispatch", fake_dispatch)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module, "dispatch", fake_dispatch)
 
     fn = reg._REGISTRY["add-linked-worktree"]
     rc = fn([str(worktree_dir)])
@@ -1220,8 +1162,6 @@ def test_add_linked_worktree_branch_short_form(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import just_submodules_hub.run_action.actions.linked_worktrees as _mod
-
     git_calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
@@ -1231,8 +1171,8 @@ def test_add_linked_worktree_branch_short_form(
     worktree_dir = tmp_path / "wt5"
     worktree_dir.mkdir()
 
-    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
-    monkeypatch.setattr(_mod, "dispatch", lambda n, a: 0)
+    monkeypatch.setattr(linked_worktrees_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(linked_worktrees_module, "dispatch", lambda n, a: 0)
 
     fn = reg._REGISTRY["add-linked-worktree"]
     rc = fn([str(worktree_dir), "-b", "my-branch"])

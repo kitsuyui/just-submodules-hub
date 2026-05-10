@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import pytest
 
@@ -10,7 +10,6 @@ from just_submodules_hub.default_branch import (
     parse_head_branch_line,
     resolve_default_branch,
 )
-
 
 # ---------------------------------------------------------------------------
 # parse_head_branch_line
@@ -32,7 +31,7 @@ def test_parse_head_branch_line_detects_non_main_branch() -> None:
 
 
 # ---------------------------------------------------------------------------
-# resolve_default_branch – symbolic-ref path
+# resolve_default_branch - symbolic-ref path
 # ---------------------------------------------------------------------------
 
 
@@ -61,7 +60,7 @@ def test_resolve_default_branch_supports_custom_remote(
 
 
 # ---------------------------------------------------------------------------
-# resolve_default_branch – remote show fallback
+# resolve_default_branch - remote show fallback
 # ---------------------------------------------------------------------------
 
 
@@ -83,7 +82,7 @@ def test_resolve_default_branch_falls_back_to_remote_show(
 
 
 # ---------------------------------------------------------------------------
-# resolve_default_branch – fallback value
+# resolve_default_branch - fallback value
 # ---------------------------------------------------------------------------
 
 
