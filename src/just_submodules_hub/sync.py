@@ -62,7 +62,10 @@ class ConfigSnapshot:
 
 @dataclass
 class RemoteSnapshot:
-    """Saved remote URL to restore after a temporary token-authenticated URL override."""
+    """Saved remote URL to restore after a temporary token-authenticated URL override.
+
+    Used to roll back URL changes when token auth is no longer needed.
+    """
 
     cwd: Path
     url: str
@@ -125,7 +128,10 @@ def redaction_values(secret: str) -> list[str]:
 
 
 def redact_secrets(text: str, redactions: Iterable[str]) -> str:
-    """Replace each non-empty string in *redactions* inside *text* with ``<redacted>``."""
+    """Replace each non-empty string in *redactions* inside *text*.
+
+    Each matching secret is replaced with the literal string ``<redacted>``.
+    """
     redacted = text
     for secret in redactions:
         if secret:
@@ -400,9 +406,10 @@ def print_failures(
 
 
 def run_final_submodule_update() -> None:
-    """Run ``git submodule update --remote --rebase --recursive --recommend-shallow``."""
+    """Run git submodule update --remote --rebase --recursive --recommend-shallow."""
     print(
-        "Running final submodule update (--remote --rebase --recursive --recommend-shallow)...",
+        "Running final submodule update"
+        " (--remote --rebase --recursive --recommend-shallow)...",
     )
     run(
         [
@@ -426,7 +433,8 @@ def build_parser() -> argparse.ArgumentParser:
     one = subparsers.add_parser("one", help="sync one repository")
     one.add_argument(
         "repo_path",
-        help="repository name or path (e.g. example, owner/repo, or repo/github.com/owner/repo)",
+        help="repository name or path"
+        " (e.g. example, owner/repo, or repo/github.com/owner/repo)",
     )
     one.add_argument(
         "--verbose",
@@ -465,7 +473,8 @@ def build_parser() -> argparse.ArgumentParser:
     all_cmd.add_argument(
         "--token-env",
         metavar="ENV",
-        help="temporarily authenticate GitHub submodule URLs with the token stored in ENV",
+        help="temporarily authenticate GitHub submodule URLs"
+        " with the token stored in ENV",
     )
     all_cmd.add_argument(
         "--final-submodule-update",

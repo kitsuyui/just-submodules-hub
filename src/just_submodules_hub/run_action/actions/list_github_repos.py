@@ -32,7 +32,7 @@ def _list_repos_for_owner(owner: str, visibility: str) -> list[str]:
         "--json",
         "nameWithOwner,url,isArchived,isFork",
         "--jq",
-        '.[] | select((.isArchived | not) and (.isFork | not)) | "\\(.nameWithOwner)\\t\\(.url)"',
+        '.[] | select((.isArchived | not) and (.isFork | not)) | "\\(.nameWithOwner)\\t\\(.url)"',  # noqa: E501
     ]
     if visibility != "all":
         cmd = [
@@ -47,7 +47,7 @@ def _list_repos_for_owner(owner: str, visibility: str) -> list[str]:
             "--json",
             "nameWithOwner,url,isArchived,isFork",
             "--jq",
-            '.[] | select((.isArchived | not) and (.isFork | not)) | "\\(.nameWithOwner)\\t\\(.url)"',
+            '.[] | select((.isArchived | not) and (.isFork | not)) | "\\(.nameWithOwner)\\t\\(.url)"',  # noqa: E501
         ]
     proc = subprocess.run(
         cmd,

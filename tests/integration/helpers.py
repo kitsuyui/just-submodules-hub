@@ -17,7 +17,8 @@ def run(cmd: list[str], cwd: Path, env: Mapping[str, str] | None = None) -> str:
     )
     if proc.returncode != 0:
         raise AssertionError(
-            f"command failed: {' '.join(cmd)}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}",
+            f"command failed: {' '.join(cmd)}"
+            f"\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}",
         )
     return proc.stdout.strip()
 

@@ -95,8 +95,8 @@ printf '%s\n' '{"number":123,"state":"MERGED","mergedAt":"2026-04-26T00:00:00Z"}
     assert proc.returncode == 0, proc.stderr
     assert run(["git", "branch", "--show-current"], cwd=submodule) == "main"
     assert (
-        f"{submodule_path}\tsettled\tswitch-default\tmain\t123\tclean\tpr merged; switched to default branch"
-        in proc.stdout.splitlines()
+        f"{submodule_path}\tsettled\tswitch-default\tmain\t123\tclean"
+        "\tpr merged; switched to default branch" in proc.stdout.splitlines()
     )
 
 

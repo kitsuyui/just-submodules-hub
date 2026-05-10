@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from plan_linked_worktree_sync import (
     PlanRecord,  # noqa: F401
-    WorktreeRecord,  # noqa: F401
+    WorktreeRecord,
     dirty_state,
     list_worktrees,
     plan_one,
@@ -235,7 +235,62 @@ def path_matches(path: str, pattern: str) -> bool:
     return fnmatch.fnmatch(path, pattern) or fnmatch.fnmatch(Path(path).name, pattern)
 
 
-def cleanup_records(  # noqa: C901
+def _cleanup_one_worktree(
+    root: Path,
+    worktree: WorktreeRecord,
+    default: str,
+    *,
+    apply: bool,
+    drop_branch: bool,
+    include_skipped: bool,
+) -> list[CleanupRecord]:
+    """Process a single worktree for cleanup; return zero or one CleanupRecord."""
+    plan = plan_one(worktree, default)
+    if plan.action not in ("retire-contained", "retire-merged-pr"):
+        if include_skipped:
+            return [
+                CleanupRecord(
+                    worktree.path, worktree.branch, "skipped", plan.action, plan.message
+                )
+            ]
+        return []
+    if not apply:
+        return [
+            CleanupRecord(
+                worktree.path, worktree.branch, "planned", "remove", "dry-run"
+            )
+        ]
+    remove_proc = run_git(root, ["worktree", "remove", worktree.path])
+    if remove_proc.returncode != 0:
+        return [
+            CleanupRecord(
+                worktree.path,
+                worktree.branch,
+                "failed",
+                "remove",
+                summarize(remove_proc),
+            )
+        ]
+    if drop_branch and worktree.branch:
+        drop_proc = run_git(root, ["branch", "-D", worktree.branch])
+        if drop_proc.returncode != 0:
+            return [
+                CleanupRecord(
+                    worktree.path,
+                    worktree.branch,
+                    "failed",
+                    "drop-branch",
+                    summarize(drop_proc),
+                )
+            ]
+    return [
+        CleanupRecord(
+            worktree.path, worktree.branch, "removed", "remove", "worktree removed"
+        )
+    ]
+
+
+def cleanup_records(
     root: Path,
     *,
     path_glob: str,
@@ -243,6 +298,7 @@ def cleanup_records(  # noqa: C901
     drop_branch: bool,
     include_skipped: bool,
 ) -> list[CleanupRecord]:
+    """Collect cleanup records for all matched linked worktrees under *root*."""
     default = default_branch(root)
     rows: list[CleanupRecord] = []
     root_resolved = root.resolve()
@@ -261,62 +317,14 @@ def cleanup_records(  # noqa: C901
                     ),
                 )
             continue
-        plan = plan_one(worktree, default)
-        if plan.action not in ("retire-contained", "retire-merged-pr"):
-            if include_skipped:
-                rows.append(
-                    CleanupRecord(
-                        worktree.path,
-                        worktree.branch,
-                        "skipped",
-                        plan.action,
-                        plan.message,
-                    ),
-                )
-            continue
-        if not apply:
-            rows.append(
-                CleanupRecord(
-                    worktree.path,
-                    worktree.branch,
-                    "planned",
-                    "remove",
-                    "dry-run",
-                ),
-            )
-            continue
-        remove_proc = run_git(root, ["worktree", "remove", worktree.path])
-        if remove_proc.returncode != 0:
-            rows.append(
-                CleanupRecord(
-                    worktree.path,
-                    worktree.branch,
-                    "failed",
-                    "remove",
-                    summarize(remove_proc),
-                ),
-            )
-            continue
-        if drop_branch and worktree.branch:
-            drop_proc = run_git(root, ["branch", "-D", worktree.branch])
-            if drop_proc.returncode != 0:
-                rows.append(
-                    CleanupRecord(
-                        worktree.path,
-                        worktree.branch,
-                        "failed",
-                        "drop-branch",
-                        summarize(drop_proc),
-                    ),
-                )
-                continue
-        rows.append(
-            CleanupRecord(
-                worktree.path,
-                worktree.branch,
-                "removed",
-                "remove",
-                "worktree removed",
+        rows.extend(
+            _cleanup_one_worktree(
+                root,
+                worktree,
+                default,
+                apply=apply,
+                drop_branch=drop_branch,
+                include_skipped=include_skipped,
             ),
         )
     return rows

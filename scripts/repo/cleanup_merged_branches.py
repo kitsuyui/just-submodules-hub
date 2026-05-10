@@ -335,7 +335,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--include-non-owner-remote",
         action="store_true",
-        help="include remote branch cleanup for merged pull requests not owned by the authenticated user",
+        help=(
+            "include remote branch cleanup for merged pull requests"
+            " not owned by the authenticated user"
+        ),
     )
     parser.add_argument(
         "--remote-name",

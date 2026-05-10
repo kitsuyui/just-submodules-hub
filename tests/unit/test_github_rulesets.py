@@ -182,9 +182,7 @@ def test_candidate_legacy_rulesets_and_identifier_lookup() -> None:
     )
 
 
-def test_summarize_classic_branch_protection_marks_redundant_when_baseline_covers_it() -> (
-    None
-):
+def test_summarize_classic_branch_protection_marks_redundant_when_covered() -> None:
     metadata = RepoMetadata("kitsuyui/example", "public", "main")
     protection = {
         "required_pull_request_reviews": {"required_approving_review_count": 0},
@@ -219,7 +217,7 @@ def test_summarize_classic_branch_protection_marks_redundant_when_baseline_cover
     assert summary["uncovered_settings"] == []
 
 
-def test_summarize_classic_branch_protection_requires_manual_review_for_extra_settings() -> (
+def test_summarize_classic_branch_protection_requires_review_for_extra_settings() -> (
     None
 ):
     metadata = RepoMetadata("kitsuyui/example", "public", "main")

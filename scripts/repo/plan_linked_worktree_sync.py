@@ -123,11 +123,15 @@ def list_worktrees(root: Path) -> list[WorktreeRecord]:
     return parse_porcelain(proc.stdout)
 
 
-def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:  # noqa: C901
-    repo = Path(worktree.path)
-    branch = worktree.branch
-    dirty = dirty_state(repo)
+def _plan_skip_for_worktree_state(
+    worktree: WorktreeRecord,
+    branch: str,
+    dirty: str,
+) -> PlanRecord | None:
+    """Return a skip/failed PlanRecord for bad worktree states.
 
+    Returns None if OK to proceed.
+    """
     if worktree.locked == "yes":
         return PlanRecord(
             worktree.path,
@@ -188,32 +192,18 @@ def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:  # noqa: C90
             "",
             "detached HEAD",
         )
-    if branch == default:
-        return PlanRecord(
-            worktree.path,
-            branch,
-            dirty,
-            "",
-            "",
-            "planned",
-            "pull-default",
-            f"origin/{default}",
-            "default branch",
-        )
-    if not branch_has_unique_commits(repo, branch, default):
-        return PlanRecord(
-            worktree.path,
-            branch,
-            dirty,
-            "",
-            "",
-            "planned",
-            "retire-contained",
-            f"origin/{default}",
-            "branch has no commits outside default branch",
-        )
+    return None
 
-    pr = gh_pr_view(repo)
+
+def _plan_record_for_pr(
+    worktree: WorktreeRecord,
+    branch: str,
+    dirty: str,
+    pr: PullRequestState,
+    default: str,
+) -> PlanRecord:
+    """Resolve a PlanRecord based on the pull request state for *branch*."""
+    repo = Path(worktree.path)
     if pr.state == "unknown":
         return PlanRecord(
             worktree.path,
@@ -262,7 +252,6 @@ def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:  # noqa: C90
             f"origin/{default}",
             "pull request is merged",
         )
-
     if remote_branch_exists(repo, branch):
         return PlanRecord(
             worktree.path,
@@ -286,6 +275,45 @@ def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:  # noqa: C90
         f"origin/{default}",
         "draft PR or private branch without remote tracking branch",
     )
+
+
+def plan_one(worktree: WorktreeRecord, default: str) -> PlanRecord:
+    """Plan the synchronization action for a single linked worktree."""
+    repo = Path(worktree.path)
+    branch = worktree.branch
+    dirty = dirty_state(repo)
+
+    skip = _plan_skip_for_worktree_state(worktree, branch, dirty)
+    if skip is not None:
+        return skip
+
+    if branch == default:
+        return PlanRecord(
+            worktree.path,
+            branch,
+            dirty,
+            "",
+            "",
+            "planned",
+            "pull-default",
+            f"origin/{default}",
+            "default branch",
+        )
+    if not branch_has_unique_commits(repo, branch, default):
+        return PlanRecord(
+            worktree.path,
+            branch,
+            dirty,
+            "",
+            "",
+            "planned",
+            "retire-contained",
+            f"origin/{default}",
+            "branch has no commits outside default branch",
+        )
+
+    pr = gh_pr_view(repo)
+    return _plan_record_for_pr(worktree, branch, dirty, pr, default)
 
 
 def parse_args() -> argparse.Namespace:

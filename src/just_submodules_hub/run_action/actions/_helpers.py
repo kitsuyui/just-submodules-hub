@@ -103,7 +103,7 @@ def set_submodule_ignore_all() -> int:
         line = line.strip()
         if not line:
             continue
-        # e.g. "submodule.repo/github.com/owner/repo.path" -> "submodule.repo/github.com/owner/repo"
+        # strip .path suffix: "submodule.foo/bar.path" -> "submodule.foo/bar"
         section = line.removesuffix(".path")
         set_proc = subprocess.run(
             ["git", "config", "--local", f"{section}.ignore", "all"],

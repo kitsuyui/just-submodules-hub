@@ -58,7 +58,6 @@ select = [
 ]
 ignore = [
     "COM812", # missing-trailing-comma: conflicts with ruff formatter; auto-fixed at Phase A2a
-    "E501",   # line-too-long: existing code has many long lines; fix separately
     "UP047",  # non-pep695-generic-function: PEP 695 syntax; defer to Phase A2b
     "ANN401", # any-type: typing.Any is necessary for JSON payloads, **kwargs pass-through,
                # and test spy stubs; overly strict for this codebase
@@ -72,8 +71,10 @@ ignore = [
 # are not production code (S108); hardcoded token strings in tests are test
 # fixtures, not real secrets (S105); lambda stubs for monkeypatch have unused
 # args by design (ARG005); try-except-pass is used in negative test assertions
-# where pytest.raises is not applicable (S110).
-"tests/**" = ["S101", "ARG001", "ARG005", "S603", "S607", "S108", "S105", "S110", "D"]
+# where pytest.raises is not applicable (S110). E501 is suppressed because
+# integration tests embed multi-line shell scripts and JSON fixtures as f-strings,
+# where ruff cannot apply per-line noqa inside the string content.
+"tests/**" = ["S101", "ARG001", "ARG005", "S603", "S607", "S108", "S105", "S110", "D", "E501"]
 
 # Scripts are CLI entrypoints; print() is intentional output (T201). subprocess
 # calls are argv-based by design (S603, S607). run_submodule_command.py uses

@@ -14,7 +14,10 @@ _SCRIPT = _PROJECT_ROOT / "scripts" / "repo" / "run_submodule_command.py"
 
 @action("every-repo")
 def every_repo(args: list[str]) -> int:
-    """Run an arbitrary command in every submodule repository via run_submodule_command.py."""
+    """Run an arbitrary command in every submodule repository.
+
+    Delegates to run_submodule_command.py.
+    """
     if not args:
         print("COMMAND is required", file=sys.stderr)
         return 2

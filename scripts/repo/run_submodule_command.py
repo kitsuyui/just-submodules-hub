@@ -106,7 +106,10 @@ def parse_args() -> tuple[argparse.Namespace, str]:
         "--marker-file",
         action="append",
         default=[],
-        help="only run the command in submodules containing this marker file; may be repeated",
+        help=(
+            "only run the command in submodules containing this marker file;"
+            " may be repeated"
+        ),
     )
     args, command_parts = parser.parse_known_args()
     if not command_parts:

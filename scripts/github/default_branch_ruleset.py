@@ -24,7 +24,7 @@ from just_submodules_hub.github_rulesets import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Inspect or upsert a baseline ruleset for a repository default branch.",
+        description="Inspect or upsert a default-branch baseline ruleset.",
     )
     parser.add_argument(
         "action",
@@ -259,7 +259,8 @@ def classic_delete_if_redundant(repo: str) -> int:
         raise RuntimeError("classic branch protection not found")
     if not summary["deletable"]:
         raise RuntimeError(
-            "classic branch protection is not redundant; manual review required for settings: "
+            "classic branch protection is not redundant;"
+            " manual review required for settings: "
             + ", ".join(summary["uncovered_settings"]),
         )
 

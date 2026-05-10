@@ -736,7 +736,7 @@ def test_commit_submodule_pointers_commits_changed(
     assert "My commit message" in commit_calls[0]
 
 
-# ---------- list-linked-worktrees / plan-linked-worktree-sync / apply-linked-worktree-sync ----------
+# ---------- list/plan/apply-linked-worktree-sync ----------
 
 
 def test_list_linked_worktrees_delegates_to_subprocess(
@@ -818,7 +818,7 @@ def test_create_private_repo_requires_repo(
 def test_create_public_repo_creates_and_adds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # create_repo_module.subprocess is the same object as add_repo.subprocess (shared module),
+    # create_repo_module.subprocess is the same object as add_repo.subprocess (shared),
     # so we patch subprocess.run once and track all calls.
     all_calls: list[list[str]] = []
 
@@ -844,7 +844,7 @@ def test_create_public_repo_creates_and_adds(
     assert submodule_calls
 
 
-# ---------- install-linked-worktree-hooks / reset-linked-worktree / cleanup-linked-worktrees ----------
+# ---------- install/reset/cleanup-linked-worktrees ----------
 
 
 def test_install_linked_worktree_hooks_delegates_to_subprocess(

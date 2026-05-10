@@ -514,7 +514,10 @@ def test_apply_plan_unsupported_action_returns_failed_without_git_call(
 def test_apply_plan_non_planned_status_passthrough_dirty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Records with status other than 'planned' must be returned as-is (no git calls)."""
+    """Records with status other than 'planned' must be returned as-is.
+
+    No git calls should be made.
+    """
     git_calls: list[list[str]] = []
 
     def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:

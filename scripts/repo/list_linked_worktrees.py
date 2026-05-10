@@ -29,7 +29,30 @@ def short_ref(ref: str) -> str:
     return ref.removeprefix("refs/heads/")
 
 
-def parse_porcelain(text: str) -> list[WorktreeRecord]:  # noqa: C901
+def _apply_porcelain_key(
+    key: str,
+    value: str,
+    current: dict[str, str],
+) -> None:
+    """Apply a single porcelain key-value pair to the current worktree state dict."""
+    if key == "HEAD":
+        current["head"] = value
+    elif key == "branch":
+        current["branch"] = short_ref(value)
+    elif key == "detached":
+        current["detached"] = "yes"
+    elif key == "locked":
+        current["locked"] = "yes"
+        current["locked_reason"] = value
+    elif key == "prunable":
+        current["prunable"] = "yes"
+        current["prunable_reason"] = value
+    elif key == "bare":
+        current["branch"] = "bare"
+
+
+def parse_porcelain(text: str) -> list[WorktreeRecord]:
+    """Parse git worktree list --porcelain output into a list of WorktreeRecord."""
     records: list[WorktreeRecord] = []
     current: dict[str, str] = {}
 
@@ -63,20 +86,8 @@ def parse_porcelain(text: str) -> list[WorktreeRecord]:  # noqa: C901
         if key == "worktree":
             flush()
             current = {"path": value}
-        elif key == "HEAD":
-            current["head"] = value
-        elif key == "branch":
-            current["branch"] = short_ref(value)
-        elif key == "detached":
-            current["detached"] = "yes"
-        elif key == "locked":
-            current["locked"] = "yes"
-            current["locked_reason"] = value
-        elif key == "prunable":
-            current["prunable"] = "yes"
-            current["prunable_reason"] = value
-        elif key == "bare":
-            current["branch"] = "bare"
+        else:
+            _apply_porcelain_key(key, value, current)
 
     flush()
     return records

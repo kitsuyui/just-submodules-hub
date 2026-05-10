@@ -49,7 +49,10 @@ def _parse_gitmodules_paths(text: str) -> list[str]:
 
 
 def managed_repo_paths(hub_root: Path) -> list[str]:
-    """Return all managed repo paths under *hub_root* from .gitmodules and filesystem."""
+    """Return all managed repo paths under *hub_root*.
+
+    Reads from .gitmodules and the filesystem.
+    """
     root = Path(hub_root)
     paths: set[str] = set()
 

@@ -92,16 +92,52 @@ def remove_linked_worktree(args: list[str]) -> int:
     return proc.returncode
 
 
-@action("add-linked-worktree")
-def add_linked_worktree(args: list[str]) -> int:  # noqa: C901
-    """Create a new linked worktree with optional submodule initialization."""
-    if not args or not args[0]:
-        print("PATH is required", file=sys.stderr)
-        return 2
+def _build_worktree_add_cmd(
+    worktree_path: str,
+    branch: str,
+    start_point: str,
+) -> list[str]:
+    """Build the git worktree add command from parsed arguments."""
+    cmd = ["git", "worktree", "add"]
+    if branch and start_point:
+        cmd.extend(["-b", branch, worktree_path, start_point])
+    elif branch:
+        cmd.extend(["-b", branch, worktree_path])
+    elif start_point:
+        cmd.extend([worktree_path, start_point])
+    else:
+        cmd.append(worktree_path)
+    return cmd
 
-    worktree_path = args[0]
-    rest = args[1:]
 
+def _build_init_submodule_args(
+    init_mode: str,
+    init_jobs: str,
+) -> list[str] | None:
+    """Build init-all-repos args from mode and jobs strings.
+
+    Returns None when *init_mode* is unrecognized.
+    """
+    init_args: list[str] = ["--force"]
+    if init_mode == "fetch-fallback":
+        init_args.append("--fetch-fallback")
+    elif init_mode == "no-fetch":
+        init_args.append("--no-fetch")
+    elif init_mode != "normal":
+        return None
+    if init_jobs:
+        init_args.extend(["--jobs", init_jobs])
+    return init_args
+
+
+def _parse_add_linked_worktree_rest(  # noqa: C901  # arg-aliases: --no-fetch/--submodule-no-fetch etc.
+    rest: list[str],
+) -> tuple[str, str, bool, str, str] | None:
+    """Parse the optional arguments for add-linked-worktree.
+
+    Returns ``(branch, start_point, init_submodules, init_mode, init_jobs)``
+    or ``None`` on error (error message already printed).
+    """
     branch = ""
     start_point = ""
     init_submodules = True
@@ -115,7 +151,7 @@ def add_linked_worktree(args: list[str]) -> int:  # noqa: C901
             i += 1
             if i >= len(rest) or not rest[i]:
                 print("--branch requires a value", file=sys.stderr)
-                return 2
+                return None
             branch = rest[i]
         elif arg.startswith("--branch="):
             branch = arg[len("--branch=") :]
@@ -123,7 +159,7 @@ def add_linked_worktree(args: list[str]) -> int:  # noqa: C901
             i += 1
             if i >= len(rest) or not rest[i]:
                 print("--start-point requires a value", file=sys.stderr)
-                return 2
+                return None
             start_point = rest[i]
         elif arg.startswith("--start-point="):
             start_point = arg[len("--start-point=") :]
@@ -138,40 +174,46 @@ def add_linked_worktree(args: list[str]) -> int:  # noqa: C901
             i += 1
             if i >= len(rest) or not rest[i]:
                 print(f"{option_name} requires a value", file=sys.stderr)
-                return 2
+                return None
             init_jobs = rest[i]
         elif arg.startswith("--jobs=") or arg.startswith("--submodule-jobs="):
             init_jobs = arg.split("=", 1)[1]
         elif arg.startswith("--"):
             print(f"unknown linked worktree add option: {arg}", file=sys.stderr)
-            return 2
+            return None
         else:
             if start_point:
                 print(
                     f"unexpected linked worktree add argument: {arg}",
                     file=sys.stderr,
                 )
-                return 2
+                return None
             start_point = arg
         i += 1
 
-    # Validate init_jobs now if provided
+    return branch, start_point, init_submodules, init_mode, init_jobs
+
+
+@action("add-linked-worktree")
+def add_linked_worktree(args: list[str]) -> int:
+    """Create a new linked worktree with optional submodule initialization."""
+    if not args or not args[0]:
+        print("PATH is required", file=sys.stderr)
+        return 2
+
+    worktree_path = args[0]
+    parsed = _parse_add_linked_worktree_rest(args[1:])
+    if parsed is None:
+        return 2
+
+    branch, start_point, init_submodules, init_mode, init_jobs = parsed
+
     if init_jobs:
         rc = validate_positive_integer(init_jobs, "JOBS")
         if rc != 0:
             return rc
 
-    # git worktree add
-    git_cmd = ["git", "worktree", "add"]
-    if branch and start_point:
-        git_cmd.extend(["-b", branch, worktree_path, start_point])
-    elif branch:
-        git_cmd.extend(["-b", branch, worktree_path])
-    elif start_point:
-        git_cmd.extend([worktree_path, start_point])
-    else:
-        git_cmd.append(worktree_path)
-
+    git_cmd = _build_worktree_add_cmd(worktree_path, branch, start_point)
     proc = subprocess.run(git_cmd, check=False)
     if proc.returncode != 0:
         return proc.returncode
@@ -179,19 +221,10 @@ def add_linked_worktree(args: list[str]) -> int:  # noqa: C901
     if not init_submodules:
         return 0
 
-    # Build init-all-repos args (always --force, mirroring run_init_all_in_worktree)
-    init_args: list[str] = ["--force"]
-    if init_mode == "fetch-fallback":
-        init_args.append("--fetch-fallback")
-    elif init_mode == "no-fetch":
-        init_args.append("--no-fetch")
-    elif init_mode != "normal":
+    init_args = _build_init_submodule_args(init_mode, init_jobs)
+    if init_args is None:
         print(f"unknown submodule init mode: {init_mode}", file=sys.stderr)
         return 2
 
-    if init_jobs:
-        init_args.extend(["--jobs", init_jobs])
-
-    # Cross-action dispatch in the new worktree's cwd
     with _chdir(worktree_path):
         return dispatch("init-all-repos", init_args)
