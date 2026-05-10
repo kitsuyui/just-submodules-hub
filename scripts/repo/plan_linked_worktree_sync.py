@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+from just_submodules_hub.default_branch import resolve_default_branch as default_branch
 from just_submodules_hub.submodule_batch import print_records
 from list_linked_worktrees import WorktreeRecord, parse_porcelain
 
@@ -59,21 +60,6 @@ def run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
 def summarize(proc: subprocess.CompletedProcess[str]) -> str:
     text = (proc.stderr or proc.stdout).strip()
     return " ".join(text.split()) or f"exit {proc.returncode}"
-
-
-def default_branch(repo: Path) -> str:
-    proc = run_git(repo, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])
-    if proc.returncode == 0:
-        value = proc.stdout.strip()
-        if value.startswith("origin/"):
-            return value.removeprefix("origin/")
-    proc = run_git(repo, ["remote", "show", "origin"])
-    if proc.returncode == 0:
-        for line in proc.stdout.splitlines():
-            line = line.strip()
-            if line.startswith("HEAD branch:"):
-                return line.split(":", 1)[1].strip()
-    return "main"
 
 
 def dirty_state(repo: Path) -> str:

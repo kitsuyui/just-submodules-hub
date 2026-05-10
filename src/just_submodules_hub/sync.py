@@ -17,6 +17,8 @@ from .default_heads import (
 )
 from .gitmodules import SubmoduleEntry, read_gitmodules_entries, read_gitmodules_paths
 from .repo_paths import repo_display_name, repo_owner, resolve_repo_input
+from .default_branch import parse_head_branch_line  # noqa: F401
+from .default_branch import resolve_default_branch
 from .shell import run
 from .submodule_batch import (
     BatchFailure,
@@ -242,33 +244,6 @@ def build_sync_targets(paths: Iterable[str], prefilter: bool, bar) -> List[str]:
     return targets
 
 
-def resolve_default_branch(repo_path: str) -> str:
-    cwd = Path(repo_path)
-    try:
-        out = run(
-            ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd=cwd
-        )
-        if out.startswith("origin/"):
-            return out[len("origin/") :]
-        if out:
-            return out
-    except Exception:
-        pass
-
-    show = run(["git", "remote", "show", "origin"], cwd=cwd)
-    parsed = parse_head_branch_line(show)
-    if parsed is not None:
-        return parsed
-    raise RuntimeError(f"Could not resolve default branch for {repo_path}")
-
-
-def parse_head_branch_line(remote_show_output: str) -> str | None:
-    for line in remote_show_output.splitlines():
-        if "HEAD branch:" in line:
-            return line.split("HEAD branch:", 1)[1].strip()
-    return None
-
-
 def sync_one(repo_path: str) -> SyncResult:
     cwd = Path(repo_path)
     if not (cwd / ".git").exists():
@@ -294,7 +269,7 @@ def sync_one(repo_path: str) -> SyncResult:
         )
 
     run(["git", "fetch", "origin", "--prune"], cwd=cwd)
-    default_branch = resolve_default_branch(repo_path)
+    default_branch = resolve_default_branch(repo_path, fallback=None)
 
     switched = current_branch != default_branch
     run(["git", "switch", default_branch], cwd=cwd)

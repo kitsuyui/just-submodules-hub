@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+from just_submodules_hub.default_branch import resolve_default_branch
 from just_submodules_hub.gitmodules import read_gitmodules_paths
 from just_submodules_hub.submodule_batch import (
     positive_int,
@@ -69,22 +70,6 @@ def lines(proc: subprocess.CompletedProcess[str]) -> tuple[str, ...]:
 def current_branch(repo: Path) -> str:
     proc = run_git(repo, ["branch", "--show-current"])
     return proc.stdout.strip() if proc.returncode == 0 else ""
-
-
-def default_branch(repo: Path, remote: str) -> str:
-    proc = run_git(repo, ["symbolic-ref", "--short", f"refs/remotes/{remote}/HEAD"])
-    if proc.returncode == 0:
-        value = proc.stdout.strip()
-        prefix = f"{remote}/"
-        if value.startswith(prefix):
-            return value.removeprefix(prefix)
-    proc = run_git(repo, ["remote", "show", remote])
-    if proc.returncode == 0:
-        for line in proc.stdout.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("HEAD branch:"):
-                return stripped.split(":", 1)[1].strip()
-    return "main"
 
 
 def local_branches(repo: Path) -> tuple[str, ...]:
@@ -162,7 +147,7 @@ def inspect_state(repo: Path, remote: str, limit: int) -> BranchState:
     merged_pr_heads, owned_merged_pr_heads = pr_heads(repo, "merged", limit)
     open_pr_heads, _ = pr_heads(repo, "open", limit)
     return BranchState(
-        default_branch=default_branch(repo, remote),
+        default_branch=resolve_default_branch(repo, remote=remote),
         current_branch=current_branch(repo),
         local_branches=local_branches(repo),
         remote_branches=remote_branches(repo, remote),
