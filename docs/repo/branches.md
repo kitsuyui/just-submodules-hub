@@ -27,3 +27,9 @@ just repo::worktrees::branches::cleanup --include-non-owner-remote
 - Use `--no-local` or `--no-remote` to narrow the cleanup target.
 - Use `repo::submodule::branches::cleanup` for managed submodules only.
 - Use `repo::worktrees::branches::cleanup` for the root repository and all managed submodules.
+
+## Scope of `repo::worktrees::branches::cleanup`
+
+Despite the `worktrees` segment in the recipe path, this command operates on the **root repository plus every managed submodule** — that is, every working tree this hub knows about via `.gitmodules`. It does **not** target Git linked worktrees (the separate working trees created by `git worktree add`). To clean up branches under linked worktrees, use the linked-worktree-aware tooling under `repo::linked-worktrees::*` instead.
+
+The naming follows the loose sense of "all working trees managed by this hub" rather than Git's `git-worktree(1)` terminology.
