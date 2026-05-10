@@ -222,7 +222,7 @@ run_init_all_in_worktree() {
     validate_positive_integer "$init_jobs" "JOBS"
   fi
 
-  set -- init-all-repos
+  set -- init-all-repos --force
   case "$init_mode" in
     fetch-fallback)
       set -- "$@" --fetch-fallback
@@ -248,22 +248,40 @@ run_init_all_in_worktree() {
 run_submodule_update() {
   no_fetch="$1"
   jobs="$2"
+  force="$3"
 
-  # `--force` ensures the working tree is checked out even when the parent
-  # index already matches the submodule HEAD. Without it, `git submodule
-  # update --init` is a no-op for "ghost" submodules where the .git data
-  # exists but the working tree is empty (a common state after `git worktree
-  # add` creates a new linked worktree, since git does not check out
-  # submodule working trees automatically). With `--force`, `init-all`
-  # converges to a fully hydrated state in every worktree.
+  # Pass --force only when called from the add-linked-worktree path.
+  # After `git worktree add`, submodule working trees are not checked out
+  # ("ghost" state): the OID in the parent index already matches the submodule
+  # HEAD, so `git submodule update --init` short-circuits as a no-op.
+  # --force breaks that short-circuit and hydrates the working tree.
+  # In the init-all normal path (run by humans or hooks on an existing
+  # worktree), submodule working trees already exist and may contain
+  # uncommitted edits; passing --force here would silently discard them.
   if [ "$no_fetch" -eq 1 ] && [ -n "$jobs" ]; then
-    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch --jobs "$jobs"
+    if [ "$force" -eq 1 ]; then
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch --jobs "$jobs"
+    else
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch --jobs "$jobs"
+    fi
   elif [ "$no_fetch" -eq 1 ]; then
-    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch
+    if [ "$force" -eq 1 ]; then
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch
+    else
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch
+    fi
   elif [ -n "$jobs" ]; then
-    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --jobs "$jobs"
+    if [ "$force" -eq 1 ]; then
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --jobs "$jobs"
+    else
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs "$jobs"
+    fi
   else
-    git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force
+    if [ "$force" -eq 1 ]; then
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force
+    else
+      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow
+    fi
   fi
 }
 
@@ -290,6 +308,7 @@ case "$action" in
     requested_jobs=""
     no_fetch=0
     fetch_fallback=0
+    force=0
 
     while [ "$#" -gt 0 ]; do
       case "${1:-}" in
@@ -313,6 +332,9 @@ case "$action" in
         --jobs=*)
           requested_jobs=${1#--jobs=}
           ;;
+        --force)
+          force=1
+          ;;
         --*)
           echo "unknown init-all option: $1" >&2
           exit 2
@@ -334,12 +356,12 @@ case "$action" in
     fi
 
     if [ "$no_fetch" -eq 1 ] && [ "$fetch_fallback" -eq 1 ]; then
-      if ! run_submodule_update 1 "$jobs"; then
+      if ! run_submodule_update 1 "$jobs" "$force"; then
         echo "no-fetch submodule update failed; retrying with normal fetch" >&2
-        run_submodule_update 0 "$jobs"
+        run_submodule_update 0 "$jobs" "$force"
       fi
     else
-      run_submodule_update "$no_fetch" "$jobs"
+      run_submodule_update "$no_fetch" "$jobs" "$force"
     fi
     set_submodule_ignore_value all
     ;;

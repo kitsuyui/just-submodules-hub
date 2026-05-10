@@ -38,7 +38,7 @@ exit 0
 
     assert proc.returncode == 0, proc.stderr
     assert calls_file.read_text(encoding="utf-8").splitlines() == [
-        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --jobs 4",
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs 4",
         "config -f .gitmodules --name-only --get-regexp ^submodule\\..*\\.path$",
     ]
 
@@ -74,7 +74,7 @@ exit 0
     assert proc.returncode == 0, proc.stderr
     assert calls_file.read_text(encoding="utf-8").splitlines() == [
         "config --get submodule.fetchJobs",
-        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --jobs 6",
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs 6",
         "config -f .gitmodules --name-only --get-regexp ^submodule\\..*\\.path$",
     ]
 
@@ -106,7 +106,7 @@ exit 0
 
     assert proc.returncode == 0, proc.stderr
     assert calls_file.read_text(encoding="utf-8").splitlines() == [
-        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch --jobs 4",
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch --jobs 4",
         "config -f .gitmodules --name-only --get-regexp ^submodule\\..*\\.path$",
     ]
 
@@ -144,7 +144,7 @@ exit 0
     assert proc.returncode == 0, proc.stderr
     assert "retrying with normal fetch" in proc.stderr
     assert calls_file.read_text(encoding="utf-8").splitlines() == [
-        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch --jobs 2",
-        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --jobs 2",
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch --jobs 2",
+        "-c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs 2",
         "config -f .gitmodules --name-only --get-regexp ^submodule\\..*\\.path$",
     ]
