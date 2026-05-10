@@ -334,3 +334,260 @@ def test_list_unmanaged_repos_prints_difference(
     out = capsys.readouterr().out
     assert "owner/unmanaged" in out
     assert "owner/managed" not in out
+
+
+# ---------- init-all-repos ----------
+
+
+def test_init_all_repos_unknown_flag(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["init-all-repos"]
+    rc = fn(["--unknown"])
+    assert rc == 2
+    assert "unknown init-all option" in capsys.readouterr().err
+
+
+def test_init_all_repos_jobs_missing_value(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["init-all-repos"]
+    rc = fn(["--jobs"])
+    assert rc == 2
+    assert "--jobs requires a value" in capsys.readouterr().err
+
+
+def test_init_all_repos_delegates_to_helpers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.init_all_repos as _mod
+
+    calls: list[tuple[str, ...]] = []
+
+    def fake_resolve(requested: str) -> str:
+        calls.append(("resolve", requested))
+        return requested
+
+    def fake_run(no_fetch: bool, jobs: str, force: bool) -> int:
+        calls.append(("run", str(no_fetch), jobs, str(force)))
+        return 0
+
+    def fake_ignore() -> int:
+        calls.append(("ignore",))
+        return 0
+
+    monkeypatch.setattr(_mod, "resolve_submodule_jobs", fake_resolve)
+    monkeypatch.setattr(_mod, "run_submodule_update", fake_run)
+    monkeypatch.setattr(_mod, "set_submodule_ignore_all", fake_ignore)
+
+    fn = reg._REGISTRY["init-all-repos"]
+    rc = fn(["--no-fetch", "--jobs=4"])
+    assert rc == 0
+    assert ("run", "True", "4", "False") in calls
+    assert ("ignore",) in calls
+
+
+def test_init_all_repos_fetch_fallback_retries(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import just_submodules_hub.run_action.actions.init_all_repos as _mod
+
+    run_calls: list[tuple[bool, str, bool]] = []
+
+    def fake_resolve(requested: str) -> str:
+        return requested
+
+    def fake_run(no_fetch: bool, jobs: str, force: bool) -> int:
+        run_calls.append((no_fetch, jobs, force))
+        # First call (no-fetch) fails, second succeeds
+        return 1 if no_fetch else 0
+
+    def fake_ignore() -> int:
+        return 0
+
+    monkeypatch.setattr(_mod, "resolve_submodule_jobs", fake_resolve)
+    monkeypatch.setattr(_mod, "run_submodule_update", fake_run)
+    monkeypatch.setattr(_mod, "set_submodule_ignore_all", fake_ignore)
+
+    fn = reg._REGISTRY["init-all-repos"]
+    rc = fn(["--fetch-fallback", "--jobs=2"])
+    assert rc == 0
+    assert len(run_calls) == 2
+    assert run_calls[0] == (True, "2", False)
+    assert run_calls[1] == (False, "2", False)
+    assert "retrying with normal fetch" in capsys.readouterr().err
+
+
+# ---------- sync-repo-default-branch / sync-all-repo-default-branch ----------
+
+
+def test_sync_repo_default_branch_delegates_to_sync(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.sync_repo_default_branch as _mod
+
+    calls: list[Any] = []
+
+    def fake_handle_one(args: Any) -> int:
+        calls.append(args)
+        return 0
+
+    monkeypatch.setattr(_mod, "handle_one_action", fake_handle_one)
+
+    fn = reg._REGISTRY["sync-repo-default-branch"]
+    rc = fn(["owner/repo"])
+    assert rc == 0
+    assert len(calls) == 1
+    assert calls[0].repo_path == "owner/repo"
+
+
+def test_sync_all_repo_default_branch_delegates_to_sync(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.sync_repo_default_branch as _mod
+
+    calls: list[Any] = []
+
+    def fake_handle_all(args: Any) -> int:
+        calls.append(args)
+        return 0
+
+    monkeypatch.setattr(_mod, "handle_all_action", fake_handle_all)
+
+    fn = reg._REGISTRY["sync-all-repo-default-branch"]
+    rc = fn([])
+    assert rc == 0
+    assert len(calls) == 1
+
+
+# ---------- reconcile-* ----------
+
+
+def test_reconcile_submodule_worktree_requires_repo(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fn = reg._REGISTRY["reconcile-submodule-worktree"]
+    rc = fn([])
+    assert rc == 2
+    assert "REPO is required" in capsys.readouterr().err
+
+
+def test_reconcile_submodule_worktree_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.reconcile_worktrees as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["reconcile-submodule-worktree"]
+    rc = fn(["owner/repo", "--format", "tsv"])
+    assert rc == 0
+    # mode args: ["one", "owner/repo", "--format", "tsv"]
+    assert "one" in calls[0]
+    assert "owner/repo" in calls[0]
+
+
+def test_reconcile_submodule_worktrees_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.reconcile_worktrees as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["reconcile-submodule-worktrees"]
+    rc = fn([])
+    assert rc == 0
+    assert "all" in calls[0]
+
+
+def test_reconcile_worktrees_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.reconcile_worktrees as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["reconcile-worktrees"]
+    rc = fn([])
+    assert rc == 0
+    assert "root-and-all" in calls[0]
+
+
+# ---------- cleanup-* ----------
+
+
+def test_cleanup_branches_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.cleanup_branches as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["cleanup-branches"]
+    rc = fn(["--apply"])
+    assert rc == 0
+    assert "one" in calls[0]
+    assert "--apply" in calls[0]
+
+
+def test_cleanup_submodule_branches_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.cleanup_branches as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["cleanup-submodule-branches"]
+    rc = fn([])
+    assert rc == 0
+    assert "all" in calls[0]
+
+
+def test_cleanup_worktree_branches_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import just_submodules_hub.run_action.actions.cleanup_branches as _mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(_mod.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["cleanup-worktree-branches"]
+    rc = fn([])
+    assert rc == 0
+    assert "root-and-all" in calls[0]

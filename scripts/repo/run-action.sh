@@ -9,10 +9,7 @@ fi
 shift
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 project_root=$(CDPATH='' cd -- "$script_dir/../.." && pwd)
-sync_script="$script_dir/sync-default-branch.sh"
 resolve_repo_script="$script_dir/resolve_repo.py"
-reconcile_worktrees_script="$script_dir/reconcile_submodule_worktrees.py"
-cleanup_branches_script="$script_dir/cleanup_merged_branches.py"
 linked_worktrees_script="$script_dir/list_linked_worktrees.py"
 linked_worktree_sync_plan_script="$script_dir/plan_linked_worktree_sync.py"
 linked_worktree_sync_apply_script="$script_dir/apply_linked_worktree_sync.py"
@@ -171,34 +168,6 @@ submodule_pointer_changed() {
   [ "$index_oid" != "$worktree_oid" ]
 }
 
-resolve_submodule_jobs() {
-  requested_jobs="${1:-}"
-  if [ -n "$requested_jobs" ]; then
-    printf '%s\n' "$requested_jobs"
-    return
-  fi
-
-  configured_jobs=$(git config --get submodule.fetchJobs 2>/dev/null || true)
-  if [ -n "$configured_jobs" ]; then
-    printf '%s\n' "$configured_jobs"
-    return
-  fi
-
-  if command -v getconf >/dev/null 2>&1; then
-    cpu_count=$(getconf _NPROCESSORS_ONLN 2>/dev/null || true)
-    if [ -n "$cpu_count" ]; then
-      printf '%s\n' "$cpu_count"
-      return
-    fi
-  fi
-
-  if command -v sysctl >/dev/null 2>&1; then
-    cpu_count=$(sysctl -n hw.ncpu 2>/dev/null || true)
-    if [ -n "$cpu_count" ]; then
-      printf '%s\n' "$cpu_count"
-    fi
-  fi
-}
 
 validate_positive_integer() {
   value="$1"
@@ -243,50 +212,12 @@ run_init_all_in_worktree() {
   (cd "$worktree_path" && "$script_dir/run-action.sh" "$@")
 }
 
-run_submodule_update() {
-  no_fetch="$1"
-  jobs="$2"
-  force="$3"
-
-  # Pass --force only when called from the add-linked-worktree path.
-  # After `git worktree add`, submodule working trees are not checked out
-  # ("ghost" state): the OID in the parent index already matches the submodule
-  # HEAD, so `git submodule update --init` short-circuits as a no-op.
-  # --force breaks that short-circuit and hydrates the working tree.
-  # In the init-all normal path (run by humans or hooks on an existing
-  # worktree), submodule working trees already exist and may contain
-  # uncommitted edits; passing --force here would silently discard them.
-  if [ "$no_fetch" -eq 1 ] && [ -n "$jobs" ]; then
-    if [ "$force" -eq 1 ]; then
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch --jobs "$jobs"
-    else
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch --jobs "$jobs"
-    fi
-  elif [ "$no_fetch" -eq 1 ]; then
-    if [ "$force" -eq 1 ]; then
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --no-fetch
-    else
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --no-fetch
-    fi
-  elif [ -n "$jobs" ]; then
-    if [ "$force" -eq 1 ]; then
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force --jobs "$jobs"
-    else
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --jobs "$jobs"
-    fi
-  else
-    if [ "$force" -eq 1 ]; then
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow --force
-    else
-      git -c protocol.file.allow=always submodule update --init --recursive --recommend-shallow
-    fi
-  fi
-}
 
 
-# Actions migrated to the Python entrypoint (#60 item 3, phase 1).
+# Actions migrated to the Python entrypoint (#60 item 3, phases 1-2).
 case "$action" in
-  list-github-repos-owner|list-github-repos|list-managed-repos|list-unmanaged-repos|open-repo|every-repo|grep)
+  list-github-repos-owner|list-github-repos|list-managed-repos|list-unmanaged-repos|open-repo|every-repo|grep|\
+init-all-repos|sync-repo-default-branch|sync-all-repo-default-branch|reconcile-submodule-worktree|reconcile-submodule-worktrees|reconcile-worktrees|cleanup-branches|cleanup-submodule-branches|cleanup-worktree-branches)
     exec uv run --project "$project_root" env PYTHONPATH="$project_root/src${PYTHONPATH:+:$PYTHONPATH}" python -m just_submodules_hub.run_action "$action" "$@"
     ;;
 esac
@@ -310,67 +241,6 @@ case "$action" in
     git config --local "submodule.${repo_dir}.ignore" all
     ;;
 
-  init-all-repos)
-    requested_jobs=""
-    no_fetch=0
-    fetch_fallback=0
-    force=0
-
-    while [ "$#" -gt 0 ]; do
-      case "${1:-}" in
-        "")
-          ;;
-        --no-fetch)
-          no_fetch=1
-          ;;
-        --fetch-fallback)
-          fetch_fallback=1
-          no_fetch=1
-          ;;
-        --jobs)
-          shift
-          if [ $# -eq 0 ] || [ -z "${1:-}" ]; then
-            echo "--jobs requires a value" >&2
-            exit 2
-          fi
-          requested_jobs="$1"
-          ;;
-        --jobs=*)
-          requested_jobs=${1#--jobs=}
-          ;;
-        --force)
-          force=1
-          ;;
-        --*)
-          echo "unknown init-all option: $1" >&2
-          exit 2
-          ;;
-        *)
-          if [ -n "$requested_jobs" ]; then
-            echo "unexpected init-all argument: $1" >&2
-            exit 2
-          fi
-          requested_jobs="$1"
-          ;;
-      esac
-      shift
-    done
-
-    jobs=$(resolve_submodule_jobs "$requested_jobs")
-    if [ -n "$jobs" ]; then
-      validate_positive_integer "$jobs" "JOBS"
-    fi
-
-    if [ "$no_fetch" -eq 1 ] && [ "$fetch_fallback" -eq 1 ]; then
-      if ! run_submodule_update 1 "$jobs" "$force"; then
-        echo "no-fetch submodule update failed; retrying with normal fetch" >&2
-        run_submodule_update 0 "$jobs" "$force"
-      fi
-    else
-      run_submodule_update "$no_fetch" "$jobs" "$force"
-    fi
-    set_submodule_ignore_value all
-    ;;
 
   remove-repo)
     repo_input="${1:-}"
@@ -410,45 +280,8 @@ case "$action" in
     just repo submodule add "https://github.com/$repo"
     ;;
 
-  sync-repo-default-branch)
-    repo_input="${1:-}"
-    shift
-    "$sync_script" one "$repo_input" "$@"
-    ;;
 
-  sync-all-repo-default-branch)
-    "$sync_script" all "$@"
-    ;;
 
-  reconcile-submodule-worktree)
-    repo_input="${1:-}"
-    shift
-    if [ -z "$repo_input" ]; then
-      echo "REPO is required" >&2
-      exit 2
-    fi
-    uv run --project "$project_root" python "$reconcile_worktrees_script" one "$repo_input" "$@"
-    ;;
-
-  reconcile-submodule-worktrees)
-    uv run --project "$project_root" python "$reconcile_worktrees_script" all "$@"
-    ;;
-
-  reconcile-worktrees)
-    uv run --project "$project_root" python "$reconcile_worktrees_script" root-and-all "$@"
-    ;;
-
-  cleanup-branches)
-    uv run --project "$project_root" python "$cleanup_branches_script" one "$@"
-    ;;
-
-  cleanup-submodule-branches)
-    uv run --project "$project_root" python "$cleanup_branches_script" all "$@"
-    ;;
-
-  cleanup-worktree-branches)
-    uv run --project "$project_root" python "$cleanup_branches_script" root-and-all "$@"
-    ;;
 
   list-linked-worktrees)
     uv run --project "$project_root" python "$linked_worktrees_script" "$@"
