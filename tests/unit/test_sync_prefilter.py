@@ -720,6 +720,8 @@ def test_sync_one_switches_and_updates(
             return ""
         if list(cmd)[:3] == ["git", "fetch", "origin"]:
             return ""
+        if list(cmd) == ["git", "remote", "set-head", "origin", "-a"]:
+            return ""
         if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
             return "origin/main"
         if list(cmd)[:2] == ["git", "switch"]:
@@ -737,6 +739,109 @@ def test_sync_one_switches_and_updates(
     result = sync.sync_one(str(repo))
     assert result.default_branch == "main"
     assert result.switched
+    assert result.updated
+
+
+def test_sync_one_refreshes_origin_head_after_fetch_when_default_renamed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """`sync_one` must refresh `refs/remotes/origin/HEAD` after fetch.
+
+    When upstream renames its default branch (e.g. ``master`` -> ``main``),
+    `git fetch` alone does not update the local symbolic-ref. Without an
+    explicit ``git remote set-head origin -a``, ``resolve_default_branch``
+    keeps returning the stale name and ``sync_one`` would switch to the
+    obsolete branch. This test simulates that rename and asserts that
+    ``set-head`` is invoked and that the resolved default reflects the
+    refreshed remote HEAD.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").write_text("gitdir", encoding="utf-8")
+    state = {
+        "head": "old",
+        "branch": "master",
+        "remote_head": "master",
+    }
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        calls.append(list(cmd))
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--quiet"]:
+            return state["branch"]
+        if list(cmd)[:3] == ["git", "status", "--porcelain"]:
+            return ""
+        if list(cmd)[:3] == ["git", "fetch", "origin"]:
+            # Upstream renamed its default branch between calls.
+            state["remote_head"] = "main"
+            return ""
+        if list(cmd) == ["git", "remote", "set-head", "origin", "-a"]:
+            # The refresh propagates the upstream rename into the local
+            # symbolic-ref so ``resolve_default_branch`` returns the new name.
+            return ""
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
+            return f"origin/{state['remote_head']}"
+        if list(cmd)[:2] == ["git", "switch"]:
+            state["branch"] = list(cmd)[-1]
+            return ""
+        if list(cmd)[:2] == ["git", "pull"]:
+            state["head"] = "new"
+            return ""
+        if list(cmd)[:2] == ["git", "rev-parse"]:
+            return state["head"]
+        raise AssertionError(f"unexpected command: {list(cmd)}")
+
+    monkeypatch.setattr(sync, "run", fake_run)
+    monkeypatch.setattr(db_module, "run", fake_run)
+    result = sync.sync_one(str(repo))
+
+    # The refresh was attempted before resolving the default branch.
+    assert ["git", "remote", "set-head", "origin", "-a"] in calls
+    fetch_idx = calls.index(["git", "fetch", "origin", "--prune"])
+    set_head_idx = calls.index(["git", "remote", "set-head", "origin", "-a"])
+    assert fetch_idx < set_head_idx
+    # The renamed default branch is picked up.
+    assert result.default_branch == "main"
+    assert result.switched
+    assert result.updated
+
+
+def test_sync_one_tolerates_set_head_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A failing ``git remote set-head`` must not abort the sync."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").write_text("gitdir", encoding="utf-8")
+    state = {"head": "old", "branch": "main"}
+
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--quiet"]:
+            return state["branch"]
+        if list(cmd)[:3] == ["git", "status", "--porcelain"]:
+            return ""
+        if list(cmd)[:3] == ["git", "fetch", "origin"]:
+            return ""
+        if list(cmd) == ["git", "remote", "set-head", "origin", "-a"]:
+            raise RuntimeError("network unavailable")
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
+            return "origin/main"
+        if list(cmd)[:2] == ["git", "switch"]:
+            return ""
+        if list(cmd)[:2] == ["git", "pull"]:
+            state["head"] = "new"
+            return ""
+        if list(cmd)[:2] == ["git", "rev-parse"]:
+            return state["head"]
+        raise AssertionError(f"unexpected command: {list(cmd)}")
+
+    monkeypatch.setattr(sync, "run", fake_run)
+    monkeypatch.setattr(db_module, "run", fake_run)
+    result = sync.sync_one(str(repo))
+    # Sync still completes with the stale-but-resolvable default branch.
+    assert result.default_branch == "main"
     assert result.updated
 
 
