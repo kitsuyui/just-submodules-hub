@@ -1,3 +1,5 @@
+"""Action handler: list GitHub repositories not yet tracked as submodules."""
+
 from __future__ import annotations
 
 import sys
@@ -22,6 +24,7 @@ def _validate_visibility(visibility: str) -> int:
 
 @action("list-unmanaged-repos")
 def list_unmanaged_repos(args: list[str]) -> int:
+    """List GitHub repositories not tracked in .gitmodules for given owners."""
     if len(args) < 2 or not args[0] or not args[1]:
         print("OWNERS and VISIBILITY are required", file=sys.stderr)
         return 2

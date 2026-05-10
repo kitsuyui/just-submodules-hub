@@ -1,3 +1,5 @@
+"""Action handler: commit changed submodule pointer updates."""
+
 from __future__ import annotations
 
 import subprocess
@@ -39,6 +41,7 @@ def _submodule_pointer_changed(repo_path: str) -> bool:
 
 @action("commit-submodule-pointers")
 def commit_submodule_pointers(args: list[str]) -> int:
+    """Stage and commit all submodule pointer changes with an optional message."""
     message = args[0] if args else "Update submodule pointers"
 
     paths = read_gitmodules_paths()

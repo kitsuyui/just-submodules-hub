@@ -1,3 +1,5 @@
+"""GitHub Issues search and filtering helpers."""
+
 from __future__ import annotations
 
 import json
@@ -10,18 +12,22 @@ VALID_STATES = {"open", "closed", "all"}
 
 @dataclass(frozen=True, order=True)
 class IssueRecord:
+    """A single GitHub issue result tied to a specific repository."""
+
     repo: str
     author: str
     url: str
 
 
 def validate_state(state: str) -> str:
+    """Validate *state* against VALID_STATES and return it unchanged."""
     if state not in VALID_STATES:
         raise ValueError("STATE must be one of: open, closed, all")
     return state
 
 
 def gh_search_args(owner: str, state: str) -> list[str]:
+    """Build the ``gh search issues`` argument list for *owner* and *state*."""
     validate_state(state)
     args = [
         "gh",
@@ -40,6 +46,7 @@ def gh_search_args(owner: str, state: str) -> list[str]:
 
 
 def parse_issue_payload(payload: str) -> list[IssueRecord]:
+    """Parse a JSON *payload* from ``gh search issues`` into IssueRecord objects."""
     data = json.loads(payload)
     records: list[IssueRecord] = []
     for item in data:
@@ -50,6 +57,10 @@ def parse_issue_payload(payload: str) -> list[IssueRecord]:
 
 
 def build_issue_record(item: dict) -> IssueRecord | None:
+    """Build an IssueRecord from one item in the ``gh search issues`` JSON array.
+
+    Returns None when required fields (repo, author, url) are missing.
+    """
     repo = (item.get("repository") or {}).get("nameWithOwner")
     author = (item.get("author") or {}).get("login")
     url = item.get("url")
@@ -62,11 +73,13 @@ def filter_managed_issues(
     records: list[IssueRecord],
     managed_paths: list[str],
 ) -> list[IssueRecord]:
+    """Return sorted, deduplicated issues belonging to managed repositories."""
     managed = set(managed_repo_slugs(managed_paths))
     return sorted({record for record in records if record.repo in managed})
 
 
 def render_issues_tsv(records: list[IssueRecord]) -> str:
+    """Render *records* as a TSV string with a header row."""
     lines = ["repo\tauthor\turl"]
     lines.extend(f"{record.repo}\t{record.author}\t{record.url}" for record in records)
     return "\n".join(lines) + "\n"

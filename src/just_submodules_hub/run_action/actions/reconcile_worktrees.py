@@ -1,3 +1,5 @@
+"""Action handlers for reconciling submodule worktrees."""
+
 from __future__ import annotations
 
 import subprocess
@@ -27,6 +29,7 @@ def _run(mode_args: list[str], extra_args: list[str]) -> int:
 
 @action("reconcile-submodule-worktree")
 def reconcile_submodule_worktree(args: list[str]) -> int:
+    """Reconcile the linked worktree for a single submodule repository."""
     # Equivalent to: reconcile_submodule_worktrees.py one <repo> [args...]
     if not args or not args[0]:
         print("REPO is required", file=sys.stderr)
@@ -38,11 +41,13 @@ def reconcile_submodule_worktree(args: list[str]) -> int:
 
 @action("reconcile-submodule-worktrees")
 def reconcile_submodule_worktrees(args: list[str]) -> int:
+    """Reconcile linked worktrees for all submodule repositories."""
     # Equivalent to: reconcile_submodule_worktrees.py all [args...]
     return _run(["all"], args)
 
 
 @action("reconcile-worktrees")
 def reconcile_worktrees(args: list[str]) -> int:
+    """Reconcile linked worktrees for the root repo and all submodules."""
     # Equivalent to: reconcile_submodule_worktrees.py root-and-all [args...]
     return _run(["root-and-all"], args)

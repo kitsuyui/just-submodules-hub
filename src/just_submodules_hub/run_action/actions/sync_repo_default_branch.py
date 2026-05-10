@@ -1,3 +1,5 @@
+"""Action handlers for syncing repositories to their default branch."""
+
 from __future__ import annotations
 
 import sys
@@ -8,6 +10,7 @@ from just_submodules_hub.sync import build_parser, handle_all_action, handle_one
 
 @action("sync-repo-default-branch")
 def sync_repo_default_branch(args: list[str]) -> int:
+    """Sync a single submodule repository to its remote default branch."""
     # Equivalent to: sync_default_branch.py one <repo> [args...]
     parser = build_parser()
     try:
@@ -23,6 +26,7 @@ def sync_repo_default_branch(args: list[str]) -> int:
 
 @action("sync-all-repo-default-branch")
 def sync_all_repo_default_branch(args: list[str]) -> int:
+    """Sync all submodule repositories to their remote default branches."""
     # Equivalent to: sync_default_branch.py all [args...]
     parser = build_parser()
     try:

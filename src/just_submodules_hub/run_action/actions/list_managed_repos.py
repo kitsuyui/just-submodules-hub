@@ -1,3 +1,5 @@
+"""Action handler: list repositories that are both managed and on GitHub."""
+
 from __future__ import annotations
 
 import sys
@@ -32,6 +34,7 @@ def _filter_by_owners(slugs: list[str], owners_str: str) -> list[str]:
 
 @action("list-managed-repos")
 def list_managed_repos(args: list[str]) -> int:
+    """List managed repositories, optionally filtered by owner and visibility."""
     owners_str = args[0] if args else ""
     visibility = args[1] if len(args) > 1 else "all"
 

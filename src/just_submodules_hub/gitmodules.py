@@ -1,3 +1,5 @@
+"""Parsing and querying helpers for ``.gitmodules`` configuration files."""
+
 from __future__ import annotations
 
 from configparser import ConfigParser
@@ -10,12 +12,15 @@ from .submodule_filters import SubmoduleFilter
 
 @dataclass(frozen=True)
 class SubmoduleEntry:
+    """A single submodule entry parsed from a ``.gitmodules`` file."""
+
     name: str
     path: str
     url: str
 
 
 def parse_submodule_section_name(section: str) -> str:
+    """Strip the ``submodule`` prefix and surrounding quotes from *section*."""
     name = section.removeprefix("submodule ").strip()
     if len(name) >= 2 and name[0] == '"' and name[-1] == '"':
         return name[1:-1]
@@ -23,6 +28,7 @@ def parse_submodule_section_name(section: str) -> str:
 
 
 def parse_gitmodules_entries(text: str) -> list[SubmoduleEntry]:
+    """Parse ``.gitmodules`` *text* into a list of SubmoduleEntry objects."""
     if not text.strip():
         return []
     parser = ConfigParser(interpolation=None)
@@ -42,10 +48,12 @@ def parse_gitmodules_entries(text: str) -> list[SubmoduleEntry]:
 
 
 def parse_gitmodules_paths(text: str) -> list[str]:
+    """Return the path field of each submodule entry in *text*."""
     return [entry.path for entry in parse_gitmodules_entries(text)]
 
 
 def read_gitmodules_paths(repo_root: Path | str = ".") -> list[str]:
+    """Read *repo_root*/.gitmodules and return the path of each submodule."""
     root = Path(repo_root)
     gitmodules_path = root / ".gitmodules"
     if not gitmodules_path.exists():
@@ -54,6 +62,7 @@ def read_gitmodules_paths(repo_root: Path | str = ".") -> list[str]:
 
 
 def read_gitmodules_entries(repo_root: Path | str = ".") -> list[SubmoduleEntry]:
+    """Read *repo_root*/.gitmodules and return all SubmoduleEntry objects."""
     root = Path(repo_root)
     gitmodules_path = root / ".gitmodules"
     if not gitmodules_path.exists():
@@ -62,10 +71,12 @@ def read_gitmodules_entries(repo_root: Path | str = ".") -> list[SubmoduleEntry]
 
 
 def managed_repo_slugs(paths: list[str]) -> list[str]:
+    """Return a sorted list of unique ``owner/repo`` slugs derived from *paths*."""
     return sorted({repo_display_name(path) for path in paths})
 
 
 def managed_repo_owners(paths: list[str]) -> list[str]:
+    """Return a sorted list of unique owner names derived from *paths*."""
     return sorted({repo_owner(path) for path in paths})
 
 
@@ -73,6 +84,7 @@ def find_submodules_with_marker(
     marker_file: str,
     repo_root: Path | str = ".",
 ) -> list[str]:
+    """Return submodule paths that contain *marker_file* somewhere inside them."""
     if not marker_file:
         raise ValueError("marker file is required")
 

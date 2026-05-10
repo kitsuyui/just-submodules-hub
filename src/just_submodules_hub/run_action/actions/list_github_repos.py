@@ -1,3 +1,5 @@
+"""Action handlers for listing GitHub repositories for an owner or set of owners."""
+
 from __future__ import annotations
 
 import subprocess
@@ -19,7 +21,7 @@ def _validate_visibility(visibility: str) -> int:
 
 
 def _list_repos_for_owner(owner: str, visibility: str) -> list[str]:
-    """Call gh repo list and return lines of 'nameWithOwner\turl'."""
+    r"""Call gh repo list and return lines of 'nameWithOwner\turl'."""
     cmd = [
         "gh",
         "repo",
@@ -59,6 +61,7 @@ def _list_repos_for_owner(owner: str, visibility: str) -> list[str]:
 
 @action("list-github-repos-owner")
 def list_github_repos_owner(args: list[str]) -> int:
+    """List GitHub repositories for a single owner with a given visibility filter."""
     if len(args) < 2 or not args[0] or not args[1]:
         print("OWNER and VISIBILITY are required", file=sys.stderr)
         return 2
@@ -79,6 +82,7 @@ def list_github_repos_owner(args: list[str]) -> int:
 
 @action("list-github-repos")
 def list_github_repos(args: list[str]) -> int:
+    """List GitHub repositories for multiple owners, deduplicating by nameWithOwner."""
     if len(args) < 2 or not args[0] or not args[1]:
         print("OWNERS and VISIBILITY are required", file=sys.stderr)
         return 2

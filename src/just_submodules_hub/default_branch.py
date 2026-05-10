@@ -1,3 +1,5 @@
+"""Helpers for resolving the default branch of a repository."""
+
 from __future__ import annotations
 
 from contextlib import suppress

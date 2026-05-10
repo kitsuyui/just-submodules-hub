@@ -1,3 +1,5 @@
+"""GitHub branch ruleset management: parsing, comparison, and summarization."""
+
 from __future__ import annotations
 
 import json
@@ -17,12 +19,15 @@ BASELINE_PULL_REQUEST_PARAMETERS = {
 
 @dataclass(frozen=True)
 class RepoMetadata:
+    """Immutable snapshot of a repository's basic metadata."""
+
     name_with_owner: str
     visibility: str
     default_branch: str
 
 
 def parse_repo_metadata(payload: str) -> RepoMetadata:
+    """Parse a ``gh repo view`` JSON *payload* into a RepoMetadata object."""
     item = json.loads(payload)
     default_branch = item.get("defaultBranchRef", {}).get("name")
     name_with_owner = item.get("nameWithOwner")
@@ -37,6 +42,7 @@ def parse_repo_metadata(payload: str) -> RepoMetadata:
 
 
 def parse_json_payload(payload: str) -> list[dict]:
+    """Parse a JSON array *payload* and return only the dict items."""
     parsed = json.loads(payload)
     if not isinstance(parsed, list):
         raise ValueError("payload must be a JSON array")
@@ -44,6 +50,7 @@ def parse_json_payload(payload: str) -> list[dict]:
 
 
 def desired_ruleset_payload(default_branch: str) -> dict:
+    """Return the canonical managed ruleset payload targeting *default_branch*."""
     return {
         "name": BASELINE_RULESET_NAME,
         "target": "branch",
@@ -70,6 +77,7 @@ def desired_ruleset_payload(default_branch: str) -> dict:
 
 
 def effective_rule_types(effective_rules: list[dict]) -> list[str]:
+    """Return a sorted list of unique rule type strings from *effective_rules*."""
     return sorted(
         {str(item.get("type")) for item in effective_rules if item.get("type")},
     )
@@ -79,6 +87,7 @@ def find_ruleset_by_name(
     rulesets: list[dict],
     name: str = BASELINE_RULESET_NAME,
 ) -> dict | None:
+    """Return the first ruleset in *rulesets* whose ``name`` field matches."""
     for item in rulesets:
         if item.get("name") == name:
             return item
@@ -86,6 +95,7 @@ def find_ruleset_by_name(
 
 
 def rules_by_type(rules: list[dict]) -> dict[str, dict]:
+    """Index *rules* by their ``type`` field, discarding entries without a string type."""
     typed: dict[str, dict] = {}
     for item in rules:
         rule_type = item.get("type")
@@ -95,6 +105,7 @@ def rules_by_type(rules: list[dict]) -> dict[str, dict]:
 
 
 def pull_request_parameters_match(rule: dict | None) -> bool:
+    """Return True when *rule* has parameters matching BASELINE_PULL_REQUEST_PARAMETERS."""
     if not rule:
         return False
     parameters = rule.get("parameters")
@@ -107,6 +118,7 @@ def pull_request_parameters_match(rule: dict | None) -> bool:
 
 
 def extract_rules(ruleset: dict | None) -> list[dict]:
+    """Extract the list of rule dicts from *ruleset*, returning [] on invalid input."""
     if not isinstance(ruleset, dict):
         return []
     raw_rules = ruleset.get("rules", [])
@@ -116,6 +128,7 @@ def extract_rules(ruleset: dict | None) -> list[dict]:
 
 
 def ref_includes_default_branch(ruleset: dict, default_branch: str) -> bool:
+    """Return True when *ruleset* is active and covers *default_branch* via its ref conditions."""
     if ruleset.get("target") != "branch":
         return False
     if ruleset.get("enforcement") != "active":
@@ -140,10 +153,12 @@ def ref_includes_default_branch(ruleset: dict, default_branch: str) -> bool:
 
 
 def normalize_ruleset_rules(ruleset: dict | None) -> dict[str, dict]:
+    """Return *ruleset*'s rules indexed by type, tolerating None input."""
     return rules_by_type(extract_rules(ruleset))
 
 
 def rule_is_covered(rule: dict, covering_rules: dict[str, dict]) -> bool:
+    """Return True when *rule* is fully covered by a matching entry in *covering_rules*."""
     rule_type = rule.get("type")
     if not isinstance(rule_type, str):
         return False
@@ -166,6 +181,7 @@ def candidate_legacy_rulesets(
     metadata: RepoMetadata,
     rulesets: list[dict],
 ) -> list[dict]:
+    """Return rulesets that cover the default branch and are not the managed baseline."""
     return [
         item
         for item in rulesets
@@ -175,6 +191,7 @@ def candidate_legacy_rulesets(
 
 
 def summarize_legacy_rulesets(metadata: RepoMetadata, rulesets: list[dict]) -> dict:
+    """Summarize which legacy rulesets are safe to delete for *metadata*."""
     baseline_ruleset = find_ruleset_by_name(rulesets)
     active_default_branch_rulesets = [
         item
@@ -239,6 +256,7 @@ def summarize_classic_branch_protection(  # noqa: C901
     protection: dict | None,
     effective_rules: list[dict],
 ) -> dict:
+    """Summarize whether a classic branch-protection rule can be safely removed."""
     if not protection:
         return {
             "repo": metadata.name_with_owner,
@@ -324,6 +342,7 @@ def summarize_classic_branch_protection(  # noqa: C901
 
 
 def find_ruleset_by_identifier(rulesets: list[dict], identifier: str) -> dict | None:
+    """Return the ruleset matching *identifier* by numeric id or by name."""
     for item in rulesets:
         if str(item.get("id")) == identifier or item.get("name") == identifier:
             return item
@@ -335,6 +354,7 @@ def summarize_ruleset_status(
     effective_rules: list[dict],
     rulesets: list[dict],
 ) -> dict:
+    """Return a comprehensive compliance summary for the managed baseline ruleset."""
     effective_rule_map = rules_by_type(effective_rules)
     managed_ruleset = find_ruleset_by_name(rulesets)
     managed_rules = extract_rules(managed_ruleset)
