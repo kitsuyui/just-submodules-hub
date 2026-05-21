@@ -456,7 +456,9 @@ def test_main_reports_when_no_submodules(
         )(),
     )
     assert sync.main() == 0
-    assert "No submodule paths found in .gitmodules" in capsys.readouterr().out
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "No submodule paths found in .gitmodules" in output.err
 
 
 def test_fetch_owner_default_heads_handles_pagination(
@@ -916,7 +918,9 @@ def test_handle_all_action_reports_all_up_to_date(
     monkeypatch.setattr(sync, "progress_bar", lambda **kwargs: DummyBar())
     args = type("Args", (), {"prefilter": True, "jobs": 1, "verbose": False})()
     assert sync.handle_all_action(args) == 0
-    assert "All submodules are up to date." in capsys.readouterr().out
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "All submodules are up to date." in output.err
 
 
 def test_handle_all_action_runs_final_update_after_success(
@@ -1002,7 +1006,48 @@ def test_handle_all_action_prints_when_sync_all_reports_no_changes(
     monkeypatch.setattr(sync, "progress_bar", lambda **kwargs: DummyBar())
     args = type("Args", (), {"prefilter": True, "jobs": 1, "verbose": False})()
     assert sync.handle_all_action(args) == 0
-    assert "All submodules are up to date." in capsys.readouterr().out
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "All submodules are up to date." in output.err
+
+
+def test_handle_all_action_reports_missing_gitmodules_on_stderr(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sync, "parse_repo_paths", list)
+    args = type("Args", (), {"prefilter": True, "jobs": 1, "verbose": False})()
+
+    assert sync.handle_all_action(args) == 0
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "No submodule paths found in .gitmodules" in output.err
+
+
+def test_run_final_submodule_update_reports_progress_on_stderr(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    commands: list[list[str]] = []
+    monkeypatch.setattr(sync, "run", lambda command: commands.append(command))
+
+    sync.run_final_submodule_update()
+
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "Running final submodule update" in output.err
+    assert commands == [
+        [
+            "git",
+            "submodule",
+            "update",
+            "--remote",
+            "--rebase",
+            "--recursive",
+            "--recommend-shallow",
+            "--progress",
+        ],
+    ]
 
 
 def test_main_handles_runtime_error(

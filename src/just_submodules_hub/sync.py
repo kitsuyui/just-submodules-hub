@@ -427,6 +427,7 @@ def run_final_submodule_update() -> None:
     print(
         "Running final submodule update"
         " (--remote --rebase --recursive --recommend-shallow)...",
+        file=sys.stderr,
     )
     run(
         [
@@ -517,7 +518,7 @@ def handle_all_action(args: argparse.Namespace) -> int:
     ) as redactions:
         paths = parse_repo_paths()
         if not paths:
-            print("No submodule paths found in .gitmodules")
+            print("No submodule paths found in .gitmodules", file=sys.stderr)
             if getattr(args, "final_submodule_update", False):
                 run_final_submodule_update()
             return 0
@@ -529,7 +530,7 @@ def handle_all_action(args: argparse.Namespace) -> int:
         ) as bar:
             targets = build_sync_targets(paths, args.prefilter, bar)
             if not targets:
-                print("All submodules are up to date.")
+                print("All submodules are up to date.", file=sys.stderr)
                 if getattr(args, "final_submodule_update", False):
                     run_final_submodule_update()
                 return 0
@@ -544,7 +545,7 @@ def handle_all_action(args: argparse.Namespace) -> int:
         if code == 0 and getattr(args, "final_submodule_update", False):
             run_final_submodule_update()
         if code == 0 and changed_count == 0 and not args.verbose:
-            print("All submodules are up to date.")
+            print("All submodules are up to date.", file=sys.stderr)
         return code
 
 
