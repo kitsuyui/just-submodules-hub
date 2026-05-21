@@ -572,13 +572,13 @@ def test_cleanup_worktree_branches_delegates_to_main(
 # ---------- add-repo ----------
 
 
-def test_add_repo_requires_repo_url(
+def test_add_repo_requires_repo(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     fn = reg._REGISTRY["add-repo"]
     rc = fn([])
     assert rc == 2
-    assert "REPO_URL is required" in capsys.readouterr().err
+    assert "REPO is required" in capsys.readouterr().err
 
 
 def test_add_repo_calls_git_submodule_add(

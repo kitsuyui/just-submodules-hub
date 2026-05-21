@@ -12,12 +12,12 @@ mod unmanaged "submodule/unmanaged.just"
 mod worktree "submodule/worktree.just"
 mod worktrees "submodule/worktrees.just"
 
-# Add a submodule.
-add REPO_URL:
+# Add a submodule. REPO accepts: URL, owner/name slug, or repo/github.com/owner/name path.
+add REPO:
   #!/bin/sh
-  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" add-repo "{{REPO_URL}}"
+  cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" add-repo "{{REPO}}"
 
-# Remove a submodule.
+# Remove a submodule. REPO accepts: URL, owner/name slug, repo/github.com/owner/name path, or short name for managed repos.
 remove REPO:
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{repo_submodule_source_dir}}/../../scripts/repo/run-with-hooks.sh" remove-repo "{{REPO}}"
