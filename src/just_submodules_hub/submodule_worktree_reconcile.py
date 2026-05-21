@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
-import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -19,6 +17,7 @@ from just_submodules_hub.default_heads import (
     matching_default_head,
     owner_prefilter_total,
 )
+from just_submodules_hub.github_prs import gh_pr_view
 from just_submodules_hub.gitmodules import read_gitmodules_paths
 from just_submodules_hub.repo_paths import resolve_repo_input
 from just_submodules_hub.submodule_batch import (
@@ -111,34 +110,6 @@ def pull_ff_only(
             "fast-forwarded",
         )
     return Result(repo_label, "noop", action, branch, pr, dirty, "already up to date")
-
-
-def gh_pr_view(repo: Path) -> tuple[str, str, str]:
-    """Return (pr_number, pr_state, error_message) for the current branch in *repo*."""
-    if shutil.which("gh") is None:
-        return "", "", "gh not found"
-    proc = subprocess.run(
-        ["gh", "pr", "view", "--json", "number,state,mergedAt"],
-        cwd=str(repo),
-        text=True,
-        capture_output=True,
-    )
-    if proc.returncode != 0:
-        return "", "", summarize(proc)
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return "", "", "gh returned invalid JSON"
-    number = str(data.get("number") or "")
-    state = str(data.get("state") or "").upper()
-    merged_at = str(data.get("mergedAt") or "")
-    if state == "MERGED" or (state == "CLOSED" and merged_at):
-        return number, "merged", ""
-    if state == "OPEN":
-        return number, "open", ""
-    if state == "CLOSED":
-        return number, "closed", ""
-    return number, state.lower() or "unknown", ""
 
 
 def switch_default_and_pull(
@@ -249,6 +220,49 @@ def detached_result(repo: Path, repo_label: str, dirty: str, default: str) -> Re
     )
 
 
+def _reconcile_topic_branch(
+    repo: Path,
+    repo_path: str,
+    branch: str,
+    dirty: str,
+    resolved_default: str,
+) -> Result:
+    """Reconcile a topic branch based on its PR state."""
+    pr_info = gh_pr_view(repo)
+    pr = pr_info.number
+    if pr_info.state == "merged":
+        return switch_default_and_pull(
+            repo, repo_path, branch, pr, dirty, resolved_default
+        )
+    if pr_info.state == "open":
+        if pr_info.draft == "yes":
+            return Result(
+                repo_path,
+                "skipped",
+                "pr-draft",
+                branch,
+                pr,
+                dirty,
+                "pr is in draft state",
+            )
+        return pull_ff_only(repo, "pull-topic", repo_path, branch, pr, dirty)
+    if pr_info.state == "closed":
+        return Result(
+            repo_path,
+            "skipped",
+            "pr-closed",
+            branch,
+            pr,
+            dirty,
+            "pr closed without merge",
+        )
+    message = pr_info.message or "no pull request metadata"
+    pulled = pull_ff_only(repo, "pull-topic", repo_path, branch, pr, dirty)
+    if pulled.status == "failed":
+        return Result(repo_path, "skipped", "pr-unknown", branch, pr, dirty, message)
+    return Result(repo_path, pulled.status, "pull-topic", branch, pr, dirty, message)
+
+
 def reconcile_one(root: Path, repo_path: str) -> Result:
     """Reconcile a single submodule worktree and return the outcome."""
     repo = root / repo_path
@@ -282,29 +296,7 @@ def reconcile_one(root: Path, repo_path: str) -> Result:
         return detached_result(repo, repo_path, dirty, resolved_default)
     if branch == resolved_default:
         return pull_ff_only(repo, "pull-default", repo_path, branch, "", dirty)
-
-    pr, pr_state, pr_error = gh_pr_view(repo)
-    if pr_state == "merged":
-        return switch_default_and_pull(
-            repo, repo_path, branch, pr, dirty, resolved_default
-        )
-    if pr_state == "open":
-        return pull_ff_only(repo, "pull-topic", repo_path, branch, pr, dirty)
-    if pr_state == "closed":
-        return Result(
-            repo_path,
-            "skipped",
-            "pr-closed",
-            branch,
-            pr,
-            dirty,
-            "pr closed without merge",
-        )
-    message = pr_error or "no pull request metadata"
-    pulled = pull_ff_only(repo, "pull-topic", repo_path, branch, pr, dirty)
-    if pulled.status == "failed":
-        return Result(repo_path, "skipped", "pr-unknown", branch, pr, dirty, message)
-    return Result(repo_path, pulled.status, "pull-topic", branch, pr, dirty, message)
+    return _reconcile_topic_branch(repo, repo_path, branch, dirty, resolved_default)
 
 
 def prefiltered_default_result(root: Path, repo_path: str, default: str) -> Result:
