@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import argparse
-import json
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from just_submodules_hub.default_branch import resolve_default_branch as default_branch
+from just_submodules_hub.github_prs import PullRequestState, gh_pr_view
 from just_submodules_hub.linked_worktree_inventory import (
     WorktreeRecord,
     parse_porcelain,
@@ -41,16 +40,6 @@ class PlanRecord:
     status: str
     action: str
     target: str
-    message: str
-
-
-@dataclass(frozen=True)
-class PullRequestState:
-    """Captured state of a pull request for a worktree branch."""
-
-    number: str
-    state: str
-    draft: str
     message: str
 
 
@@ -93,36 +82,6 @@ def remote_branch_exists(repo: Path, branch: str) -> bool:
         ["rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}"],
     )
     return proc.returncode == 0
-
-
-def gh_pr_view(repo: Path) -> PullRequestState:
-    """Query the current PR state for the checked-out branch in *repo*."""
-    if shutil.which("gh") is None:
-        return PullRequestState("", "unknown", "", "gh not found")
-    proc = subprocess.run(
-        ["gh", "pr", "view", "--json", "number,state,isDraft,mergedAt"],
-        cwd=str(repo),
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        message = summarize(proc)
-        lowered = message.lower()
-        if "no pull requests found" in lowered or "no pull request" in lowered:
-            return PullRequestState("", "none", "", "no pull request metadata")
-        return PullRequestState("", "unknown", "", message)
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return PullRequestState("", "unknown", "", "gh returned invalid JSON")
-    number = str(data.get("number") or "")
-    state = str(data.get("state") or "").lower()
-    draft = "yes" if data.get("isDraft") else "no"
-    merged_at = str(data.get("mergedAt") or "")
-    if state == "merged" or (state == "closed" and merged_at):
-        state = "merged"
-    return PullRequestState(number, state or "unknown", draft, "")
 
 
 def list_worktrees(root: Path) -> list[WorktreeRecord]:

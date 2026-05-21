@@ -105,6 +105,7 @@ ignore = [
 # These modules are CLI entrypoints / data-pipeline modules that use print() for
 # structured output and subprocess with list args (no shell=True). S603/S607 fire
 # on subprocess.run with list args, and T201 fires on diagnostic print() calls.
+"src/just_submodules_hub/github_prs.py" = ["S603", "S607"]
 "src/just_submodules_hub/linked_worktree_inventory.py" = ["T201", "S603", "S607"]
 "src/just_submodules_hub/linked_worktree_planning.py" = ["T201", "S603", "S607"]
 "src/just_submodules_hub/linked_worktree_apply.py" = ["T201", "S603", "S607"]
