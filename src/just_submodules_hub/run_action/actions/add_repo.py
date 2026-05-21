@@ -15,19 +15,17 @@ _GITHUB_COM_PREFIX = "repo/github.com/"
 
 
 def _url_to_repo_dir(repo_url_input: str) -> str:
-    r"""Convert a GitHub URL / slug to the local submodule directory path.
+    r"""Convert a GitHub repo reference to the local submodule directory path.
 
-    Mirrors the shell logic::
-
-        repo_path=$(echo "$repo_url_input" \\
-            | sed -E 's#^(git@github.com:|https://github.com/)##; s#\\.git$##')
-        repo_dir="repo/github.com/${repo_path}"
-
-    Examples::
+    Accepted forms::
 
         https://github.com/owner/name  ->  repo/github.com/owner/name
         git@github.com:owner/name.git  ->  repo/github.com/owner/name
         owner/name                     ->  repo/github.com/owner/name
+        repo/github.com/owner/name     ->  repo/github.com/owner/name
+
+    Short names (name only, without owner) are not accepted because owner
+    information is required to construct the remote URL.
     """
     slug = _strip_repo_transport(repo_url_input)
     # _strip_repo_transport handles git@/https:// prefixes and .git suffix.
@@ -42,7 +40,7 @@ def add_repo(args: list[str]) -> int:
     """Register a GitHub repository as a shallow submodule with ``ignore = all``."""
     repo_url_input = args[0] if args else ""
     if not repo_url_input:
-        print("REPO_URL is required", file=sys.stderr)
+        print("REPO is required", file=sys.stderr)
         return 2
 
     try:
