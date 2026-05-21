@@ -6,7 +6,7 @@ from pathlib import Path
 from .helpers import add_submodule, advance_remote, create_remote, init_hub, run
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SYNC_SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
+SYNC_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
 def write_consumer_justfile(hub_repo: Path) -> None:
@@ -61,7 +61,11 @@ def test_imported_repo_submodule_commit_pointers_uses_consumer_invocation_direct
     advance_remote(remote, "README.md", "after\n", "Update remote")
 
     sync_proc = subprocess.run(
-        [str(SYNC_SCRIPT), "one", "repo/github.com/example-owner/pointers"],
+        [
+            str(SYNC_SCRIPT),
+            "sync-repo-default-branch",
+            "repo/github.com/example-owner/pointers",
+        ],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
