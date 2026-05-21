@@ -23,8 +23,21 @@ def _submodule_pointer_changed(repo_path: str) -> bool:
     )
     if index_proc.returncode != 0 or not index_proc.stdout.strip():
         return False
-    # Output format: "<mode> <object> <stage>\t<path>"
-    index_oid = index_proc.stdout.split()[1]
+    # Output format per line: "<mode> <object> <stage>\t<path>"
+    # During a merge conflict, stages 1 (ancestor), 2 (ours), 3 (theirs) are listed
+    # instead of stage 0. Only stage 0 is the clean index entry; no stage 0 means
+    # the path is unresolved, so treat it as unchanged to avoid a false positive.
+    index_oid = None
+    for line in index_proc.stdout.splitlines():
+        tab_idx = line.find("\t")
+        if tab_idx == -1:
+            continue
+        fields = line[:tab_idx].split()
+        if len(fields) >= 3 and fields[2] == "0":
+            index_oid = fields[1]
+            break
+    if index_oid is None:
+        return False
 
     worktree_proc = subprocess.run(
         ["git", "-C", repo_path, "rev-parse", "HEAD"],
