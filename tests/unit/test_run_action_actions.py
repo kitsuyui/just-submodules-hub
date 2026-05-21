@@ -675,6 +675,61 @@ def test_remove_repo_calls_deinit_rm_git_rm(
     assert ["git", "rm", "-f", "repo/github.com/owner/myrepo"] in calls
 
 
+# ---------- _submodule_pointer_changed ----------
+
+
+def test_submodule_pointer_changed_false_during_merge_conflict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ANCESTOR = "a" * 40
+    OURS = "b" * 40
+    THEIRS = "c" * 40
+    conflict_output = (
+        f"160000 {ANCESTOR} 1\tsome/path\n"
+        f"160000 {OURS} 2\tsome/path\n"
+        f"160000 {THEIRS} 3\tsome/path\n"
+    )
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        if "ls-files" in cmd:
+            return CompletedProcess(cmd, 0, stdout=conflict_output)
+        return CompletedProcess(cmd, 0, stdout=OURS + "\n")
+
+    monkeypatch.setattr(commit_submodule_pointers_module.subprocess, "run", fake_run)
+    assert not commit_submodule_pointers_module._submodule_pointer_changed("some/path")
+
+
+def test_submodule_pointer_changed_true_when_index_differs_from_head(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    INDEX_OID = "a" * 40
+    HEAD_OID = "b" * 40
+    normal_output = f"160000 {INDEX_OID} 0\tsome/path\n"
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        if "ls-files" in cmd:
+            return CompletedProcess(cmd, 0, stdout=normal_output)
+        return CompletedProcess(cmd, 0, stdout=HEAD_OID + "\n")
+
+    monkeypatch.setattr(commit_submodule_pointers_module.subprocess, "run", fake_run)
+    assert commit_submodule_pointers_module._submodule_pointer_changed("some/path")
+
+
+def test_submodule_pointer_changed_false_when_index_matches_head(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    OID = "a" * 40
+    normal_output = f"160000 {OID} 0\tsome/path\n"
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        if "ls-files" in cmd:
+            return CompletedProcess(cmd, 0, stdout=normal_output)
+        return CompletedProcess(cmd, 0, stdout=OID + "\n")
+
+    monkeypatch.setattr(commit_submodule_pointers_module.subprocess, "run", fake_run)
+    assert not commit_submodule_pointers_module._submodule_pointer_changed("some/path")
+
+
 # ---------- commit-submodule-pointers ----------
 
 
