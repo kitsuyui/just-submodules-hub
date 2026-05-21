@@ -166,7 +166,11 @@ def test_apply_plan_aborts_rebase_on_conflict(
 def test_apply_plan_omits_aborted_suffix_when_abort_also_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """If ``git rebase --abort`` itself fails, do not claim it succeeded."""
+    """If ``git rebase --abort`` itself fails, do not claim it succeeded.
+
+    The message must still tell the user that --abort failed and that the
+    worktree may remain in REBASING state so they know manual cleanup is needed.
+    """
     calls: list[list[str]] = []
 
     def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -186,6 +190,8 @@ def test_apply_plan_omits_aborted_suffix_when_abort_also_fails(
     assert result.status == "failed"
     assert "CONFLICT" in result.message
     assert "rebase aborted" not in result.message
+    assert "rebase --abort also failed" in result.message
+    assert "REBASING" in result.message
     assert ["rebase", "--abort"] in calls
 
 
@@ -429,9 +435,11 @@ def test_apply_plan_pull_default_merge_failure_returns_failed(
 def test_apply_plan_rebase_branch_failure_returns_failed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """rebase non-zero exit (rebase-branch) must set status='failed'."""
+    """rebase non-zero exit (rebase-branch) must set status='failed' with abort suffix."""
 
     def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args == ["rebase", "--abort"]:
+            return completed(args)
         if args[:1] == ["rebase"]:
             return completed(
                 args,
@@ -445,15 +453,17 @@ def test_apply_plan_rebase_branch_failure_returns_failed(
     result = apply_sync.apply_plan(record("rebase-branch", "origin/feature/x"))
 
     assert result.status == "failed"
-    assert result.message == "CONFLICT (content): Merge conflict"
+    assert result.message == "CONFLICT (content): Merge conflict; rebase aborted"
 
 
 def test_apply_plan_rebase_default_failure_returns_failed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """rebase non-zero exit (rebase-default) must set status='failed'."""
+    """rebase non-zero exit (rebase-default) must set status='failed' with abort suffix."""
 
     def fake_run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args == ["rebase", "--abort"]:
+            return completed(args)
         if args[:1] == ["rebase"]:
             return completed(args, stderr="rebase: nothing to rebase", returncode=1)
         return completed(args, stdout="abc123\n")
@@ -463,7 +473,7 @@ def test_apply_plan_rebase_default_failure_returns_failed(
     result = apply_sync.apply_plan(record("rebase-default"))
 
     assert result.status == "failed"
-    assert result.message == "rebase: nothing to rebase"
+    assert result.message == "rebase: nothing to rebase; rebase aborted"
 
 
 def test_apply_plan_retire_contained_switch_failure_returns_failed(

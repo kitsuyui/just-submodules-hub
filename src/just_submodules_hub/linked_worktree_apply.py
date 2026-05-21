@@ -64,7 +64,12 @@ def apply_plan(record: PlanRecord) -> PlanRecord:
             # worktree is not left in REBASING state with conflict markers,
             # which would block subsequent runs and confuse users.
             abort_proc = run_git(repo, ["rebase", "--abort"])
-            suffix = "; rebase aborted" if abort_proc.returncode == 0 else ""
+            suffix = (
+                "; rebase aborted"
+                if abort_proc.returncode == 0
+                else f"; rebase --abort also failed: {summarize(abort_proc)}"
+                " (worktree may remain in REBASING state)"
+            )
             return replace(
                 record,
                 status="failed",
