@@ -706,6 +706,43 @@ def test_sync_one_skips_dirty_repository(
     assert result.skip_reason == "dirty working tree"
 
 
+def test_sync_one_ignores_untracked_only_repository(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").write_text("gitdir", encoding="utf-8")
+    state = {"head": "old", "branch": "main"}
+
+    def fake_run(cmd: Sequence[str], cwd: Path | None = None) -> str:
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--quiet"]:
+            return state["branch"]
+        if list(cmd) == ["git", "status", "--porcelain", "--untracked-files=no"]:
+            return ""
+        if list(cmd)[:3] == ["git", "fetch", "origin"]:
+            return ""
+        if list(cmd) == ["git", "remote", "set-head", "origin", "-a"]:
+            return ""
+        if list(cmd)[:3] == ["git", "symbolic-ref", "--short"]:
+            return "origin/main"
+        if list(cmd)[:2] == ["git", "switch"]:
+            state["branch"] = list(cmd)[-1]
+            return ""
+        if list(cmd)[:2] == ["git", "pull"]:
+            state["head"] = "new"
+            return ""
+        if list(cmd)[:2] == ["git", "rev-parse"]:
+            return state["head"]
+        raise AssertionError(f"unexpected command: {list(cmd)}")
+
+    monkeypatch.setattr(sync, "run", fake_run)
+    monkeypatch.setattr(db_module, "run", fake_run)
+    result = sync.sync_one(str(repo))
+    assert not result.skipped
+    assert result.updated
+
+
 def test_sync_one_switches_and_updates(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
