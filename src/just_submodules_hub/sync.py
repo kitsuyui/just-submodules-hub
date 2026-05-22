@@ -315,7 +315,10 @@ def sync_one(repo_path: str) -> SyncResult:
             cwd=cwd,
         )
 
-    status_porcelain = run(["git", "status", "--porcelain"], cwd=cwd)
+    status_porcelain = run(
+        ["git", "status", "--porcelain", "--untracked-files=no"],
+        cwd=cwd,
+    )
     if status_porcelain:
         return SyncResult(
             repo_path=repo_path,
