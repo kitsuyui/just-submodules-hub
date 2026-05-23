@@ -690,7 +690,7 @@ def test_submodule_pointer_changed_false_during_merge_conflict(
         f"160000 {THEIRS} 3\tsome/path\n"
     )
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[str]:
         if "ls-files" in cmd:
             return CompletedProcess(cmd, 0, stdout=conflict_output)
         return CompletedProcess(cmd, 0, stdout=OURS + "\n")
@@ -706,7 +706,7 @@ def test_submodule_pointer_changed_true_when_index_differs_from_head(
     HEAD_OID = "b" * 40
     normal_output = f"160000 {INDEX_OID} 0\tsome/path\n"
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[str]:
         if "ls-files" in cmd:
             return CompletedProcess(cmd, 0, stdout=normal_output)
         return CompletedProcess(cmd, 0, stdout=HEAD_OID + "\n")
@@ -721,7 +721,7 @@ def test_submodule_pointer_changed_false_when_index_matches_head(
     OID = "a" * 40
     normal_output = f"160000 {OID} 0\tsome/path\n"
 
-    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[str]:
         if "ls-files" in cmd:
             return CompletedProcess(cmd, 0, stdout=normal_output)
         return CompletedProcess(cmd, 0, stdout=OID + "\n")
