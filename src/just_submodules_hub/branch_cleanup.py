@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from just_submodules_hub.default_branch import resolve_default_branch
+from just_submodules_hub.github_cli import run_gh as run_gh_command
 from just_submodules_hub.gitmodules import read_gitmodules_paths
 from just_submodules_hub.submodule_batch import (
     positive_int,
@@ -58,13 +59,7 @@ def run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
 
 def run_gh(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
     """Run a gh command in *repo* and return the CompletedProcess."""
-    return subprocess.run(
-        ["gh", *args],
-        cwd=str(repo),
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    return run_gh_command(args, cwd=repo)
 
 
 def lines(proc: subprocess.CompletedProcess[str]) -> tuple[str, ...]:

@@ -1,5 +1,12 @@
+from pathlib import Path
+from subprocess import CompletedProcess
+
+import pytest
+
+import just_submodules_hub.github_prs as github_prs
 from just_submodules_hub.github_prs import (
     PullRequestRecord,
+    PullRequestState,
     build_pull_request_record,
     filter_managed_pull_requests,
     gh_search_args,
@@ -7,6 +14,30 @@ from just_submodules_hub.github_prs import (
     render_pull_requests_tsv,
     validate_state,
 )
+
+
+def test_gh_pr_view_reports_timeout_as_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(github_prs.shutil, "which", lambda name: "/usr/bin/gh")
+    monkeypatch.setattr(
+        github_prs,
+        "run_gh",
+        lambda args, cwd: CompletedProcess(
+            ["gh", *args],
+            124,
+            stdout="",
+            stderr="gh command timed out after 60 seconds",
+        ),
+    )
+
+    assert github_prs.gh_pr_view(tmp_path) == PullRequestState(
+        "",
+        "unknown",
+        "",
+        "gh command timed out after 60 seconds",
+    )
 
 
 def test_gh_search_args_for_merged() -> None:

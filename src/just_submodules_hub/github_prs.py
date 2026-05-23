@@ -8,6 +8,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from .github_cli import run_gh
 from .gitmodules import managed_repo_slugs
 
 VALID_STATES = {"open", "closed", "merged", "all"}
@@ -32,12 +33,9 @@ def gh_pr_view(repo: Path) -> PullRequestState:
     """Query the current PR state for the checked-out branch in *repo*."""
     if shutil.which("gh") is None:
         return PullRequestState("", "unknown", "", "gh not found")
-    proc = subprocess.run(
-        ["gh", "pr", "view", "--json", "number,state,isDraft,mergedAt"],
-        cwd=str(repo),
-        text=True,
-        capture_output=True,
-        check=False,
+    proc = run_gh(
+        ["pr", "view", "--json", "number,state,isDraft,mergedAt"],
+        cwd=repo,
     )
     if proc.returncode != 0:
         message = _summarize(proc)

@@ -52,16 +52,33 @@ def run(
     cmd: Sequence[str],
     cwd: Path | None = None,
     env: Mapping[str, str] | None = None,
+    timeout: float | None = None,
 ) -> str:
     """Run *cmd* and return stdout stripped; raise RuntimeError on non-zero exit."""
     redactions = sensitive_values(env)
-    proc = subprocess.run(
-        list(cmd),
-        cwd=str(cwd) if cwd else None,
-        env=dict(env) if env else None,
-        text=True,
-        capture_output=True,
-    )
+    try:
+        proc = subprocess.run(
+            list(cmd),
+            cwd=str(cwd) if cwd else None,
+            env=dict(env) if env else None,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        seconds = exc.timeout if exc.timeout is not None else timeout
+        output = (
+            "timed out" if seconds is None else f"timed out after {seconds:g} seconds"
+        )
+        raise RuntimeError(
+            command_failure_message(
+                cmd,
+                124,
+                cwd,
+                output,
+                redactions,
+            ),
+        ) from exc
     if proc.returncode != 0:
         output = (proc.stderr or proc.stdout).strip()
         raise RuntimeError(

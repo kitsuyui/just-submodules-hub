@@ -11,6 +11,7 @@ from typing import Any, cast
 
 from tqdm import tqdm
 
+from .github_cli import GH_COMMAND_TIMEOUT_SECONDS
 from .repo_paths import repo_display_name, repo_owner
 from .shell import run
 from .submodule_batch import tick
@@ -61,7 +62,7 @@ def gh_graphql(owner: str, cursor: str | None) -> dict:
     ]
     if cursor:
         cmd.extend(["-F", f"cursor={cursor}"])
-    out = run(cmd)
+    out = run(cmd, timeout=GH_COMMAND_TIMEOUT_SECONDS)
     return cast(dict[Any, Any], json.loads(out))
 
 
