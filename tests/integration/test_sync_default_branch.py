@@ -6,7 +6,7 @@ from pathlib import Path
 from .helpers import add_submodule, advance_remote, create_remote, git_head
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
+ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
 def test_sync_default_branch_updates_submodule_to_latest(
@@ -23,7 +23,11 @@ def test_sync_default_branch_updates_submodule_to_latest(
     latest_head = advance_remote(remote, "README.md", "hello again\n", "Update README")
 
     proc = subprocess.run(
-        [str(SCRIPT), "one", "repo/github.com/example-owner/sync-me"],
+        [
+            str(ACTION_SCRIPT),
+            "sync-repo-default-branch",
+            "repo/github.com/example-owner/sync-me",
+        ],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
@@ -48,7 +52,7 @@ def test_sync_default_branch_resolves_unique_short_name(
     latest_head = advance_remote(remote, "README.md", "hello again\n", "Update README")
 
     proc = subprocess.run(
-        [str(SCRIPT), "one", "sync-me"],
+        [str(ACTION_SCRIPT), "sync-repo-default-branch", "sync-me"],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,

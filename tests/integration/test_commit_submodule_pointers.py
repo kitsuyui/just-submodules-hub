@@ -6,7 +6,6 @@ from pathlib import Path
 from .helpers import add_submodule, advance_remote, create_remote, run
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SYNC_SCRIPT = PROJECT_ROOT / "scripts/repo/sync-default-branch.sh"
 ACTION_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
 
 
@@ -24,7 +23,11 @@ def test_commit_submodule_pointers_creates_parent_commit(
     advance_remote(remote, "README.md", "after\n", "Update remote")
 
     sync_proc = subprocess.run(
-        [str(SYNC_SCRIPT), "one", "repo/github.com/example-owner/pointers"],
+        [
+            str(ACTION_SCRIPT),
+            "sync-repo-default-branch",
+            "repo/github.com/example-owner/pointers",
+        ],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
@@ -62,7 +65,7 @@ def test_commit_submodule_pointers_works_when_submodules_are_ignored_all(
     advance_remote(remote, "README.md", "after\n", "Update remote")
 
     sync_proc = subprocess.run(
-        [str(SYNC_SCRIPT), "one", submodule_path],
+        [str(ACTION_SCRIPT), "sync-repo-default-branch", submodule_path],
         cwd=str(hub_repo),
         text=True,
         capture_output=True,
