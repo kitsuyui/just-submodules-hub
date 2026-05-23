@@ -24,7 +24,7 @@ class DummyBar:
     def __enter__(self) -> DummyBar:
         return self
 
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+    def __exit__(self, _exc_type: object, exc: object, _tb: object) -> None:
         pass
 
 
@@ -533,6 +533,25 @@ def test_fetch_owner_default_heads_rejects_missing_owner(
         assert str(exc) == "repository owner not found: kitsuyui"
     else:
         raise AssertionError("missing repository owner should raise")
+
+
+def test_gh_graphql_uses_github_cli_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_cmd: list[str] = []
+    captured_timeout: object = None
+
+    def fake_run(cmd: list[str], **kwargs: object) -> str:
+        nonlocal captured_cmd, captured_timeout
+        captured_cmd = cmd
+        captured_timeout = kwargs["timeout"]
+        return '{"data": {}}'
+
+    monkeypatch.setattr(default_heads, "run", fake_run)
+
+    assert default_heads.gh_graphql("kitsuyui", None) == {"data": {}}
+    assert captured_cmd[:3] == ["gh", "api", "graphql"]
+    assert captured_timeout == default_heads.GH_COMMAND_TIMEOUT_SECONDS
 
 
 def test_sync_all_reports_failures(

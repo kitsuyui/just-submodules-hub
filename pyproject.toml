@@ -101,6 +101,7 @@ ignore = [
 # shell.py is the core subprocess wrapper; S603 fires on every subprocess.run
 # call even though arguments are always passed as a list (no shell=True).
 "src/just_submodules_hub/shell.py" = ["S603"]
+"src/just_submodules_hub/github_cli.py" = ["S603"]
 
 # These modules are CLI entrypoints / data-pipeline modules that use print() for
 # structured output and subprocess with list args (no shell=True). S603/S607 fire

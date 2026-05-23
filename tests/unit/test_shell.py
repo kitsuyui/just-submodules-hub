@@ -81,3 +81,33 @@ def test_run_redacts_sensitive_env_values(monkeypatch: pytest.MonkeyPatch) -> No
     message = str(excinfo.value)
     assert "secret-token" not in message
     assert "<redacted>" in message
+
+
+def test_run_passes_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run(cmd: list[str], **kwargs: object) -> CompletedProcess[str]:
+        captured["timeout"] = kwargs["timeout"]
+        return CompletedProcess(cmd, 0, stdout="hello\n", stderr="")
+
+    monkeypatch.setattr(shell.subprocess, "run", fake_run)
+
+    assert shell.run(["echo", "hello"], timeout=12.5) == "hello"
+    assert captured["timeout"] == 12.5
+
+
+def test_run_raises_runtime_error_on_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd: list[str], **kwargs: object) -> CompletedProcess[str]:
+        raise shell.subprocess.TimeoutExpired(cmd, timeout=12.5)
+
+    monkeypatch.setattr(shell.subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        shell.run(["gh", "api", "user"], timeout=12.5)
+
+    message = str(excinfo.value)
+    assert "command failed: gh api user" in message
+    assert "exit code: 124" in message
+    assert "timed out after 12.5 seconds" in message
