@@ -35,6 +35,38 @@ def _url_to_repo_dir(repo_url_input: str) -> str:
     return f"{_GITHUB_COM_PREFIX}{slug}"
 
 
+def _remove_path_if_exists(path: Path) -> None:
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    elif path.exists() or path.is_symlink():
+        path.unlink()
+
+
+def _rollback_added_submodule(repo_dir: str) -> None:
+    """Remove the submodule state created by a failed multi-step add."""
+    subprocess.run(
+        ["git", "submodule", "deinit", "-f", "--", repo_dir],
+        check=False,
+    )
+    subprocess.run(
+        ["git", "rm", "-f", "--", repo_dir],
+        check=False,
+    )
+    subprocess.run(
+        [
+            "git",
+            "config",
+            "-f",
+            ".gitmodules",
+            "--remove-section",
+            f"submodule.{repo_dir}",
+        ],
+        check=False,
+    )
+    _remove_path_if_exists(Path(".git") / "modules" / repo_dir)
+    _remove_path_if_exists(Path(repo_dir))
+
+
 @action("add-repo")
 def add_repo(args: list[str]) -> int:
     """Register a GitHub repository as a shallow submodule with ``ignore = all``."""
@@ -78,6 +110,10 @@ def add_repo(args: list[str]) -> int:
         check=False,
     )
     if proc.returncode != 0:
+        _rollback_added_submodule(repo_dir)
         return proc.returncode
 
-    return set_submodule_ignore_value(repo_dir, "all")
+    returncode = set_submodule_ignore_value(repo_dir, "all")
+    if returncode != 0:
+        _rollback_added_submodule(repo_dir)
+    return returncode
