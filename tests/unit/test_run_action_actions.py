@@ -235,6 +235,38 @@ def test_list_github_repos_comma_and_space_separated_owners(
     assert seen_owners == ["a", "b", "c"]
 
 
+def test_list_repos_for_owner_error_includes_owner_and_visibility(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[str]:
+        return CompletedProcess(
+            cmd, returncode=1, stdout="", stderr="API rate limit exceeded"
+        )
+
+    monkeypatch.setattr(list_github_repos_module.subprocess, "run", fake_run)
+    with pytest.raises(RuntimeError, match=r"\[owner='myorg'") as exc_info:
+        list_github_repos_module._list_repos_for_owner("myorg", "public")
+    assert "visibility='public'" in str(exc_info.value)
+    assert "API rate limit exceeded" in str(exc_info.value)
+
+
+def test_list_github_repos_error_message_includes_owner_context(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fake_list(owner: str, vis: str) -> list[str]:
+        raise RuntimeError(
+            f"gh repo list failed for owner={owner!r} visibility={vis!r}: some error"
+        )
+
+    monkeypatch.setattr(list_github_repos_module, "_list_repos_for_owner", fake_list)
+    fn = reg._REGISTRY["list-github-repos"]
+    rc = fn(["badorg", "public"])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "badorg" in err
+
+
 # ---------- list-managed-repos ----------
 
 
