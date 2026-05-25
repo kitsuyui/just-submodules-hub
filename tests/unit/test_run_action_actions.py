@@ -661,6 +661,98 @@ def test_add_repo_accepts_ssh_url(
     assert calls[0][5] == "repo/github.com/owner/myrepo"
 
 
+def test_add_repo_rolls_back_when_shallow_config_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    repo_dir = "repo/github.com/owner/myrepo"
+    shallow_cmd = [
+        "git",
+        "config",
+        "-f",
+        ".gitmodules",
+        f"submodule.{repo_dir}.shallow",
+        "true",
+    ]
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 1 if cmd == shallow_cmd else 0)
+
+    monkeypatch.setattr(add_repo_module.subprocess, "run", fake_run)
+    monkeypatch.chdir(tmp_path)
+
+    fn = reg._REGISTRY["add-repo"]
+    rc = fn(["https://github.com/owner/myrepo"])
+
+    assert rc == 1
+    assert calls == [
+        [
+            "git",
+            "submodule",
+            "add",
+            "--",
+            "git@github.com:owner/myrepo.git",
+            repo_dir,
+        ],
+        shallow_cmd,
+        ["git", "submodule", "deinit", "-f", "--", repo_dir],
+        ["git", "rm", "-f", "--", repo_dir],
+        [
+            "git",
+            "config",
+            "-f",
+            ".gitmodules",
+            "--remove-section",
+            f"submodule.{repo_dir}",
+        ],
+    ]
+
+
+def test_add_repo_rolls_back_when_ignore_config_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    repo_dir = "repo/github.com/owner/myrepo"
+    calls: list[list[str]] = []
+    ignore_calls: list[tuple[str, str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    def fake_set_submodule_ignore_value(path: str, value: str) -> int:
+        ignore_calls.append((path, value))
+        return 7
+
+    monkeypatch.setattr(add_repo_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        add_repo_module,
+        "set_submodule_ignore_value",
+        fake_set_submodule_ignore_value,
+    )
+    monkeypatch.chdir(tmp_path)
+
+    fn = reg._REGISTRY["add-repo"]
+    rc = fn(["https://github.com/owner/myrepo"])
+
+    assert rc == 7
+    assert ignore_calls == [(repo_dir, "all")]
+    assert calls[-3:] == [
+        ["git", "submodule", "deinit", "-f", "--", repo_dir],
+        ["git", "rm", "-f", "--", repo_dir],
+        [
+            "git",
+            "config",
+            "-f",
+            ".gitmodules",
+            "--remove-section",
+            f"submodule.{repo_dir}",
+        ],
+    ]
+
+
 # ---------- remove-repo ----------
 
 
