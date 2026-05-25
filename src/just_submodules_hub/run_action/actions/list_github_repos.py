@@ -55,7 +55,10 @@ def _list_repos_for_owner(owner: str, visibility: str) -> list[str]:
         capture_output=True,
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip())
+        detail = proc.stderr.strip()
+        raise RuntimeError(
+            f"gh repo list failed [owner={owner!r} visibility={visibility!r}]: {detail}"
+        )
     return [line for line in proc.stdout.splitlines() if line]
 
 
