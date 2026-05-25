@@ -99,6 +99,12 @@ def should_sync_target(
 def github_token_url(url: str, token: str) -> str | None:
     """Rewrite *url* to embed *token* as HTTPS basic-auth credentials.
 
+    **Protocol conversion**: SSH URLs (``git@github.com:…`` and
+    ``ssh://git@github.com/…``) are always rewritten to HTTPS, even when the
+    caller passes an SSH-form URL.  Callers that rely on an SSH transport or
+    ProxyCommand after token injection will see the protocol change and must
+    account for it.
+
     Returns None when *url* is empty or not a recognizable GitHub URL form.
     """
     if not url:
