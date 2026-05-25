@@ -40,6 +40,8 @@ query($owner: String!, $cursor: String) {
 }
 """
 
+DEFAULT_OWNER_DEFAULT_HEAD_PAGE_LIMIT = 20
+
 
 @dataclass(frozen=True)
 class DefaultHead:
@@ -83,15 +85,51 @@ def extract_default_head(node: dict, owner: str) -> tuple[str, DefaultHead] | No
     return f"{owner}/{repo_name}", DefaultHead(name, oid)
 
 
+def should_keep_slug(slug: str, wanted_slugs: set[str] | None) -> bool:
+    """Return True when *slug* is in the optional wanted-slug filter."""
+    return wanted_slugs is None or slug in wanted_slugs
+
+
+def found_all_wanted_slugs(
+    found: dict[str, DefaultHead],
+    wanted_slugs: set[str] | None,
+) -> bool:
+    """Return True when every wanted slug already has a fetched default head."""
+    return wanted_slugs is not None and wanted_slugs.issubset(found)
+
+
+def collect_default_heads(
+    nodes: Iterable[dict],
+    owner: str,
+    wanted_slugs: set[str] | None,
+    found: dict[str, DefaultHead],
+) -> None:
+    """Add fetched default heads from GraphQL repository *nodes* into *found*."""
+    for node in nodes:
+        extracted = extract_default_head(node, owner)
+        if extracted is None:
+            continue
+        slug, head = extracted
+        if not should_keep_slug(slug, wanted_slugs):
+            continue
+        found[slug] = head
+
+
 def fetch_owner_default_heads(
     owner: str,
     bar: tqdm[Any] | None,
+    *,
+    wanted_slugs: set[str] | None = None,
+    page_limit: int = DEFAULT_OWNER_DEFAULT_HEAD_PAGE_LIMIT,
 ) -> dict[str, DefaultHead]:
-    """Fetch all default-branch HEAD OIDs for every repository owned by *owner*."""
+    """Fetch default-branch HEAD OIDs for repositories owned by *owner*."""
+    if page_limit <= 0:
+        raise ValueError("page_limit must be greater than zero")
+
     cursor: str | None = None
     found: dict[str, DefaultHead] = {}
 
-    while True:
+    for page_number in range(page_limit):
         payload = gh_graphql(owner, cursor)
         tick(bar)
 
@@ -100,12 +138,10 @@ def fetch_owner_default_heads(
             raise RuntimeError(f"repository owner not found: {owner}")
 
         repos = repo_owner_payload["repositories"]
-        for node in repos.get("nodes", []):
-            extracted = extract_default_head(node, owner)
-            if extracted is None:
-                continue
-            slug, head = extracted
-            found[slug] = head
+        collect_default_heads(repos.get("nodes", []), owner, wanted_slugs, found)
+
+        if found_all_wanted_slugs(found, wanted_slugs):
+            break
 
         page_info = repos.get("pageInfo", {})
         if not page_info.get("hasNextPage"):
@@ -114,7 +150,7 @@ def fetch_owner_default_heads(
         cursor = page_info.get("endCursor")
         if not cursor:
             break
-        if bar is not None:
+        if page_number + 1 < page_limit and bar is not None:
             bar.total = (bar.total or 0) + 1
             bar.refresh()
 
@@ -132,13 +168,16 @@ def fetch_default_heads_for_paths(
     paths: Iterable[str],
     bar: tqdm[Any] | None,
 ) -> dict[str, DefaultHead]:
-    """Fetch default-branch HEAD OIDs for every owner found in *paths*."""
+    """Fetch default-branch HEAD OIDs for repositories listed in *paths*."""
     path_list = list(paths)
-    owners = sorted({repo_owner(path) for path in path_list})
+    owner_slugs: dict[str, set[str]] = {}
+    for path in path_list:
+        owner_slugs.setdefault(repo_owner(path), set()).add(repo_display_name(path))
+
     heads: dict[str, DefaultHead] = {}
 
-    for owner in owners:
-        heads.update(fetch_owner_default_heads(owner, bar))
+    for owner, wanted_slugs in sorted(owner_slugs.items()):
+        heads.update(fetch_owner_default_heads(owner, bar, wanted_slugs=wanted_slugs))
 
     return heads
 
