@@ -256,10 +256,31 @@ def _reconcile_topic_branch(
             dirty,
             "pr closed without merge",
         )
-    message = pr_info.message or "no pull request metadata"
+    if pr_info.state == "none":
+        pulled = pull_ff_only(repo, "pull-topic", repo_path, branch, pr, dirty)
+        if pulled.status == "failed":
+            return Result(
+                repo_path,
+                "failed",
+                "pr-none",
+                branch,
+                pr,
+                dirty,
+                "no PR found; pull failed",
+            )
+        return Result(
+            repo_path,
+            pulled.status,
+            "pull-topic",
+            branch,
+            pr,
+            dirty,
+            "no pull request found",
+        )
+    message = pr_info.message or "gh error: PR state unknown"
     pulled = pull_ff_only(repo, "pull-topic", repo_path, branch, pr, dirty)
     if pulled.status == "failed":
-        return Result(repo_path, "skipped", "pr-unknown", branch, pr, dirty, message)
+        return Result(repo_path, "failed", "pr-unknown", branch, pr, dirty, message)
     return Result(repo_path, pulled.status, "pull-topic", branch, pr, dirty, message)
 
 
