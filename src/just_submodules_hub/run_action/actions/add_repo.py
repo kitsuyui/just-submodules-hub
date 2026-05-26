@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from just_submodules_hub.repo_paths import _strip_repo_transport
+from just_submodules_hub.repo_paths import normalize_repo_input
 from just_submodules_hub.run_action.actions._helpers import set_submodule_ignore_value
 from just_submodules_hub.run_action.registry import action
 
@@ -27,12 +27,7 @@ def _url_to_repo_dir(repo_url_input: str) -> str:
     Short names (name only, without owner) are not accepted because owner
     information is required to construct the remote URL.
     """
-    slug = _strip_repo_transport(repo_url_input)
-    # _strip_repo_transport handles git@/https:// prefixes and .git suffix.
-    # If the slug already contains the full path prefix, keep it as-is.
-    if slug.startswith(_GITHUB_COM_PREFIX):
-        return slug
-    return f"{_GITHUB_COM_PREFIX}{slug}"
+    return normalize_repo_input(repo_url_input)
 
 
 def _remove_path_if_exists(path: Path) -> None:
