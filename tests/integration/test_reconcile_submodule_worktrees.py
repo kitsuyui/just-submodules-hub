@@ -130,3 +130,97 @@ def test_reconcile_submodule_worktrees_aggregates_jsonl(
     assert proc.returncode == 0, proc.stderr
     assert f'"repo": "{submodule_path}"' in proc.stdout
     assert '"action": "pull-default"' in proc.stdout
+
+
+def test_reconcile_submodule_worktree_pr_none_pull_failure_returns_failed(
+    tmp_path: Path,
+    hub_repo: Path,
+) -> None:
+    """Pull failure with no PR (state=none) must exit 1, not 0."""
+    remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "pr-none-fail",
+        {"README.md": "initial\n"},
+    )
+    submodule_path = "repo/github.com/example-owner/pr-none-fail"
+    add_submodule(hub_repo, remote, submodule_path)
+    submodule = hub_repo / submodule_path
+    # Create a local-only topic branch with no upstream tracking
+    run(["git", "switch", "-c", "topic/no-remote"], cwd=submodule)
+
+    fake_bin = tmp_path / "bin-none"
+    fake_bin.mkdir()
+    # gh returns "no pull requests found" → state=none
+    write_executable(
+        fake_bin / "gh",
+        '#!/bin/sh\necho "no pull requests found" >&2\nexit 1\n',
+    )
+
+    proc = subprocess.run(
+        [
+            str(ACTION_SCRIPT),
+            "reconcile-submodule-worktree",
+            submodule_path,
+            "--format",
+            "tsv",
+        ],
+        cwd=str(hub_repo),
+        env={**os.environ, "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"},
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 1, (
+        "expected exit 1 when pull fails with no PR, got 0\n" + proc.stdout
+    )
+    assert "failed" in proc.stdout
+    assert "pr-none" in proc.stdout
+
+
+def test_reconcile_submodule_worktree_pr_unknown_pull_failure_returns_failed(
+    tmp_path: Path,
+    hub_repo: Path,
+) -> None:
+    """Pull failure with gh error (state=unknown) must exit 1, not 0."""
+    remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "pr-unknown-fail",
+        {"README.md": "initial\n"},
+    )
+    submodule_path = "repo/github.com/example-owner/pr-unknown-fail"
+    add_submodule(hub_repo, remote, submodule_path)
+    submodule = hub_repo / submodule_path
+    # Create a local-only topic branch with no upstream tracking
+    run(["git", "switch", "-c", "topic/gh-error"], cwd=submodule)
+
+    fake_bin = tmp_path / "bin-unknown"
+    fake_bin.mkdir()
+    # gh exits non-zero with an unrecognized error → state=unknown
+    write_executable(
+        fake_bin / "gh",
+        '#!/bin/sh\necho "API rate limit exceeded" >&2\nexit 1\n',
+    )
+
+    proc = subprocess.run(
+        [
+            str(ACTION_SCRIPT),
+            "reconcile-submodule-worktree",
+            submodule_path,
+            "--format",
+            "tsv",
+        ],
+        cwd=str(hub_repo),
+        env={**os.environ, "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"},
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 1, (
+        "expected exit 1 when pull fails with unknown PR state, got 0\n" + proc.stdout
+    )
+    assert "failed" in proc.stdout
+    assert "pr-unknown" in proc.stdout
