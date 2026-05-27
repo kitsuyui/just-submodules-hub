@@ -290,9 +290,13 @@ def build_sync_targets(
         return path_list
 
     heads: dict[str, DefaultHead | tuple[str, str]] = {}
+    owner_slugs: dict[str, set[str]] = {}
 
-    for owner in sorted({repo_owner(path) for path in path_list}):
-        heads.update(fetch_owner_default_heads(owner, bar))
+    for path in path_list:
+        owner_slugs.setdefault(repo_owner(path), set()).add(repo_display_name(path))
+
+    for owner, wanted_slugs in sorted(owner_slugs.items()):
+        heads.update(fetch_owner_default_heads(owner, bar, wanted_slugs=wanted_slugs))
 
     targets: list[str] = []
 

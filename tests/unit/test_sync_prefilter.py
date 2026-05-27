@@ -32,14 +32,23 @@ def test_build_sync_targets_skips_up_to_date_repositories(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bar = DummyBar()
+    seen_wanted_slugs: list[set[str] | None] = []
 
-    monkeypatch.setattr(
-        sync,
-        "fetch_owner_default_heads",
-        lambda owner, _bar: {
+    def fake_fetch_owner_default_heads(
+        owner: str,
+        _bar: object,
+        *,
+        wanted_slugs: set[str] | None = None,
+    ) -> dict[str, tuple[str, str]]:
+        assert owner == "kitsuyui"
+        seen_wanted_slugs.append(wanted_slugs)
+        return {
             "kitsuyui/ts-playground": ("main", "aaa"),
             "kitsuyui/react-playground": ("main", "bbb"),
-        },
+        }
+
+    monkeypatch.setattr(
+        sync, "fetch_owner_default_heads", fake_fetch_owner_default_heads
     )
     monkeypatch.setattr(
         sync,
@@ -60,6 +69,9 @@ def test_build_sync_targets_skips_up_to_date_repositories(
 
     assert targets == ["repo/github.com/kitsuyui/react-playground"]
     assert bar.updated == 1
+    assert seen_wanted_slugs == [
+        {"kitsuyui/react-playground", "kitsuyui/ts-playground"}
+    ]
 
 
 def test_extract_default_head_ignores_incomplete_nodes() -> None:
@@ -518,6 +530,106 @@ def test_fetch_owner_default_heads_handles_pagination(
     assert bar.updated == 2
 
 
+def test_fetch_owner_default_heads_applies_page_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bar = DummyBar()
+    calls: list[str | None] = []
+
+    def fake_gh_graphql(_owner: str, cursor: str | None) -> dict[str, object]:
+        calls.append(cursor)
+        return {
+            "data": {
+                "repositoryOwner": {
+                    "repositories": {
+                        "nodes": [
+                            {
+                                "name": f"sample-repo-{len(calls)}",
+                                "defaultBranchRef": {
+                                    "name": "main",
+                                    "target": {"oid": f"oid-{len(calls)}"},
+                                },
+                            },
+                        ],
+                        "pageInfo": {
+                            "hasNextPage": True,
+                            "endCursor": f"cursor-{len(calls)}",
+                        },
+                    },
+                },
+            },
+        }
+
+    monkeypatch.setattr(default_heads, "gh_graphql", fake_gh_graphql)
+
+    heads = default_heads.fetch_owner_default_heads(
+        "kitsuyui",
+        bar,
+        page_limit=2,
+    )
+
+    assert calls == [None, "cursor-1"]
+    assert heads == {
+        "kitsuyui/sample-repo-1": default_heads.DefaultHead("main", "oid-1"),
+        "kitsuyui/sample-repo-2": default_heads.DefaultHead("main", "oid-2"),
+    }
+    assert bar.updated == 2
+
+
+def test_fetch_owner_default_heads_filters_wanted_slugs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bar = DummyBar()
+    calls: list[str | None] = []
+
+    def fake_gh_graphql(_owner: str, cursor: str | None) -> dict[str, object]:
+        calls.append(cursor)
+        return {
+            "data": {
+                "repositoryOwner": {
+                    "repositories": {
+                        "nodes": [
+                            {
+                                "name": "sample-repo",
+                                "defaultBranchRef": {
+                                    "name": "main",
+                                    "target": {"oid": "aaa"},
+                                },
+                            },
+                            {
+                                "name": "unwanted-repo",
+                                "defaultBranchRef": {
+                                    "name": "main",
+                                    "target": {"oid": "bbb"},
+                                },
+                            },
+                        ],
+                        "pageInfo": {"hasNextPage": True, "endCursor": "cursor-1"},
+                    },
+                },
+            },
+        }
+
+    monkeypatch.setattr(default_heads, "gh_graphql", fake_gh_graphql)
+
+    heads = default_heads.fetch_owner_default_heads(
+        "kitsuyui",
+        bar,
+        wanted_slugs={"kitsuyui/sample-repo"},
+    )
+
+    assert calls == [None]
+    assert heads == {"kitsuyui/sample-repo": default_heads.DefaultHead("main", "aaa")}
+    assert bar.updated == 1
+
+
+def test_fetch_owner_default_heads_rejects_non_positive_page_limit() -> None:
+    bar = DummyBar()
+
+    with pytest.raises(ValueError, match="page_limit must be greater than zero"):
+        default_heads.fetch_owner_default_heads("kitsuyui", bar, page_limit=0)
+
+
 def test_fetch_owner_default_heads_rejects_missing_owner(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -666,13 +778,21 @@ def test_build_sync_targets_includes_uninitialized_submodule(
     """
     bar = DummyBar()
 
-    monkeypatch.setattr(
-        sync,
-        "fetch_owner_default_heads",
-        lambda owner, _bar: {
+    def fake_fetch_owner_default_heads(
+        owner: str,
+        _bar: object,
+        *,
+        wanted_slugs: set[str] | None = None,
+    ) -> dict[str, tuple[str, str]]:
+        assert owner == "kitsuyui"
+        assert wanted_slugs == {"kitsuyui/initialized", "kitsuyui/uninit"}
+        return {
             "kitsuyui/initialized": ("main", "aaa"),
             "kitsuyui/uninit": ("main", "bbb"),
-        },
+        }
+
+    monkeypatch.setattr(
+        sync, "fetch_owner_default_heads", fake_fetch_owner_default_heads
     )
 
     def fake_local_head(repo_path: str) -> tuple[str, str]:
