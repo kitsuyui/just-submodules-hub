@@ -5,7 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from .helpers import write_executable
+from .helpers import write_consumer_justfile, write_executable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / "scripts/github/default-branch-ruleset.sh"
@@ -123,6 +123,7 @@ exit 1
 def test_default_branch_ruleset_legacy_status_reports_manual_review_for_uncovered_rules(
     tmp_path: Path,
 ) -> None:
+    write_consumer_justfile(tmp_path)
     fake_bin = tmp_path / "fake-bin"
     write_executable(
         fake_bin / "gh",
@@ -161,7 +162,7 @@ exit 1
     )
 
     proc = subprocess.run(
-        [str(SCRIPT), "legacy-status", "kitsuyui/example"],
+        ["just", "github::branch-protection::legacy::status", "kitsuyui/example"],
         cwd=str(tmp_path),
         env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
         text=True,
@@ -239,6 +240,7 @@ exit 1
 def test_default_branch_classic_protection_status_reports_redundant_protection(
     tmp_path: Path,
 ) -> None:
+    write_consumer_justfile(tmp_path)
     fake_bin = tmp_path / "fake-bin"
     write_executable(
         fake_bin / "gh",
@@ -271,7 +273,7 @@ exit 1
     )
 
     proc = subprocess.run(
-        [str(SCRIPT), "classic-status", "kitsuyui/example"],
+        ["just", "github::branch-protection::classic::status", "kitsuyui/example"],
         cwd=str(tmp_path),
         env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
         text=True,

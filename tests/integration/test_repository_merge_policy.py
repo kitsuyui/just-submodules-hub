@@ -5,7 +5,13 @@ import os
 import subprocess
 from pathlib import Path
 
-from .helpers import add_submodule, create_remote, init_hub, write_executable
+from .helpers import (
+    add_submodule,
+    create_remote,
+    init_hub,
+    write_consumer_justfile,
+    write_executable,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / "scripts/github/repository-merge-policy.sh"
@@ -149,6 +155,7 @@ def test_repository_merge_policy_status_all_filters_managed_repositories(
 ) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
+    write_consumer_justfile(hub_repo)
 
     public_remote = create_remote(
         tmp_path,
@@ -202,7 +209,7 @@ exit 1
     )
 
     proc = subprocess.run(
-        [str(SCRIPT), "status-all", "squash", "public"],
+        ["just", "github::merge-policy::squash::all::status", "public"],
         cwd=str(hub_repo),
         env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
         text=True,
@@ -225,6 +232,7 @@ def test_repository_merge_policy_disable_all_updates_filtered_repositories(
 ) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
+    write_consumer_justfile(hub_repo)
 
     public_remote = create_remote(
         tmp_path,
@@ -280,7 +288,7 @@ exit 1
     )
 
     proc = subprocess.run(
-        [str(SCRIPT), "disable-all", "rebase", "public"],
+        ["just", "github::merge-policy::rebase::all::disable", "public"],
         cwd=str(hub_repo),
         env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
         text=True,
@@ -303,6 +311,7 @@ exit 1
 def test_repository_merge_policy_all_actions_default_to_public(tmp_path: Path) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
+    write_consumer_justfile(hub_repo)
 
     public_remote = create_remote(
         tmp_path,
@@ -345,7 +354,7 @@ exit 1
     )
 
     proc = subprocess.run(
-        [str(SCRIPT), "status-all", "squash"],
+        ["just", "github::merge-policy::squash::all::status"],
         cwd=str(hub_repo),
         env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
         text=True,
