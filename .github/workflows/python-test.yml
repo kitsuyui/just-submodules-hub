@@ -11,6 +11,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -65,3 +70,10 @@ jobs:
 
       - name: Record coverage
         run: just coverage-xml
+
+      - name: Report coverage with octocov
+        if: matrix.python == '3.14'
+        uses: k1LoW/octocov-action@b3b6ee60482a667950f87553abf1df63217235d9 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          config: .octocov.yml
