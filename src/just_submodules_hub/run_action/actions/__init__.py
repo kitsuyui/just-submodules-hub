@@ -8,6 +8,7 @@ from just_submodules_hub.run_action.actions import (  # noqa: F401
     every_repo,
     grep,
     init_all_repos,
+    install_submodule_hooks,
     linked_worktree_sync,
     linked_worktrees,
     list_github_repos,

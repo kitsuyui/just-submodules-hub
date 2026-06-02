@@ -33,6 +33,9 @@ just repo::submodule::worktree::reconcile <repo|owner/repo|repo/github.com/owner
 just repo::submodule::worktrees::reconcile
 just repo::submodule::worktrees::reconcile --format tsv
 just repo::submodule::worktrees::reconcile --format table --jobs 8
+just repo::submodule::hooks::install
+just repo::submodule::hooks::install --dry-run --format table
+just repo::submodule::hooks::install --manager lefthook --format jsonl --jobs 8
 just repo::submodule::managed::list
 just repo::submodule::managed::list kitsuyui private
 just repo::submodule::unmanaged::list
@@ -68,6 +71,18 @@ just repo::submodule::every '<command>' --format jsonl --jobs 8
 - Reconciliation output formats are `table`, `tsv`, and `jsonl`.
 - Reconciliation uses an owner-level GraphQL default-branch prefilter by default. Submodules already on the remote default branch HEAD are reported as `noop` without running per-repository `pull`.
 - Reconciliation does not commit parent gitlink changes; use `pointers::commit` separately after reviewing the result.
+- `hooks::install` installs configured Git hook managers in managed submodules.
+  It currently detects `lefthook.yml` / `lefthook.yaml`, `.pre-commit-config.yaml` /
+  `.pre-commit-config.yml`, and `.husky/`.
+- `hooks::install` is intentionally opt-in. It changes each submodule's local Git hook
+  setup but does not edit repository files or commit parent gitlink changes.
+- `hooks::install --dry-run` reports what would be installed without changing local
+  hook configuration.
+- `hooks::install --manager <name>` limits setup to one manager. Supported managers are
+  `lefthook`, `pre-commit`, and `husky`.
+- `hooks::install` fails a repository as ambiguous when multiple hook managers are
+  configured in the same submodule, so one manager does not silently overwrite another
+  manager's Git hook.
 - `managed::list` without arguments lists all locally managed submodules from `.gitmodules`.
 - `managed::list <owners> <visibility>` filters managed submodules by GitHub repository visibility. The visibility value can be `public`, `private`, `internal`, or `all`.
 - `unmanaged::list <owners> <visibility>` uses the same owner and visibility argument order, then subtracts managed submodules from GitHub repositories.
@@ -112,6 +127,40 @@ Submodule commands often need to run the same operation per submodule and then s
 4. Report machine-readable output when useful, typically `tsv` or `jsonl`, plus a default that matches the command's most common interactive use.
 
 The shared Python helper `just_submodules_hub.submodule_batch` contains the common parallel execution, progress bar, and record rendering pieces used by `default-branch::sync-all`, `worktrees::reconcile`, and `every`.
+
+## Installing submodule Git hooks
+
+`hooks::install` applies repository-local hook setup across managed submodules. It is
+useful after cloning a hub, after initializing submodules, or after adding new hook
+configuration such as Lefthook, pre-commit, or Husky.
+
+Examples:
+
+```sh
+just repo::submodule::hooks::install --dry-run --format table
+just repo::submodule::hooks::install --format table --jobs 8
+just repo::submodule::hooks::install --manager lefthook --format jsonl
+```
+
+Detection and setup behavior:
+
+| Manager | Detection | Setup |
+| --- | --- | --- |
+| `lefthook` | `lefthook.yml`, `lefthook.yaml`, `.lefthook.yml`, or `.lefthook.yaml` | `lefthook install` |
+| `pre-commit` | `.pre-commit-config.yaml` or `.pre-commit-config.yml` | `pre-commit install` |
+| `husky` | `.husky/` | `git config core.hooksPath .husky/_` when `.husky/_` exists, otherwise `husky` |
+
+The aggregate report uses these statuses:
+
+| Status | Meaning |
+| --- | --- |
+| `installed` | The hook manager setup command completed successfully. |
+| `would-install` | `--dry-run` found a hook manager and reported the setup command. |
+| `noop` | No matching hook manager was configured, or the requested manager was not configured. |
+| `failed` | The setup command failed, the required command was missing, or multiple managers were configured. |
+
+Structured output fields are `repo`, `status`, `manager`, `command`, `exit_code`,
+`stdout`, and `stderr`.
 
 ## Running arbitrary commands
 

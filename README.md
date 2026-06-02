@@ -61,6 +61,8 @@ just repo::submodule::root-status::hide
 just repo::submodule::root-status::hide just-submodules-hub
 just repo::submodule::worktree::reconcile just-submodules-hub
 just repo::submodule::worktrees::reconcile
+just repo::submodule::hooks::install
+just repo::submodule::hooks::install --dry-run --format table
 just repo::linked-worktrees::list
 just repo::linked-worktrees::add ../hub-feature --branch feature/hub --fetch-fallback
 just repo::linked-worktrees::hooks::install
@@ -69,6 +71,7 @@ just repo::linked-worktrees::sync::plan --format jsonl
 just repo::linked-worktrees::sync::apply --format jsonl
 just repo::worktrees::reconcile
 just repo::submodule::every "git status --short"
+just repo::submodule::hooks::install --format jsonl --jobs 8
 just repo::submodule::managed::list kitsuyui private
 just repo::catalog::languages::python::list
 just repo::catalog::languages::python::every "uv run pytest"

@@ -15,6 +15,7 @@ import just_submodules_hub.run_action.actions.create_repo as create_repo_module
 import just_submodules_hub.run_action.actions.every_repo as every_repo_module
 import just_submodules_hub.run_action.actions.grep as grep_module
 import just_submodules_hub.run_action.actions.init_all_repos as init_all_repos_module
+import just_submodules_hub.run_action.actions.install_submodule_hooks as install_submodule_hooks_module
 import just_submodules_hub.run_action.actions.linked_worktree_sync as linked_worktree_sync_module
 import just_submodules_hub.run_action.actions.linked_worktrees as linked_worktrees_module
 import just_submodules_hub.run_action.actions.list_github_repos as list_github_repos_module
@@ -100,6 +101,26 @@ def test_every_repo_delegates_to_subprocess(
     rc = fn(["ls", "--jobs", "2"])
     assert rc == 0
     assert calls[0][-3:] == ["ls", "--jobs", "2"]
+
+
+# ---------- install-submodule-hooks ----------
+
+
+def test_install_submodule_hooks_delegates_to_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(install_submodule_hooks_module.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["install-submodule-hooks"]
+    rc = fn(["--format", "jsonl"])
+    assert rc == 0
+    assert calls[0][-3:] == ["just_submodules_hub.submodule_hooks", "--format", "jsonl"]
 
 
 # ---------- grep ----------
