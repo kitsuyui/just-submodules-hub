@@ -96,6 +96,7 @@ ignore = [
 # print() is the canonical output mechanism for tabular/JSONL records and
 # progress messages. Suppressing T201 here is intentional.
 "src/just_submodules_hub/submodule_batch.py" = ["T201"]
+"src/just_submodules_hub/submodule_hooks.py" = ["S603"]
 "src/just_submodules_hub/sync.py" = ["T201"]
 
 # shell.py is the core subprocess wrapper; S603 fires on every subprocess.run
