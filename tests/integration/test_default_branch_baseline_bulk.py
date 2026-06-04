@@ -5,10 +5,13 @@ import os
 import subprocess
 from pathlib import Path
 
-from .helpers import add_submodule, create_remote, init_hub, write_executable
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = PROJECT_ROOT / "scripts/github/default-branch-baseline-bulk.sh"
+from .helpers import (
+    add_submodule,
+    create_remote,
+    init_hub,
+    write_consumer_justfile,
+    write_executable,
+)
 
 
 def test_default_branch_baseline_status_all_reports_filtered_managed_repositories(
@@ -16,6 +19,7 @@ def test_default_branch_baseline_status_all_reports_filtered_managed_repositorie
 ) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
+    write_consumer_justfile(hub_repo)
 
     public_remote = create_remote(
         tmp_path,
@@ -80,7 +84,7 @@ exit 1
     )
 
     proc = subprocess.run(
-        [str(SCRIPT), "status-all", "public"],
+        ["just", "github::branch-protection::all::status", "public"],
         cwd=str(hub_repo),
         env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
         text=True,
@@ -101,6 +105,7 @@ def test_default_branch_baseline_status_all_skips_wiki_submodules(
 ) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
+    write_consumer_justfile(hub_repo)
 
     public_remote = create_remote(
         tmp_path,
@@ -163,7 +168,7 @@ exit 1
     )
 
     proc = subprocess.run(
-        [str(SCRIPT), "status-all", "public"],
+        ["just", "github::branch-protection::all::status", "public"],
         cwd=str(hub_repo),
         env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
         text=True,
@@ -182,6 +187,7 @@ def test_default_branch_baseline_cleanup_classic_all_skips_manual_review_cases(
 ) -> None:
     hub_repo = tmp_path / "hub"
     init_hub(hub_repo)
+    write_consumer_justfile(hub_repo)
 
     repo_remote = create_remote(
         tmp_path,
@@ -223,7 +229,7 @@ exit 1
     )
 
     proc = subprocess.run(
-        [str(SCRIPT), "cleanup-classic-all", "public"],
+        ["just", "github::branch-protection::all::classic::cleanup", "public"],
         cwd=str(hub_repo),
         env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
         text=True,

@@ -6,6 +6,8 @@ import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 
 def run(cmd: list[str], cwd: Path, env: Mapping[str, str] | None = None) -> str:
     proc = subprocess.run(
@@ -64,6 +66,14 @@ def clone_remote(remote: Path, destination: Path) -> None:
 def init_hub(path: Path) -> None:
     init_repo(path)
     run(["git", "config", "protocol.file.allow", "always"], cwd=path)
+
+
+def write_consumer_justfile(hub_repo: Path) -> None:
+    justfile = hub_repo / "justfile"
+    justfile.write_text(
+        f'import "{PROJECT_ROOT / "just/index.just"}"\n',
+        encoding="utf-8",
+    )
 
 
 def add_submodule(hub: Path, remote: Path | str, submodule_path: str) -> None:

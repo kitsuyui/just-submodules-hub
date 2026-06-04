@@ -3,18 +3,17 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from .helpers import add_submodule, advance_remote, create_remote, init_hub, run
+from .helpers import (
+    add_submodule,
+    advance_remote,
+    create_remote,
+    init_hub,
+    run,
+    write_consumer_justfile,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SYNC_SCRIPT = PROJECT_ROOT / "scripts/repo/run-action.sh"
-
-
-def write_consumer_justfile(hub_repo: Path) -> None:
-    justfile = hub_repo / "justfile"
-    justfile.write_text(
-        f'import "{PROJECT_ROOT / "just/index.just"}"\n',
-        encoding="utf-8",
-    )
 
 
 def test_imported_repo_submodule_list_managed_uses_consumer_invocation_directory(
