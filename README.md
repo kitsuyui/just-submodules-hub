@@ -194,6 +194,23 @@ Use `repo::submodule::init-all` to initialize registered submodules recursively 
 Pass a jobs value explicitly, use `--jobs <n>`, or set Git's `submodule.fetchJobs`; otherwise the command uses the local CPU count when available.
 Use `--no-fetch` to initialize from already available local objects without contacting remotes. Use `--fetch-fallback` to try the no-fetch path first and retry with normal fetching if that update fails.
 
+## Development
+
+This repository uses [lefthook](https://github.com/evilmartians/lefthook) to run CI checks locally before commits and pushes.
+
+Install lefthook and set up the hooks once:
+
+```sh
+lefthook install
+```
+
+The following hooks are configured:
+
+- **pre-commit**: runs `just typecheck` (mypy static type checking)
+- **pre-push**: runs `just typecheck` and `just test` (mypy + pytest unit and integration tests)
+
+CI still runs the full suite (formatting, lint, typecheck, and tests) on every pull request and push to main.
+
 ## License Scope
 
 This repository is dedicated to the public domain under CC0-1.0.
