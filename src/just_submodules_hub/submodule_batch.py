@@ -80,8 +80,10 @@ def run_parallel(
 ) -> tuple[list[R], list[BatchFailure]]:
     """Run *worker* over *items* in parallel with up to *jobs* threads.
 
-    Returns a (results, failures) tuple; exceptions are captured as BatchFailure
-    entries rather than re-raised so all items are attempted.
+    Returns a (results, failures) tuple in completion order. Exceptions are
+    captured as BatchFailure entries rather than re-raised so all items are
+    attempted. Callers that need deterministic presentation must sort the
+    returned records before rendering them.
     """
     results: list[R] = []
     failures: list[BatchFailure] = []
@@ -110,7 +112,11 @@ def run_parallel_with_progress(
     unit: str = "task",
     enabled: bool = True,
 ) -> tuple[list[R], list[BatchFailure]]:
-    """Run *worker* in parallel over *items*, showing a labeled progress bar."""
+    """Run *worker* in parallel over *items*, showing a labeled progress bar.
+
+    The returned (results, failures) tuple preserves the completion-order
+    contract of run_parallel().
+    """
     with progress_bar(total=len(items), desc=desc, unit=unit, enabled=enabled) as bar:
         return run_parallel(items, worker, jobs=jobs, on_done=lambda: tick(bar))
 
