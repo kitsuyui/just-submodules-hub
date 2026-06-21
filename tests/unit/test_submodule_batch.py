@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 
 import pytest
@@ -38,6 +39,24 @@ def test_run_parallel_collects_results_and_failures() -> None:
         ("bad", "boom"),
     ]
     assert seen == ["done", "done"]
+
+
+def test_run_parallel_returns_results_in_completion_order() -> None:
+    both_started = threading.Barrier(2)
+    fast_completed = threading.Event()
+
+    def worker(item: str) -> str:
+        both_started.wait(timeout=1)
+        if item == "slow":
+            fast_completed.wait(timeout=1)
+            return "slow"
+        fast_completed.set()
+        return "fast"
+
+    results, failures = run_parallel(["slow", "fast"], worker, jobs=2)
+
+    assert results == ["fast", "slow"]
+    assert failures == []
 
 
 def test_run_parallel_with_progress_can_disable_progress() -> None:
