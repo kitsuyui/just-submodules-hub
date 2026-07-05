@@ -42,18 +42,25 @@ def test_run_parallel_collects_results_and_failures() -> None:
 
 
 def test_run_parallel_returns_results_in_completion_order() -> None:
-    both_started = threading.Barrier(2)
-    fast_completed = threading.Event()
+    # as_completed() yields futures that were already finished before the
+    # consuming loop polls them in arbitrary (set) order. Gate the slow
+    # worker on on_done, which fires only after a result has actually been
+    # consumed, so "fast" is guaranteed to be collected first even when the
+    # main thread is scheduled late.
+    fast_consumed = threading.Event()
 
     def worker(item: str) -> str:
-        both_started.wait(timeout=1)
         if item == "slow":
-            fast_completed.wait(timeout=1)
+            assert fast_consumed.wait(timeout=5), "fast result was never consumed"
             return "slow"
-        fast_completed.set()
         return "fast"
 
-    results, failures = run_parallel(["slow", "fast"], worker, jobs=2)
+    results, failures = run_parallel(
+        ["slow", "fast"],
+        worker,
+        jobs=2,
+        on_done=fast_consumed.set,
+    )
 
     assert results == ["fast", "slow"]
     assert failures == []
