@@ -141,7 +141,31 @@ def render_pull_requests_tsv(records: list[PullRequestRecord]) -> str:
 #           checks are failing or pending.
 # HAS_HOOKS: mergeable with passing checks; the repository has pre-receive hooks.
 # Everything else (BEHIND, BLOCKED, DIRTY, DRAFT, UNKNOWN) needs work first.
+#
+# mergeStateStatus only guarantees *required* checks. Repositories without
+# required checks report UNSTABLE even when every check is failing, so
+# readiness additionally demands that the full statusCheckRollup is green
+# (see has_only_green_checks).
 READY_MERGE_STATES = {"CLEAN", "UNSTABLE", "HAS_HOOKS"}
+
+# Check outcomes that count as green. Anything else — FAILURE, ERROR,
+# CANCELLED, TIMED_OUT, pending/queued runs — keeps the PR out of the
+# ready list until it settles.
+GREEN_CHECK_OUTCOMES = {"SUCCESS", "NEUTRAL", "SKIPPED"}
+
+
+def has_only_green_checks(rollup: list[dict] | None) -> bool:
+    """Return True when every check in a ``statusCheckRollup`` is green.
+
+    The rollup mixes CheckRun entries (``conclusion``, empty until the run
+    completes) and StatusContext entries (``state``). An empty rollup counts
+    as green: no checks configured means nothing is failing.
+    """
+    for item in rollup or []:
+        outcome = str(item.get("conclusion") or item.get("state") or "").upper()
+        if outcome not in GREEN_CHECK_OUTCOMES:
+            return False
+    return True
 
 
 @dataclass(frozen=True, order=True)
@@ -167,7 +191,7 @@ def gh_pr_list_args(repo: str) -> list[str]:
         "--limit",
         "200",
         "--json",
-        "author,isDraft,mergeStateStatus,mergeable,url",
+        "author,isDraft,mergeStateStatus,mergeable,statusCheckRollup,url",
     ]
 
 
@@ -182,7 +206,11 @@ def is_missing_repository_error(message: str) -> bool:
 
 
 def parse_ready_pull_requests(payload: str, repo: str) -> list[ReadyPullRequestRecord]:
-    """Parse a ``gh pr list`` JSON *payload* and keep only merge-ready PRs."""
+    """Parse a ``gh pr list`` JSON *payload* and keep only merge-ready PRs.
+
+    Ready means: not a draft, MERGEABLE, a merge state in READY_MERGE_STATES,
+    and every check in the statusCheckRollup green — required or not.
+    """
     data = json.loads(payload)
     records: list[ReadyPullRequestRecord] = []
     for item in data:
@@ -192,6 +220,8 @@ def parse_ready_pull_requests(payload: str, repo: str) -> list[ReadyPullRequestR
             continue
         merge_state = str(item.get("mergeStateStatus") or "")
         if merge_state not in READY_MERGE_STATES:
+            continue
+        if not has_only_green_checks(item.get("statusCheckRollup")):
             continue
         author = (item.get("author") or {}).get("login")
         url = item.get("url")

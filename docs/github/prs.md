@@ -19,11 +19,15 @@ just github::prs::summaries::show merged
 ## Merge-ready pull requests
 
 `github::prs::ready` narrows the open list down to pull requests a maintainer
-can merge as-is: not a draft, no merge conflict, and GitHub reports the merge
-state as `CLEAN`, `UNSTABLE` (only non-required checks outstanding), or
-`HAS_HOOKS`. Pull requests that are `BEHIND`, `BLOCKED` (e.g. missing a
-required review), or conflicting are excluded. The output adds a
-`merge_state` column so the remaining judgement call stays visible.
+can merge as-is: not a draft, no merge conflict, GitHub reports the merge
+state as `CLEAN`, `UNSTABLE`, or `HAS_HOOKS`, **and every check is green** —
+success, neutral, or skipped. The last condition matters because
+`mergeStateStatus` only covers *required* checks: a repository without
+required checks reports `UNSTABLE` even while its CI is failing, so the
+listing additionally inspects the full check rollup and drops pull requests
+with failing or still-running checks. Pull requests that are `BEHIND` or
+`BLOCKED` (e.g. missing a required review) are excluded as well. The output
+keeps a `merge_state` column so the remaining judgement call stays visible.
 
 ## Deprecated aliases
 
