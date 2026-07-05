@@ -12,6 +12,7 @@ from just_submodules_hub.github_prs import (
     filter_managed_pull_requests,
     gh_pr_list_args,
     gh_search_args,
+    has_only_green_checks,
     is_missing_repository_error,
     parse_pull_request_payload,
     parse_ready_pull_requests,
@@ -119,7 +120,8 @@ def test_gh_pr_list_args_targets_the_repo() -> None:
     args = gh_pr_list_args("kitsuyui/ts-playground")
     assert args[:3] == ["gh", "pr", "list"]
     assert "kitsuyui/ts-playground" in args
-    assert "mergeStateStatus,mergeable" in args[-1] or "mergeStateStatus" in args[-1]
+    assert "mergeStateStatus" in args[-1]
+    assert "statusCheckRollup" in args[-1]
 
 
 def test_parse_ready_pull_requests_keeps_only_mergeable_green_prs() -> None:
@@ -137,7 +139,32 @@ def test_parse_ready_pull_requests_keeps_only_mergeable_green_prs() -> None:
     "isDraft": false,
     "mergeStateStatus": "UNSTABLE",
     "mergeable": "MERGEABLE",
+    "statusCheckRollup": [
+      {"name": "test", "conclusion": "SUCCESS"},
+      {"context": "octocov", "state": "SUCCESS"}
+    ],
     "url": "https://example.com/pr/2"
+  },
+  {
+    "author": {"login": "kitsuyui"},
+    "isDraft": false,
+    "mergeStateStatus": "UNSTABLE",
+    "mergeable": "MERGEABLE",
+    "statusCheckRollup": [
+      {"name": "test", "conclusion": "SUCCESS"},
+      {"name": "deploy", "conclusion": "FAILURE"}
+    ],
+    "url": "https://example.com/pr/6"
+  },
+  {
+    "author": {"login": "kitsuyui"},
+    "isDraft": false,
+    "mergeStateStatus": "UNSTABLE",
+    "mergeable": "MERGEABLE",
+    "statusCheckRollup": [
+      {"name": "test", "status": "IN_PROGRESS", "conclusion": ""}
+    ],
+    "url": "https://example.com/pr/7"
   },
   {
     "author": {"login": "kitsuyui"},
@@ -167,6 +194,30 @@ def test_parse_ready_pull_requests_keeps_only_mergeable_green_prs() -> None:
         "https://example.com/pr/1",
         "https://example.com/pr/2",
     ]
+
+
+def test_has_only_green_checks_accepts_green_and_empty_rollups() -> None:
+    assert has_only_green_checks(None)
+    assert has_only_green_checks([])
+    assert has_only_green_checks(
+        [
+            {"name": "test", "conclusion": "SUCCESS"},
+            {"name": "lint", "conclusion": "NEUTRAL"},
+            {"name": "optional", "conclusion": "SKIPPED"},
+            {"context": "octocov", "state": "SUCCESS"},
+        ],
+    )
+
+
+def test_has_only_green_checks_rejects_failing_pending_and_cancelled() -> None:
+    assert not has_only_green_checks([{"name": "test", "conclusion": "FAILURE"}])
+    assert not has_only_green_checks([{"context": "ci", "state": "ERROR"}])
+    assert not has_only_green_checks([{"name": "test", "conclusion": "CANCELLED"}])
+    # A CheckRun that has not completed yet has an empty conclusion.
+    assert not has_only_green_checks(
+        [{"name": "test", "status": "IN_PROGRESS", "conclusion": ""}],
+    )
+    assert not has_only_green_checks([{"context": "ci", "state": "PENDING"}])
 
 
 def test_render_ready_pull_requests_tsv_sorts_and_dedupes() -> None:
