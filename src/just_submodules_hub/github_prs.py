@@ -133,3 +133,86 @@ def render_pull_requests_tsv(records: list[PullRequestRecord]) -> str:
     lines = ["repo\tauthor\turl"]
     lines.extend(f"{record.repo}\t{record.author}\t{record.url}" for record in records)
     return "\n".join(lines) + "\n"
+
+
+# GitHub's mergeStateStatus values that mean "a maintainer can merge this now".
+# CLEAN: mergeable, required checks green, branch up to date.
+# UNSTABLE: mergeable and required checks green, but some non-required
+#           checks are failing or pending.
+# HAS_HOOKS: mergeable with passing checks; the repository has pre-receive hooks.
+# Everything else (BEHIND, BLOCKED, DIRTY, DRAFT, UNKNOWN) needs work first.
+READY_MERGE_STATES = {"CLEAN", "UNSTABLE", "HAS_HOOKS"}
+
+
+@dataclass(frozen=True, order=True)
+class ReadyPullRequestRecord:
+    """An open pull request that can be merged as-is."""
+
+    repo: str
+    author: str
+    merge_state: str
+    url: str
+
+
+def gh_pr_list_args(repo: str) -> list[str]:
+    """Build the ``gh pr list`` argument list to inspect mergeability."""
+    return [
+        "gh",
+        "pr",
+        "list",
+        "--repo",
+        repo,
+        "--state",
+        "open",
+        "--limit",
+        "200",
+        "--json",
+        "author,isDraft,mergeStateStatus,mergeable,url",
+    ]
+
+
+def is_missing_repository_error(message: str) -> bool:
+    """Return True when *message* says the repository has no PR support.
+
+    Managed submodules can point at wikis or other checkouts that GitHub's
+    pull-request API cannot resolve as repositories. Those should be skipped
+    with a warning instead of aborting the whole listing.
+    """
+    return "could not resolve to a repository" in message.lower()
+
+
+def parse_ready_pull_requests(payload: str, repo: str) -> list[ReadyPullRequestRecord]:
+    """Parse a ``gh pr list`` JSON *payload* and keep only merge-ready PRs."""
+    data = json.loads(payload)
+    records: list[ReadyPullRequestRecord] = []
+    for item in data:
+        if item.get("isDraft"):
+            continue
+        if str(item.get("mergeable") or "") != "MERGEABLE":
+            continue
+        merge_state = str(item.get("mergeStateStatus") or "")
+        if merge_state not in READY_MERGE_STATES:
+            continue
+        author = (item.get("author") or {}).get("login")
+        url = item.get("url")
+        if not (author and url):
+            continue
+        records.append(
+            ReadyPullRequestRecord(
+                repo=repo,
+                author=author,
+                merge_state=merge_state,
+                url=url,
+            ),
+        )
+    return records
+
+
+def render_ready_pull_requests_tsv(records: list[ReadyPullRequestRecord]) -> str:
+    """Render *records* as a TSV string with a header row."""
+    lines = ["repo\tauthor\tmerge_state\turl"]
+    lines.extend(
+        f"{record.repo}\t{record.author}\t{record.merge_state}\t{record.url}"
+        for record in sorted(set(records))
+    )
+    return "\n".join(lines) + "\n"
