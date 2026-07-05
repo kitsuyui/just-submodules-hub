@@ -7,11 +7,16 @@ import just_submodules_hub.github_prs as github_prs
 from just_submodules_hub.github_prs import (
     PullRequestRecord,
     PullRequestState,
+    ReadyPullRequestRecord,
     build_pull_request_record,
     filter_managed_pull_requests,
+    gh_pr_list_args,
     gh_search_args,
+    is_missing_repository_error,
     parse_pull_request_payload,
+    parse_ready_pull_requests,
     render_pull_requests_tsv,
+    render_ready_pull_requests_tsv,
     validate_state,
 )
 
@@ -108,3 +113,79 @@ def test_validate_state_rejects_unknown_state() -> None:
         assert str(exc) == "STATE must be one of: open, closed, merged, all"
     else:
         raise AssertionError("validate_state should reject unknown state")
+
+
+def test_gh_pr_list_args_targets_the_repo() -> None:
+    args = gh_pr_list_args("kitsuyui/ts-playground")
+    assert args[:3] == ["gh", "pr", "list"]
+    assert "kitsuyui/ts-playground" in args
+    assert "mergeStateStatus,mergeable" in args[-1] or "mergeStateStatus" in args[-1]
+
+
+def test_parse_ready_pull_requests_keeps_only_mergeable_green_prs() -> None:
+    payload = """
+[
+  {
+    "author": {"login": "app/renovate"},
+    "isDraft": false,
+    "mergeStateStatus": "CLEAN",
+    "mergeable": "MERGEABLE",
+    "url": "https://example.com/pr/1"
+  },
+  {
+    "author": {"login": "kitsuyui"},
+    "isDraft": false,
+    "mergeStateStatus": "UNSTABLE",
+    "mergeable": "MERGEABLE",
+    "url": "https://example.com/pr/2"
+  },
+  {
+    "author": {"login": "kitsuyui"},
+    "isDraft": true,
+    "mergeStateStatus": "CLEAN",
+    "mergeable": "MERGEABLE",
+    "url": "https://example.com/pr/3"
+  },
+  {
+    "author": {"login": "kitsuyui"},
+    "isDraft": false,
+    "mergeStateStatus": "DIRTY",
+    "mergeable": "CONFLICTING",
+    "url": "https://example.com/pr/4"
+  },
+  {
+    "author": {"login": "kitsuyui"},
+    "isDraft": false,
+    "mergeStateStatus": "BLOCKED",
+    "mergeable": "MERGEABLE",
+    "url": "https://example.com/pr/5"
+  }
+]
+"""
+    records = parse_ready_pull_requests(payload, "kitsuyui/ts-playground")
+    assert [record.url for record in records] == [
+        "https://example.com/pr/1",
+        "https://example.com/pr/2",
+    ]
+
+
+def test_render_ready_pull_requests_tsv_sorts_and_dedupes() -> None:
+    record = ReadyPullRequestRecord(
+        repo="kitsuyui/ts-playground",
+        author="kitsuyui",
+        merge_state="CLEAN",
+        url="https://example.com/pr/1",
+    )
+    output = render_ready_pull_requests_tsv([record, record])
+    assert output == (
+        "repo\tauthor\tmerge_state\turl\n"
+        "kitsuyui/ts-playground\tkitsuyui\tCLEAN\thttps://example.com/pr/1\n"
+    )
+
+
+def test_is_missing_repository_error_matches_gh_graphql_message() -> None:
+    assert is_missing_repository_error(
+        "GraphQL: Could not resolve to a Repository with the name "
+        "'kitsuyui/example.wiki'. (repository)",
+    )
+    assert not is_missing_repository_error("gh: rate limit exceeded")

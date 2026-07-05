@@ -7,5 +7,10 @@ list STATE="open":
   #!/bin/sh
   cd "{{invocation_directory()}}" && "{{github_prs_source_dir}}/../../scripts/github/list-managed-prs.sh" "{{STATE}}"
 
+# List open pull requests that can be merged as-is (mergeable, checks green).
+ready:
+  #!/bin/sh
+  cd "{{invocation_directory()}}" && "{{github_prs_source_dir}}/../../scripts/github/list-ready-prs.sh"
+
 # Deprecated compatibility alias. Prefer summaries::show.
 alias summary := summaries::show
