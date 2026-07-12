@@ -328,6 +328,27 @@ def test_read_plan_from_stdin_invalid_json_exits_2(
     assert "not-valid-json" in captured.err
 
 
+@pytest.mark.parametrize("missing_field", ["status", "action"])
+def test_read_plan_from_stdin_missing_required_field_exits_2(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    missing_field: str,
+) -> None:
+    """A JSONL row missing any required PlanRecord field must be rejected."""
+    payload = dataclasses.asdict(_make_plan_record())
+    del payload[missing_field]
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload) + "\n"))
+
+    with pytest.raises(SystemExit) as exc_info:
+        apply_sync.read_plan_from_stdin()
+
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "line 1" in captured.err
+    assert "missing required fields" in captured.err
+    assert missing_field in captured.err
+
+
 def test_main_without_from_plan_stdin_calls_plan_one(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
