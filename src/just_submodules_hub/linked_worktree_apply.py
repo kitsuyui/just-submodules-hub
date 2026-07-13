@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 
@@ -108,7 +109,21 @@ def read_plan_from_stdin() -> list[PlanRecord]:
                 file=sys.stderr,
             )
             raise SystemExit(2) from exc
-        records.append(PlanRecord(**{k: data.get(k, "") for k in FIELDS}))
+        if not isinstance(data, Mapping):
+            print(
+                f"line {lineno}: expected a JSON object: {line!r}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        missing = [field for field in FIELDS if field not in data]
+        if missing:
+            names = ", ".join(missing)
+            print(
+                f"line {lineno}: missing required fields: {names}: {line!r}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        records.append(PlanRecord(**{field: data[field] for field in FIELDS}))
     return records
 
 
