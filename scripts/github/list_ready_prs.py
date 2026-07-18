@@ -7,18 +7,22 @@ import argparse
 import shutil
 import subprocess
 import sys
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from just_submodules_hub.github_prs import (
+    ActionRequiredPullRequestRecord,
     ReadyPullRequestRecord,
     filter_managed_pull_requests,
     gh_pr_list_args,
     gh_search_args,
     is_missing_repository_error,
+    parse_action_required_pull_requests,
     parse_pull_request_payload,
     parse_ready_pull_requests,
+    render_action_required_pull_requests_tsv,
     render_ready_pull_requests_tsv,
 )
 from just_submodules_hub.gitmodules import managed_repo_owners, read_gitmodules_paths
@@ -32,6 +36,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--repo-root",
         default=".",
         help="repository root (default: current directory)",
+    )
+    parser.add_argument(
+        "--action-required",
+        action="store_true",
+        help="list PRs that need an external action instead of merge-ready PRs",
+    )
+    parser.add_argument(
+        "--operator-required",
+        action="store_true",
+        help="list only action-required PRs that need an operator decision",
     )
     return parser
 
@@ -58,8 +72,41 @@ def list_repository_pull_requests(
     )
 
 
+def parse_records(
+    payload: str,
+    repo: str,
+    *,
+    action_required: bool,
+) -> Sequence[ReadyPullRequestRecord | ActionRequiredPullRequestRecord]:
+    if action_required:
+        return parse_action_required_pull_requests(payload, repo)
+    return parse_ready_pull_requests(payload, repo)
+
+
+def render_records(
+    records: list[ReadyPullRequestRecord | ActionRequiredPullRequestRecord],
+    *,
+    action_required: bool,
+    operator_required: bool = False,
+) -> str:
+    if action_required:
+        action_records = [
+            record
+            for record in records
+            if isinstance(record, ActionRequiredPullRequestRecord)
+            and (not operator_required or record.operator_required)
+        ]
+        return render_action_required_pull_requests_tsv(
+            action_records,
+        )
+    return render_ready_pull_requests_tsv(
+        [record for record in records if isinstance(record, ReadyPullRequestRecord)],
+    )
+
+
 def main() -> int:
     args = build_parser().parse_args()
+    action_listing = args.action_required or args.operator_required
 
     ok, message = check_gh_auth()
     if not ok:
@@ -95,10 +142,16 @@ def main() -> int:
         },
     )
 
-    records: list[ReadyPullRequestRecord] = []
+    records: list[ReadyPullRequestRecord | ActionRequiredPullRequestRecord] = []
     worker_count = min(8, len(candidate_repos))
     if worker_count == 0:
-        sys.stdout.write(render_ready_pull_requests_tsv(records))
+        sys.stdout.write(
+            render_records(
+                records,
+                action_required=action_listing,
+                operator_required=args.operator_required,
+            ),
+        )
         return 0
 
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
@@ -117,9 +170,17 @@ def main() -> int:
                 continue
             print(message, file=sys.stderr)
             return 1
-        records.extend(parse_ready_pull_requests(proc.stdout, repo))
+        records.extend(
+            parse_records(proc.stdout, repo, action_required=action_listing),
+        )
 
-    sys.stdout.write(render_ready_pull_requests_tsv(records))
+    sys.stdout.write(
+        render_records(
+            records,
+            action_required=action_listing,
+            operator_required=args.operator_required,
+        ),
+    )
     return 0
 
 

@@ -5,17 +5,23 @@ import pytest
 
 import just_submodules_hub.github_prs as github_prs
 from just_submodules_hub.github_prs import (
+    ActionRequiredPullRequestRecord,
     PullRequestRecord,
     PullRequestState,
     ReadyPullRequestRecord,
+    action_required_reasons,
     build_pull_request_record,
     filter_managed_pull_requests,
     gh_pr_list_args,
     gh_search_args,
+    has_failed_checks,
     has_only_green_checks,
+    has_pending_checks,
     is_missing_repository_error,
+    parse_action_required_pull_requests,
     parse_pull_request_payload,
     parse_ready_pull_requests,
+    render_action_required_pull_requests_tsv,
     render_pull_requests_tsv,
     render_ready_pull_requests_tsv,
     validate_state,
@@ -218,6 +224,99 @@ def test_has_only_green_checks_rejects_failing_pending_and_cancelled() -> None:
         [{"name": "test", "status": "IN_PROGRESS", "conclusion": ""}],
     )
     assert not has_only_green_checks([{"context": "ci", "state": "PENDING"}])
+
+
+def test_check_state_helpers_distinguish_failed_pending_and_green() -> None:
+    assert has_failed_checks([{"name": "test", "conclusion": "FAILURE"}])
+    assert not has_failed_checks([{"name": "test", "conclusion": ""}])
+    assert has_pending_checks([{"name": "test", "conclusion": ""}])
+    assert has_pending_checks([{"context": "ci", "state": "PENDING"}])
+    assert not has_pending_checks([{"name": "test", "conclusion": "SUCCESS"}])
+
+
+def test_action_required_reasons_classifies_stable_blockers() -> None:
+    cases: list[tuple[dict[str, object], tuple[str, ...]]] = [
+        ({"isDraft": True}, ("draft",)),
+        (
+            {"mergeable": "CONFLICTING", "mergeStateStatus": "DIRTY"},
+            ("merge_conflict",),
+        ),
+        (
+            {"reviewDecision": "CHANGES_REQUESTED"},
+            ("changes_requested",),
+        ),
+        ({"reviewDecision": "REVIEW_REQUIRED"}, ("review_required",)),
+        (
+            {"statusCheckRollup": [{"conclusion": "FAILURE"}]},
+            ("checks_failed",),
+        ),
+        ({"mergeStateStatus": "BEHIND"}, ("branch_behind",)),
+        ({"mergeStateStatus": "BLOCKED"}, ("repository_policy",)),
+    ]
+    for item, reasons in cases:
+        assert action_required_reasons(item) == reasons
+
+
+def test_action_required_reasons_excludes_states_that_can_settle() -> None:
+    assert action_required_reasons({"mergeable": "UNKNOWN"}) == ()
+    assert (
+        action_required_reasons(
+            {
+                "mergeStateStatus": "BLOCKED",
+                "statusCheckRollup": [{"status": "IN_PROGRESS", "conclusion": ""}],
+            },
+        )
+        == ()
+    )
+
+
+def test_parse_and_render_action_required_pull_requests() -> None:
+    payload = """
+[
+  {
+    "author": {"login": "kitsuyui"},
+    "isDraft": true,
+    "mergeStateStatus": "DIRTY",
+    "mergeable": "CONFLICTING",
+    "url": "https://example.com/pr/1"
+  },
+  {
+    "author": {"login": "app/renovate"},
+    "mergeStateStatus": "UNSTABLE",
+    "mergeable": "MERGEABLE",
+    "statusCheckRollup": [{"status": "IN_PROGRESS", "conclusion": ""}],
+    "url": "https://example.com/pr/2"
+  }
+]
+"""
+    records = parse_action_required_pull_requests(
+        payload,
+        "kitsuyui/ts-playground",
+    )
+    assert records == [
+        ActionRequiredPullRequestRecord(
+            repo="kitsuyui/ts-playground",
+            author="kitsuyui",
+            reasons=("draft", "merge_conflict"),
+            url="https://example.com/pr/1",
+        ),
+    ]
+    assert render_action_required_pull_requests_tsv(records) == (
+        "repo\tauthor\treasons\turl\n"
+        "kitsuyui/ts-playground\tkitsuyui\tdraft,merge_conflict\t"
+        "https://example.com/pr/1\n"
+    )
+    assert records[0].operator_required
+
+
+def test_action_required_record_distinguishes_automatable_repair() -> None:
+    record = ActionRequiredPullRequestRecord(
+        repo="kitsuyui/ts-playground",
+        author="kitsuyui",
+        reasons=("merge_conflict", "checks_failed"),
+        url="https://example.com/pr/2",
+    )
+    assert not record.operator_required
 
 
 def test_render_ready_pull_requests_tsv_sorts_and_dedupes() -> None:
