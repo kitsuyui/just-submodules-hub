@@ -152,6 +152,21 @@ READY_MERGE_STATES = {"CLEAN", "UNSTABLE", "HAS_HOOKS"}
 # CANCELLED, TIMED_OUT, pending/queued runs — keeps the PR out of the
 # ready list until it settles.
 GREEN_CHECK_OUTCOMES = {"SUCCESS", "NEUTRAL", "SKIPPED"}
+FAILED_CHECK_OUTCOMES = {
+    "ACTION_REQUIRED",
+    "CANCELLED",
+    "ERROR",
+    "FAILURE",
+    "STALE",
+    "STARTUP_FAILURE",
+    "TIMED_OUT",
+}
+OPERATOR_REQUIRED_REASONS = {
+    "changes_requested",
+    "draft",
+    "repository_policy",
+    "review_required",
+}
 
 
 def has_only_green_checks(rollup: list[dict] | None) -> bool:
@@ -168,6 +183,26 @@ def has_only_green_checks(rollup: list[dict] | None) -> bool:
     return True
 
 
+def check_outcomes(rollup: list[dict] | None) -> list[str]:
+    """Return normalized outcomes from a mixed check/status rollup."""
+    return [
+        str(item.get("conclusion") or item.get("state") or "").upper()
+        for item in rollup or []
+    ]
+
+
+def has_failed_checks(rollup: list[dict] | None) -> bool:
+    """Return True when a settled check requires a rerun or a code change."""
+    return any(outcome in FAILED_CHECK_OUTCOMES for outcome in check_outcomes(rollup))
+
+
+def has_pending_checks(rollup: list[dict] | None) -> bool:
+    """Return True when a check can still settle without intervention."""
+    return any(
+        outcome in {"", "EXPECTED", "PENDING"} for outcome in check_outcomes(rollup)
+    )
+
+
 @dataclass(frozen=True, order=True)
 class ReadyPullRequestRecord:
     """An open pull request that can be merged as-is."""
@@ -176,6 +211,21 @@ class ReadyPullRequestRecord:
     author: str
     merge_state: str
     url: str
+
+
+@dataclass(frozen=True, order=True)
+class ActionRequiredPullRequestRecord:
+    """An open pull request that cannot become ready without an external action."""
+
+    repo: str
+    author: str
+    reasons: tuple[str, ...]
+    url: str
+
+    @property
+    def operator_required(self) -> bool:
+        """Whether generic automation should leave the blocker to an operator."""
+        return bool(set(self.reasons) & OPERATOR_REQUIRED_REASONS)
 
 
 def gh_pr_list_args(repo: str) -> list[str]:
@@ -191,7 +241,7 @@ def gh_pr_list_args(repo: str) -> list[str]:
         "--limit",
         "200",
         "--json",
-        "author,isDraft,mergeStateStatus,mergeable,statusCheckRollup,url",
+        "author,isDraft,mergeStateStatus,mergeable,reviewDecision,statusCheckRollup,url",
     ]
 
 
@@ -238,11 +288,86 @@ def parse_ready_pull_requests(payload: str, repo: str) -> list[ReadyPullRequestR
     return records
 
 
+def action_required_reasons(item: dict) -> tuple[str, ...]:
+    """Return stable blockers that need an observable external action.
+
+    Pending checks and temporarily unknown mergeability are omitted because
+    they may settle by themselves. The external actor can be human or
+    automation; this package deliberately has no knowledge of queue ownership.
+    """
+    reasons: list[str] = []
+    if item.get("isDraft"):
+        reasons.append("draft")
+
+    mergeable = str(item.get("mergeable") or "")
+    merge_state = str(item.get("mergeStateStatus") or "")
+    if mergeable == "CONFLICTING" or merge_state == "DIRTY":
+        reasons.append("merge_conflict")
+
+    review_decision = str(item.get("reviewDecision") or "")
+    if review_decision == "CHANGES_REQUESTED":
+        reasons.append("changes_requested")
+    elif review_decision == "REVIEW_REQUIRED":
+        reasons.append("review_required")
+
+    rollup = item.get("statusCheckRollup")
+    failed_checks = has_failed_checks(rollup)
+    pending_checks = has_pending_checks(rollup)
+    if failed_checks:
+        reasons.append("checks_failed")
+
+    if merge_state == "BEHIND":
+        reasons.append("branch_behind")
+    elif (
+        merge_state == "BLOCKED"
+        and review_decision not in {"CHANGES_REQUESTED", "REVIEW_REQUIRED"}
+        and not failed_checks
+        and not pending_checks
+    ):
+        reasons.append("repository_policy")
+
+    return tuple(reasons)
+
+
+def parse_action_required_pull_requests(
+    payload: str,
+    repo: str,
+) -> list[ActionRequiredPullRequestRecord]:
+    """Parse open PRs and keep only those needing an external action."""
+    records: list[ActionRequiredPullRequestRecord] = []
+    for item in json.loads(payload):
+        reasons = action_required_reasons(item)
+        author = (item.get("author") or {}).get("login")
+        url = item.get("url")
+        if reasons and author and url:
+            records.append(
+                ActionRequiredPullRequestRecord(
+                    repo=repo,
+                    author=author,
+                    reasons=reasons,
+                    url=url,
+                ),
+            )
+    return records
+
+
 def render_ready_pull_requests_tsv(records: list[ReadyPullRequestRecord]) -> str:
     """Render *records* as a TSV string with a header row."""
     lines = ["repo\tauthor\tmerge_state\turl"]
     lines.extend(
         f"{record.repo}\t{record.author}\t{record.merge_state}\t{record.url}"
+        for record in sorted(set(records))
+    )
+    return "\n".join(lines) + "\n"
+
+
+def render_action_required_pull_requests_tsv(
+    records: list[ActionRequiredPullRequestRecord],
+) -> str:
+    """Render action-required records as a sorted, deduplicated TSV string."""
+    lines = ["repo\tauthor\treasons\turl"]
+    lines.extend(
+        f"{record.repo}\t{record.author}\t{','.join(record.reasons)}\t{record.url}"
         for record in sorted(set(records))
     )
     return "\n".join(lines) + "\n"
