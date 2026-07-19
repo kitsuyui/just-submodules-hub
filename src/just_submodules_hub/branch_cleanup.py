@@ -121,6 +121,12 @@ def linked_worktree_branches(repo: Path) -> frozenset[str]:
 
 def authenticated_login(repo: Path) -> str:
     """Return the login of the authenticated GitHub user."""
+    persona = run_gh(repo, ["persona-status"])
+    if persona.returncode == 0:
+        for line in lines(persona):
+            key, separator, value = line.partition("=")
+            if key == "github_user" and separator and value:
+                return value
     proc = run_gh(repo, ["api", "user", "--jq", ".login"])
     if proc.returncode != 0:
         raise RuntimeError(
