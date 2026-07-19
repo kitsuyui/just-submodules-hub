@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import threading
 from pathlib import Path
 
 import pytest
@@ -131,3 +132,49 @@ def test_cleanup_records_plans_only_retire_candidates(
             "dry-run",
         ),
     ]
+
+
+def test_cleanup_records_plans_worktrees_concurrently(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    worktrees = [
+        safety.WorktreeRecord(str(root), "1", "main", "no", "no", "no", ""),
+        safety.WorktreeRecord(
+            str(tmp_path / "first"), "2", "first", "no", "no", "no", ""
+        ),
+        safety.WorktreeRecord(
+            str(tmp_path / "second"), "3", "second", "no", "no", "no", ""
+        ),
+    ]
+    barrier = threading.Barrier(2, timeout=1)
+    monkeypatch.setattr(safety, "default_branch", lambda root: "main")
+    monkeypatch.setattr(safety, "list_worktrees", lambda root: worktrees)
+
+    def cleanup_one(
+        root: Path,
+        worktree: safety.WorktreeRecord,
+        default: str,
+        **kwargs: object,
+    ) -> list[safety.CleanupRecord]:
+        barrier.wait()
+        return [
+            safety.CleanupRecord(
+                worktree.path, worktree.branch, "planned", "remove", "dry-run"
+            )
+        ]
+
+    monkeypatch.setattr(safety, "_cleanup_one_worktree", cleanup_one)
+
+    records = safety.cleanup_records(
+        root,
+        path_glob="*",
+        apply=False,
+        drop_branch=False,
+        include_skipped=False,
+        jobs=2,
+    )
+
+    assert [record.branch for record in records] == ["first", "second"]

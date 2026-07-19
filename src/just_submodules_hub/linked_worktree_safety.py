@@ -7,6 +7,7 @@ import fnmatch
 import re
 import stat
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -21,7 +22,7 @@ from just_submodules_hub.linked_worktree_planning import (
     run_git,
     summarize,
 )
-from just_submodules_hub.submodule_batch import print_records
+from just_submodules_hub.submodule_batch import positive_int, print_records
 
 HOOK_FIELDS = ("status", "path", "message")
 RESET_FIELDS = ("path", "branch", "status", "action", "backup", "target", "message")
@@ -307,11 +308,13 @@ def cleanup_records(
     apply: bool,
     drop_branch: bool,
     include_skipped: bool,
+    jobs: int = 8,
 ) -> list[CleanupRecord]:
     """Collect cleanup records for all matched linked worktrees under *root*."""
     resolved_default = default_branch(root)
     rows: list[CleanupRecord] = []
     root_resolved = root.resolve()
+    matched: list[WorktreeRecord] = []
     for worktree in list_worktrees(root):
         if Path(worktree.path).resolve() == root_resolved:
             continue
@@ -327,16 +330,29 @@ def cleanup_records(
                     ),
                 )
             continue
-        rows.extend(
-            _cleanup_one_worktree(
-                root,
-                worktree,
-                resolved_default,
-                apply=apply,
-                drop_branch=drop_branch,
-                include_skipped=include_skipped,
-            ),
+        matched.append(worktree)
+
+    def cleanup_one(worktree: WorktreeRecord) -> list[CleanupRecord]:
+        return _cleanup_one_worktree(
+            root,
+            worktree,
+            resolved_default,
+            apply=apply,
+            drop_branch=drop_branch,
+            include_skipped=include_skipped,
         )
+
+    if apply:
+        for worktree in matched:
+            rows.extend(cleanup_one(worktree))
+        return rows
+    worker_count = min(jobs, len(matched))
+    if worker_count == 0:
+        return rows
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        planned = list(executor.map(cleanup_one, matched))
+    for records in planned:
+        rows.extend(records)
     return rows
 
 
@@ -369,6 +385,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     cleanup.add_argument("--apply", action="store_true")
     cleanup.add_argument("--drop-branch", action="store_true")
     cleanup.add_argument("--include-skipped", action="store_true")
+    cleanup.add_argument("--jobs", type=positive_int, default=8)
     cleanup.add_argument("--format", choices=("table", "tsv", "jsonl"), default="table")
 
     return parser.parse_args(argv)
@@ -400,6 +417,7 @@ def main(argv: list[str] | None = None) -> int:
             apply=args.apply,
             drop_branch=args.drop_branch,
             include_skipped=args.include_skipped,
+            jobs=args.jobs,
         )
         fields = CLEANUP_FIELDS
     print_records(records, fields, args.format)
