@@ -328,6 +328,59 @@ def test_remote_branches_reads_actual_remote_heads(
     assert cleanup.remote_branches(tmp_path, "origin") == ("main", "feature/merged")
 
 
+def test_authenticated_login_uses_guarded_persona_status(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run_gh(repo: Path, args: list[str]) -> object:
+        calls.append(args)
+        return type(
+            "Proc",
+            (),
+            {
+                "returncode": 0,
+                "stdout": "persona=kitsuyui\ngithub_user=kitsuyui\nverified=true\n",
+                "stderr": "",
+            },
+        )()
+
+    monkeypatch.setattr(cleanup, "run_gh", fake_run_gh)
+
+    assert cleanup.authenticated_login(tmp_path) == "kitsuyui"
+    assert calls == [["persona-status"]]
+
+
+def test_authenticated_login_falls_back_to_standard_gh_api(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run_gh(repo: Path, args: list[str]) -> object:
+        calls.append(args)
+        if args == ["persona-status"]:
+            return type(
+                "Proc",
+                (),
+                {"returncode": 1, "stdout": "", "stderr": "unknown command"},
+            )()
+        return type(
+            "Proc",
+            (),
+            {"returncode": 0, "stdout": "standard-user\n", "stderr": ""},
+        )()
+
+    monkeypatch.setattr(cleanup, "run_gh", fake_run_gh)
+
+    assert cleanup.authenticated_login(tmp_path) == "standard-user"
+    assert calls == [
+        ["persona-status"],
+        ["api", "user", "--jq", ".login"],
+    ]
+
+
 def test_cleanup_repo_skips_repositories_without_pr_api(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
