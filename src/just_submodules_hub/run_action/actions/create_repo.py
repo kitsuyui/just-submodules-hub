@@ -1,4 +1,4 @@
-"""Action handlers: create a new GitHub repository and add it as a submodule."""
+"""Action handlers for creating a new GitHub repository."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 
-from just_submodules_hub.run_action.registry import action, dispatch
+from just_submodules_hub.run_action.registry import action
 
 
 def _create_repo(args: list[str], visibility: str) -> int:
@@ -37,17 +37,19 @@ def _create_repo(args: list[str], visibility: str) -> int:
         if create_proc.returncode != 0:
             return create_proc.returncode
 
-    # Delegate to add-repo via registry dispatch (Python-to-Python, no shell round-trip)
-    return dispatch("add-repo", [f"https://github.com/{repo}"])
+    # The calling Just recipe runs add-repo as a second hook-wrapped action.
+    # Keeping the two actions separate ensures consumer before/after-add-repo
+    # hooks apply identity and local submodule policy to the new checkout.
+    return 0
 
 
 @action("create-public-repo")
 def create_public_repo(args: list[str]) -> int:
-    """Create a new public GitHub repository and register it as a submodule."""
+    """Create a new public GitHub repository."""
     return _create_repo(args, "public")
 
 
 @action("create-private-repo")
 def create_private_repo(args: list[str]) -> int:
-    """Create a new private GitHub repository and register it as a submodule."""
+    """Create a new private GitHub repository."""
     return _create_repo(args, "private")

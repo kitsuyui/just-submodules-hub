@@ -61,6 +61,13 @@ Hooks fire for recipes that invoke `run-with-hooks.sh`. As of this writing that 
 - `repo::linked-worktrees::sync::plan` / `::sync::apply`
 - `github::repos::list` / `::owner::list` / `::public::create` / `::private::create` (actions: `list-github-repos`, `list-github-repos-owner`, `create-public-repo`, `create-private-repo`)
 
+The repository create recipes are composite operations. After the
+`create-public-repo` or `create-private-repo` action succeeds, they invoke
+`add-repo` through the same wrapper. Both the create hooks and the
+`before-add-repo` / `after-add-repo` hooks therefore run. This keeps identity
+selection and checkout-local setup consistent without requiring an intermediate
+clone outside the hub.
+
 Hooks do **not** fire for the following recipes, which call their backing scripts directly without the wrapper:
 
 - `github::prs::list` and `github::prs::summaries::show`

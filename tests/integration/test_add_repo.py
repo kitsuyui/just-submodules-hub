@@ -42,6 +42,7 @@ exit 0
     assert proc.returncode == 0, proc.stderr
     calls = calls_file.read_text(encoding="utf-8").splitlines()
     assert calls == [
+        r"config --get-regexp ^url\..*\.insteadOf$",
         "submodule add -- git@github.com:example-owner/example-repo.git repo/github.com/example-owner/example-repo",
         "config -f .gitmodules submodule.repo/github.com/example-owner/example-repo.shallow true",
         "config --local submodule.repo/github.com/example-owner/example-repo.ignore all",

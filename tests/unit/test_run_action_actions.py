@@ -644,6 +644,7 @@ def test_add_repo_calls_git_submodule_add(
         return CompletedProcess(cmd, 0)
 
     monkeypatch.setattr(add_repo_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(add_repo_module, "_clone_url_rewrite_args", lambda _url: [])
 
     fn = reg._REGISTRY["add-repo"]
     rc = fn(["https://github.com/owner/myrepo"])
@@ -674,6 +675,7 @@ def test_add_repo_accepts_ssh_url(
         return CompletedProcess(cmd, 0)
 
     monkeypatch.setattr(add_repo_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(add_repo_module, "_clone_url_rewrite_args", lambda _url: [])
 
     fn = reg._REGISTRY["add-repo"]
     rc = fn(["git@github.com:owner/myrepo.git"])
@@ -702,6 +704,7 @@ def test_add_repo_rolls_back_when_shallow_config_fails(
         return CompletedProcess(cmd, 1 if cmd == shallow_cmd else 0)
 
     monkeypatch.setattr(add_repo_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(add_repo_module, "_clone_url_rewrite_args", lambda _url: [])
     monkeypatch.chdir(tmp_path)
 
     fn = reg._REGISTRY["add-repo"]
@@ -748,6 +751,7 @@ def test_add_repo_rolls_back_when_ignore_config_fails(
         return 7
 
     monkeypatch.setattr(add_repo_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(add_repo_module, "_clone_url_rewrite_args", lambda _url: [])
     monkeypatch.setattr(
         add_repo_module,
         "set_submodule_ignore_value",
@@ -771,6 +775,28 @@ def test_add_repo_rolls_back_when_ignore_config_fails(
             "--remove-section",
             f"submodule.{repo_dir}",
         ],
+    ]
+
+
+def test_clone_url_rewrite_args_forwards_longest_matching_rule(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[str]:
+        stdout = "\n".join(
+            [
+                "url.ssh://broad.example/.insteadof git@github.com:",
+                ("url.ssh://owner.example/.insteadof git@github.com:owner/"),
+            ],
+        )
+        return CompletedProcess(cmd, 0, stdout=stdout)
+
+    monkeypatch.setattr(add_repo_module.subprocess, "run", fake_run)
+
+    assert add_repo_module._clone_url_rewrite_args(
+        "git@github.com:owner/myrepo.git",
+    ) == [
+        "-c",
+        "url.ssh://owner.example/.insteadof=git@github.com:owner/",
     ]
 
 
@@ -1009,11 +1035,9 @@ def test_create_private_repo_requires_repo(
     assert "REPO is required" in capsys.readouterr().err
 
 
-def test_create_public_repo_creates_and_adds(
+def test_create_public_repo_creates_remote_only(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # create_repo_module.subprocess is the same object as add_repo.subprocess (shared),
-    # so we patch subprocess.run once and track all calls.
     all_calls: list[list[str]] = []
 
     def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
@@ -1033,9 +1057,9 @@ def test_create_public_repo_creates_and_adds(
     create_calls = [c for c in all_calls if len(c) > 2 and c[2] == "create"]
     assert create_calls, f"No create call found in: {all_calls}"
     assert "--public" in create_calls[0]
-    # git submodule add was called (add-repo dispatched internally)
+    # The Just recipe invokes add-repo separately so its hooks are preserved.
     submodule_calls = [c for c in all_calls if "submodule" in c]
-    assert submodule_calls
+    assert not submodule_calls
 
 
 # ---------- install/reset/cleanup-linked-worktrees ----------
