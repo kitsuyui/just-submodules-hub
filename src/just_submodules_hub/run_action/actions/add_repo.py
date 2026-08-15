@@ -37,6 +37,35 @@ def _remove_path_if_exists(path: Path) -> None:
         path.unlink()
 
 
+def _clone_url_rewrite_args(repo_url: str) -> list[str]:
+    """Return an explicit ``git -c`` URL rewrite for a child clone.
+
+    Repository-local ``url.*.insteadOf`` configuration is not reliably
+    propagated by every Git version from ``git submodule add`` to its child
+    clone. Forward the longest matching rule explicitly while keeping the
+    portable URL as the argument recorded in ``.gitmodules``.
+    """
+    proc = subprocess.run(
+        ["git", "config", "--get-regexp", r"^url\..*\.insteadOf$"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode not in {0, 1}:
+        return []
+
+    matches: list[tuple[int, str, str]] = []
+    for line in (proc.stdout or "").splitlines():
+        key, separator, value = line.partition(" ")
+        if separator and value and repo_url.startswith(value):
+            matches.append((len(value), key, value))
+    if not matches:
+        return []
+
+    _, key, value = max(matches, key=lambda match: match[0])
+    return ["-c", f"{key}={value}"]
+
+
 def _rollback_added_submodule(repo_dir: str) -> None:
     """Remove the submodule state created by a failed multi-step add."""
     subprocess.run(
@@ -86,8 +115,17 @@ def add_repo(args: list[str]) -> int:
     if modules_dir.is_dir() and not Path(repo_dir).is_dir():
         shutil.rmtree(modules_dir)
 
+    clone_rewrite_args = _clone_url_rewrite_args(repo_url)
     proc = subprocess.run(
-        ["git", "submodule", "add", "--", repo_url, repo_dir],
+        [
+            "git",
+            *clone_rewrite_args,
+            "submodule",
+            "add",
+            "--",
+            repo_url,
+            repo_dir,
+        ],
         check=False,
     )
     if proc.returncode != 0:
