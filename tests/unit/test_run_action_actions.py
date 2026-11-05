@@ -960,6 +960,95 @@ def test_commit_submodule_pointers_commits_changed(
     assert "My commit message" in commit_calls[0]
 
 
+def test_commit_submodule_pointers_selected_targets_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        if "--quiet" in cmd:
+            return CompletedProcess(cmd, 1)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(
+        commit_submodule_pointers_module,
+        "read_gitmodules_paths",
+        lambda: ["repo/github.com/owner/first", "repo/github.com/owner/second"],
+    )
+    monkeypatch.setattr(
+        commit_submodule_pointers_module,
+        "_submodule_pointer_changed",
+        lambda p: True,
+    )
+    monkeypatch.setattr(commit_submodule_pointers_module.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["commit-submodule-pointers"]
+    rc = fn(["Update first", "owner/first"])
+    assert rc == 0
+    add_calls = [c for c in calls if c[:2] == ["git", "add"]]
+    assert add_calls == [["git", "add", "--", "repo/github.com/owner/first"]]
+    assert "repo/github.com/owner/second" not in add_calls[0]
+
+
+def test_commit_submodule_pointers_selected_target_without_change(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(
+        commit_submodule_pointers_module,
+        "read_gitmodules_paths",
+        lambda: ["repo/github.com/owner/first", "repo/github.com/owner/second"],
+    )
+    monkeypatch.setattr(
+        commit_submodule_pointers_module,
+        "_submodule_pointer_changed",
+        lambda p: p == "repo/github.com/owner/second",
+    )
+    monkeypatch.setattr(commit_submodule_pointers_module.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["commit-submodule-pointers"]
+    rc = fn(["Update first", "repo/github.com/owner/first"])
+    assert rc == 0
+    assert "No submodule pointer changes" in capsys.readouterr().out
+    assert calls == []
+
+
+def test_commit_submodule_pointers_rejects_unregistered_target(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> CompletedProcess[bytes]:
+        calls.append(cmd)
+        return CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(
+        commit_submodule_pointers_module,
+        "read_gitmodules_paths",
+        lambda: ["repo/github.com/owner/first"],
+    )
+    monkeypatch.setattr(
+        commit_submodule_pointers_module,
+        "_submodule_pointer_changed",
+        lambda p: True,
+    )
+    monkeypatch.setattr(commit_submodule_pointers_module.subprocess, "run", fake_run)
+
+    fn = reg._REGISTRY["commit-submodule-pointers"]
+    rc = fn(["Update other", "owner/other"])
+    assert rc == 1
+    assert "not a registered submodule" in capsys.readouterr().err
+    assert calls == []
+
+
 # ---------- list/plan/apply-linked-worktree-sync ----------
 
 

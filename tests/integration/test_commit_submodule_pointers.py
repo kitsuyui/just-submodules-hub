@@ -91,3 +91,97 @@ def test_commit_submodule_pointers_works_when_submodules_are_ignored_all(
         run(["git", "log", "-1", "--pretty=%s"], cwd=hub_repo)
         == "Update ignored submodule pointers"
     )
+
+
+def test_commit_submodule_pointers_selected_repo_leaves_other_pointers_unstaged(
+    tmp_path: Path,
+    hub_repo: Path,
+) -> None:
+    first_remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "first",
+        {"README.md": "before\n"},
+    )
+    second_remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "second",
+        {"README.md": "before\n"},
+    )
+    first_path = "repo/github.com/example-owner/first"
+    second_path = "repo/github.com/example-owner/second"
+    add_submodule(hub_repo, first_remote, first_path)
+    add_submodule(hub_repo, second_remote, second_path)
+    advance_remote(first_remote, "README.md", "after\n", "Update first remote")
+    advance_remote(second_remote, "README.md", "after\n", "Update second remote")
+
+    for submodule_path in (first_path, second_path):
+        sync_proc = subprocess.run(
+            [str(ACTION_SCRIPT), "sync-repo-default-branch", submodule_path],
+            cwd=str(hub_repo),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert sync_proc.returncode == 0, sync_proc.stderr
+
+    before_head = run(["git", "rev-parse", "HEAD"], cwd=hub_repo)
+    commit_proc = subprocess.run(
+        [
+            str(ACTION_SCRIPT),
+            "commit-submodule-pointers",
+            "Update first pointer",
+            "example-owner/first",
+        ],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert commit_proc.returncode == 0, commit_proc.stderr
+    assert (
+        run(["git", "log", "-1", "--pretty=%s"], cwd=hub_repo) == "Update first pointer"
+    )
+
+    committed_paths = run(
+        ["git", "diff", "--name-only", before_head, "HEAD"],
+        cwd=hub_repo,
+    ).splitlines()
+    assert committed_paths == [first_path]
+
+    staged_paths = run(["git", "diff", "--cached", "--name-only"], cwd=hub_repo)
+    assert staged_paths == ""
+    unstaged_paths = run(
+        ["git", "diff", "--name-only", "--ignore-submodules=none"],
+        cwd=hub_repo,
+    ).splitlines()
+    assert unstaged_paths == [second_path]
+
+
+def test_commit_submodule_pointers_rejects_unregistered_repo(
+    tmp_path: Path,
+    hub_repo: Path,
+) -> None:
+    remote = create_remote(
+        tmp_path,
+        "example-owner",
+        "registered",
+        {"README.md": "before\n"},
+    )
+    add_submodule(hub_repo, remote, "repo/github.com/example-owner/registered")
+
+    commit_proc = subprocess.run(
+        [
+            str(ACTION_SCRIPT),
+            "commit-submodule-pointers",
+            "Update missing pointer",
+            "example-owner/missing",
+        ],
+        cwd=str(hub_repo),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert commit_proc.returncode == 1
+    assert "not a registered submodule" in commit_proc.stderr

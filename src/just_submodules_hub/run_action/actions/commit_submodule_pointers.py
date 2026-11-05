@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import subprocess
+import sys
+from pathlib import Path
 
 from just_submodules_hub.gitmodules import read_gitmodules_paths
+from just_submodules_hub.repo_paths import resolve_repo_input
 from just_submodules_hub.run_action.registry import action
 
 
@@ -52,12 +55,47 @@ def _submodule_pointer_changed(repo_path: str) -> bool:
     return index_oid != worktree_oid
 
 
+def _select_submodule_paths(paths: list[str], targets: list[str]) -> list[str]:
+    """Return the ``.gitmodules`` paths selected by *targets*, in order.
+
+    Each target may be a submodule path, an ``owner/repo`` slug, a repository
+    URL, or an unambiguous short name. Raises ``ValueError`` when a target does
+    not resolve to a registered submodule.
+    """
+    hub_root = Path.cwd()
+    registered = set(paths)
+    selected: list[str] = []
+    for target in targets:
+        try:
+            resolved = resolve_repo_input(target, hub_root)
+        except FileNotFoundError as exc:
+            raise ValueError(str(exc)) from exc
+        if resolved not in registered:
+            raise ValueError(f"not a registered submodule: {target} -> {resolved}")
+        if resolved not in selected:
+            selected.append(resolved)
+    return selected
+
+
 @action("commit-submodule-pointers")
 def commit_submodule_pointers(args: list[str]) -> int:
-    """Stage and commit all submodule pointer changes with an optional message."""
-    message = args[0] if args else "Update submodule pointers"
+    """Stage and commit submodule pointer changes.
+
+    ``args[0]`` is the commit message (optional). Any further arguments select
+    the submodules to commit, given as paths, ``owner/repo`` slugs, or short
+    names. Without selectors, every changed pointer in ``.gitmodules`` is
+    committed.
+    """
+    message = args[0] if args and args[0] else "Update submodule pointers"
+    targets = [arg for arg in args[1:] if arg]
 
     paths = read_gitmodules_paths()
+    if targets:
+        try:
+            paths = _select_submodule_paths(paths, targets)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
     changed: list[str] = [p for p in paths if p and _submodule_pointer_changed(p)]
 
     if not changed:
