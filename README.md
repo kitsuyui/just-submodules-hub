@@ -129,6 +129,7 @@ This uses Git's local `submodule.<name>.ignore` setting in the consumer reposito
 - `root-status::show` clears the local ignore setting and restores visibility.
 - `root-status::visibility` reports `hidden` or `visible`.
 - `pointers::commit` still stages and commits intentional gitlink updates by comparing the recorded gitlink with the submodule `HEAD`.
+- `pointers::commit "<message>" owner/repo ...` commits only the listed submodule pointers and leaves other changed gitlinks unstaged.
 - Deprecated aliases such as `hide-root-status-changes`, `hide-worktree-changes`, `hide-all-changes`, `ignore-dirty-*`, and `ignore-all-*` remain available for compatibility.
 
 ### Sync Options

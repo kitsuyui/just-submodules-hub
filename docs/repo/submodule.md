@@ -22,6 +22,8 @@ just repo::submodule::default-branch::sync <repo|owner/repo|repo/github.com/owne
 just repo::submodule::default-branch::sync-all
 just repo::submodule::default-branch::sync-all --token-env SUBMODULES_TOKEN --no-prefilter
 just repo::submodule::pointers::commit
+just repo::submodule::pointers::commit "Update submodule pointers"
+just repo::submodule::pointers::commit "Update one pointer" <repo|owner/repo|repo/github.com/owner/repo>
 just repo::submodule::root-status::hide
 just repo::submodule::root-status::hide <repo|owner/repo|repo/github.com/owner/repo>
 just repo::submodule::root-status::show
@@ -56,6 +58,7 @@ just repo::submodule::every '<command>' --format jsonl --jobs 8
 - Short names work only when they resolve to exactly one managed repository.
 - `branches::cleanup` finds branches in managed submodules whose pull requests are already merged. It is dry-run by default; pass `--apply` to delete branches. Remote branch cleanup only includes merged pull requests authored by the authenticated GitHub user unless `--include-non-owner-remote` is passed.
 - `pointers::commit` stages and commits only gitlink updates.
+- `pointers::commit <message> <repo>...` limits the commit to the listed submodules; other changed gitlinks stay unstaged. Each target must be a registered submodule.
 - Parent status visibility is hidden by default after `add` and `init-all`.
 - `root-status::hide` changes the consumer repository's local `.git/config`, not `.gitmodules`.
 - `root-status::hide` without arguments updates all managed submodules.
